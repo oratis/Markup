@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "@milkdown/theme-nord/style.css";
+@import "katex/dist/katex.min.css";
+
+:root {
+  --markup-prose-max-width: 720px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide scrollbar in webview while keeping scroll behavior */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Milkdown editor surface */
+.milkdown {
+  width: 100%;
+  background: transparent;
+}
+
+.milkdown .editor {
+  padding: 48px max(24px, calc((100% - var(--markup-prose-max-width)) / 2));
+  outline: none;
+  min-height: 100%;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.milkdown .editor h1 { font-size: 1.85em; }
+.milkdown .editor h2 { font-size: 1.55em; }
+.milkdown .editor h3 { font-size: 1.3em; }
+
+.milkdown .editor pre,
+.milkdown .editor code {
+  font-family: theme("fontFamily.mono");
+}
+
+/* Drag region for the macOS frameless title bar */
+.titlebar-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* Status bar */
+.statusbar {
+  font-variant-numeric: tabular-nums;
+}

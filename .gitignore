@@ -1,0 +1,39 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# tauri
+src-tauri/target/
+src-tauri/gen/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build output
+*.tsbuildinfo
+
+# Python (used by build scripts)
+__pycache__/
+*.pyc
+test-fixtures/
