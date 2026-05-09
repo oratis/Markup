@@ -13,6 +13,13 @@
     "tauri:build": "tauri build --target x86_64-apple-darwin"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.7.1",
+    "@codemirror/lang-markdown": "^6.3.1",
+    "@codemirror/language": "^6.10.4",
+    "@codemirror/search": "^6.5.7",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.35.0",
     "@milkdown/core": "^7.5.0",
     "@milkdown/ctx": "^7.5.0",
     "@milkdown/kit": "^7.5.0",
@@ -31,6 +38,7 @@
     "@milkdown/transformer": "^7.5.0",
     "@milkdown/utils": "^7.5.0",
     "@prosemirror-adapter/react": "^0.2.6",
+    "@tanstack/react-virtual": "^3.10.9",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
@@ -42,6 +50,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^25.6.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",

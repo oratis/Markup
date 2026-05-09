@@ -32,6 +32,8 @@ lerna-debug.log*
 
 # build output
 *.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 
 # Python (used by build scripts)
 __pycache__/

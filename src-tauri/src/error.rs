@@ -14,6 +14,21 @@ pub enum AppError {
     #[error("dialog cancelled")]
     Cancelled,
 
+    #[error("walk: {0}")]
+    Walk(#[from] walkdir::Error),
+
+    #[error("notify: {0}")]
+    Notify(#[from] notify::Error),
+
+    #[error("tantivy: {0}")]
+    Tantivy(#[from] tantivy::TantivyError),
+
+    #[error("query: {0}")]
+    Query(#[from] tantivy::query::QueryParserError),
+
+    #[error("vault not open")]
+    NoVault,
+
     #[error("{0}")]
     Other(String),
 }

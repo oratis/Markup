@@ -7,6 +7,7 @@ import {
   parserCtx,
 } from "@milkdown/core";
 import { Slice } from "@milkdown/prose/model";
+import { log as perfLog } from "../lib/perf";
 import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
 import { history } from "@milkdown/plugin-history";
@@ -17,19 +18,24 @@ import { indent } from "@milkdown/plugin-indent";
 import { math } from "@milkdown/plugin-math";
 import { diagram } from "@milkdown/plugin-diagram";
 import { nord } from "@milkdown/theme-nord";
-import { Milkdown, useEditor } from "@milkdown/react";
+import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
+import { SourceEditor } from "./SourceEditor";
 
 interface MarkupEditorProps {
   initialValue: string;
-  fileKey: string; // changes when file path changes → triggers reload via useEffect
+  fileKey: string;
+  sourceMode: boolean;
+  isDark: boolean;
   onChange: (markdown: string) => void;
 }
 
-function InnerEditor({ initialValue, fileKey, onChange }: MarkupEditorProps) {
-  // Hold the latest onChange in a ref so the editor factory captures stable refs.
+function WysiwygEditor({
+  initialValue,
+  fileKey,
+  onChange,
+}: Omit<MarkupEditorProps, "sourceMode" | "isDark">) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-
   const initialRef = useRef(initialValue);
 
   const { get } = useEditor((root) =>
@@ -55,10 +61,10 @@ function InnerEditor({ initialValue, fileKey, onChange }: MarkupEditorProps) {
       .use(diagram),
   );
 
-  // When fileKey changes, replace the document instead of recreating the editor.
   useEffect(() => {
     const editor = get();
     if (!editor) return;
+    const t0 = performance.now();
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx);
       const parser = ctx.get(parserCtx);
@@ -73,11 +79,39 @@ function InnerEditor({ initialValue, fileKey, onChange }: MarkupEditorProps) {
         ),
       );
     });
+    perfLog(
+      `wysiwyg-load[${initialValue.length}b]`,
+      performance.now() - t0,
+    );
   }, [fileKey, initialValue, get]);
 
   return <Milkdown />;
 }
 
+/**
+ * Switches between Milkdown WYSIWYG and CodeMirror 6 source mode.
+ *
+ * MilkdownProvider must wrap the WYSIWYG variant so its hooks resolve.
+ * We mount/unmount the provider with the editor it owns.
+ */
 export function MarkupEditor(props: MarkupEditorProps) {
-  return <InnerEditor {...props} />;
+  if (props.sourceMode) {
+    return (
+      <SourceEditor
+        value={props.initialValue}
+        fileKey={props.fileKey}
+        onChange={props.onChange}
+        isDark={props.isDark}
+      />
+    );
+  }
+  return (
+    <MilkdownProvider>
+      <WysiwygEditor
+        initialValue={props.initialValue}
+        fileKey={props.fileKey}
+        onChange={props.onChange}
+      />
+    </MilkdownProvider>
+  );
 }

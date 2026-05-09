@@ -1,7 +1,9 @@
 use crate::error::{AppError, AppResult};
 use serde::Serialize;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
 
 #[derive(Debug, Serialize)]
@@ -66,6 +68,42 @@ async fn read_file_inner(path: &Path) -> AppResult<LoadedFile> {
         content,
         mtime_ms: mtime_ms(&meta),
     })
+}
+
+/// Append a perf observation to ~/Library/Logs/markup/perf.log.
+/// Used by Spike 0.2 instrumentation. Failures are ignored.
+#[tauri::command]
+pub async fn log_perf(app: tauri::AppHandle, label: String, ms: f64) -> AppResult<()> {
+    let log_dir = app
+        .path()
+        .home_dir()
+        .map_err(|e| AppError::Other(format!("home_dir: {e}")))?
+        .join("Library/Logs/markup");
+    let _ = tokio::fs::create_dir_all(&log_dir).await;
+    let log_path = log_dir.join("perf.log");
+    let line = format!(
+        "{}\t{}\t{:.2}\n",
+        chrono_now_iso(),
+        label,
+        ms
+    );
+    let line_bytes = line.into_bytes();
+    let _ = tokio::task::spawn_blocking(move || {
+        std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_path)
+            .and_then(|mut f| f.write_all(&line_bytes))
+    })
+    .await;
+    Ok(())
+}
+
+fn chrono_now_iso() -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    format!("{}.{:03}", now.as_secs(), now.subsec_millis())
 }
 
 #[tauri::command]

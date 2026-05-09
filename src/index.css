@@ -7,6 +7,33 @@
 
 :root {
   --markup-prose-max-width: 720px;
+  /* default: light theme */
+  --markup-bg: #fdfdfd;
+  --markup-fg: #1f2328;
+  --markup-muted: rgba(0, 0, 0, 0.5);
+  --markup-border: rgba(0, 0, 0, 0.06);
+  --markup-accent: #0969da;
+}
+
+html.theme-dark {
+  --markup-bg: #1a1a1a;
+  --markup-fg: #e6edf3;
+  --markup-muted: rgba(255, 255, 255, 0.55);
+  --markup-border: rgba(255, 255, 255, 0.08);
+  --markup-accent: #58a6ff;
+}
+
+html.theme-sepia {
+  --markup-bg: #f7efde;
+  --markup-fg: #3a2e25;
+  --markup-muted: rgba(58, 46, 37, 0.55);
+  --markup-border: rgba(58, 46, 37, 0.12);
+  --markup-accent: #8b5a2b;
+}
+
+html, body, #root {
+  background: var(--markup-bg);
+  color: var(--markup-fg);
 }
 
 html,
