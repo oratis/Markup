@@ -68,15 +68,43 @@ pnpm tauri:dev
 #   5. Type continuously in either mode; visual lag observation is your test
 ```
 
-### 3. (Optional) Build unsigned release
+### 3. Unsigned release artifacts (already built)
+
+The autonomous run built these for you:
+
+| Artifact | Size | Path |
+|----------|------|------|
+| Binary | 9.6MB | `src-tauri/target/x86_64-apple-darwin/release/markup` |
+| App bundle | 9.2MB | `src-tauri/target/x86_64-apple-darwin/release/bundle/macos/Markup.app` |
+| DMG | 4.8MB | `src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/Markup_0.0.1_x64.dmg` |
+
+**About the DMG**: Tauri's bundled `bundle_dmg.sh` uses AppleScript to
+position icons in the DMG window — this **failed** during the autonomous
+run because macOS demands interactive Automation permission for
+`osascript` to control Finder, which can't be granted headlessly.
+
+I worked around it by calling `hdiutil` directly to produce a basic
+compressed DMG with no custom icon layout. **This DMG works** — open it,
+drag the .app to Applications, done. The aesthetic "drag here ↘" arrow
+is what's missing.
+
+To produce the fancy layout DMG yourself (you'll get an Automation
+permission prompt; click Allow):
 ```bash
 . "$HOME/.cargo/env"
 pnpm tauri:build
-# Artifact at: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/Markup_*.dmg
 ```
-First time you double-click the DMG, macOS Gatekeeper will warn. To suppress
-that warning for your own machine: System Settings → Privacy & Security →
-"Open Anyway".
+
+To rebuild the simple DMG:
+```bash
+cd src-tauri/target/x86_64-apple-darwin/release/bundle
+hdiutil create -volname Markup -srcfolder macos/Markup.app \
+  -ov -format UDZO -fs HFS+ dmg/Markup_0.0.1_x64.dmg
+```
+
+**First time you double-click the DMG**, macOS Gatekeeper will warn (no
+signature). To suppress: System Settings → Privacy & Security →
+"Open Anyway". For real distribution, use the signing script (step 4 below).
 
 ### 4. (Required for distribution) Sign + notarize
 Before running:
