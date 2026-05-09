@@ -12,7 +12,7 @@ use commands::{log_perf, open_file, read_file, write_file};
 use commands_vault::{
     close_vault, current_vault, list_vault_files, open_vault, pick_vault, search_vault,
 };
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 use vault::VaultState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

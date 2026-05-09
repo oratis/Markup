@@ -80,8 +80,32 @@ markup/
 
 ## 状态
 
-**M0 阶段（spike 验证）**。当前 spike 0.1 在跑。
-跟进：[docs/research/05-spike-results.md](./docs/research/05-spike-results.md)。
+**M0 阶段已基本完成**（Spike 0.1/0.3/0.4），M1 P0 主要功能已实现。
+
+进度跟进入口：
+- [docs/STATUS.md](./docs/STATUS.md) — 整体状态 + 醒来后的操作清单
+- [docs/research/05-spike-results.md](./docs/research/05-spike-results.md) — Spike 验证记录
+- [docs/decisions/](./docs/decisions/) — 架构决策（ADR-001、ADR-002）
+
+## 醒来后操作清单（TL;DR）
+
+```bash
+# 1. 跑 dev 验证
+. "$HOME/.cargo/env"
+pnpm tauri:dev
+
+# 2. 跑 Spike 0.3 bench（10k 文件索引）
+cd src-tauri && cargo test --release --test spike_03 -- --nocapture --ignored bench_10k_files
+
+# 3. 准备签名（首次）
+xcrun notarytool store-credentials "AC_PASSWORD" \
+  --apple-id "wangharp@gmail.com" \
+  --team-id "<YOUR_TEAM_ID>" \
+  --password "<APP_SPECIFIC_PASSWORD>"
+
+# 4. 出 release（签名 + 公证一条龙）
+./scripts/sign-and-notarize.sh
+```
 
 ## License
 

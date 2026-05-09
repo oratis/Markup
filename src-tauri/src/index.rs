@@ -85,7 +85,7 @@ impl MarkupIndex {
         let path_str = path.to_string_lossy().into_owned();
         let title = derive_title(path, content);
 
-        let mut writer = self.writer.lock().await;
+        let writer = self.writer.lock().await;
         writer.delete_term(Term::from_field_text(self.schema.path, &path_str));
         writer.add_document(doc!(
             self.schema.path => path_str,
@@ -98,7 +98,7 @@ impl MarkupIndex {
 
     pub async fn remove_file(&self, path: &Path) -> AppResult<()> {
         let path_str = path.to_string_lossy().into_owned();
-        let mut writer = self.writer.lock().await;
+        let writer = self.writer.lock().await;
         writer.delete_term(Term::from_field_text(self.schema.path, &path_str));
         Ok(())
     }
