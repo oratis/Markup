@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build --target x86_64-apple-darwin"
+    "tauri:build": "tauri build --target x86_64-apple-darwin",
+    "test:rust": "cd src-tauri && cargo test",
+    "bench:spike03": "cd src-tauri && cargo test --release --test spike_03 -- --nocapture --ignored"
   },
   "dependencies": {
     "@codemirror/commands": "^6.7.1",

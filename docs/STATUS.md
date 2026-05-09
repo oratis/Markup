@@ -131,6 +131,17 @@ icon-generation flow (e.g. `pnpm tauri icon`) before public release.
 
 ## Risks identified
 
+- **Xcode CLT is from 2020** (clang 11.0.3 / SDK 10.15.4). On macOS 26
+  this is way out of date. Symptoms during autonomous run: `cargo build
+  --release --target x86_64-apple-darwin` failed with `clang: error:
+  invalid version number in '-mmacosx-version-min=12.0'` because the
+  10.15.4 SDK can't target 12.0+. Worked around by lowering
+  `minimumSystemVersion` to "10.15" in tauri.conf.json. Ironically this
+  makes the binary MORE compatible (Catalina+).
+  **To restore 12.0 target**: run `softwareupdate --list` then
+  `softwareupdate --install --label "Command Line Tools for Xcode-..."`
+  (needs admin). Or install the full Xcode.app from App Store. Then
+  edit `src-tauri/tauri.conf.json` `minimumSystemVersion` back to "12.0".
 - **88MB RSS** measured at idle (Spike 0.1). Sub-300MB target met
   comfortably. **NOT** measured under load (5MB doc + 10k vault).
 - **Mermaid bundles 1.4MB** of flowchart-elk JS in the main chunk. May
