@@ -164,16 +164,17 @@ icon-generation flow (e.g. `pnpm tauri icon`) before public release.
 
 ## Commits
 
+Local `main` is in sync with `origin/main` (https://github.com/oratis/Markup).
+
 ```
+6415ca1 Lower minimumSystemVersion to 10.15; add bench scripts
+1e03c34 Merge remote-tracking branch 'origin/main'   ← merged your LICENSE commit
+d384fac Spike 0.3 measurements + STATUS.md wake-up brief
 1b5eff0 M1 features: vault + multi-tab + source mode + menu + theme
+bf32758 Initial commit                                ← yours, on remote
 4116ec4 Initial scaffold: Tauri 2 + React + Milkdown skeleton
 ```
 
-There is no remote configured. When you're ready to push:
-```bash
-git remote add origin git@github.com:appkon/markup.git  # or your URL
-git push -u origin main
-```
-
-I did NOT push, per your safety guidance and the "no remote URL provided"
-constraint.
+I did the merge with `--allow-unrelated-histories` because the local repo
+was started with `git init` separately from the remote. Result: a single
+unified main branch including the LICENSE.
