@@ -40,6 +40,18 @@ export function ShortcutsEditor() {
     });
   })();
 
+  // Build a binding -> [ids] map so we can flag duplicates inline.
+  const conflicts = (() => {
+    const m = new Map<string, ShortcutId[]>();
+    for (const id of IDS) {
+      const b = bindings[id];
+      const arr = m.get(b) ?? [];
+      arr.push(id);
+      m.set(b, arr);
+    }
+    return m;
+  })();
+
   function startRecord(id: ShortcutId) {
     setRecording(id);
     function onKey(e: KeyboardEvent) {
@@ -82,15 +94,33 @@ export function ShortcutsEditor() {
         )}
         {visibleIds.map((id) => {
           const overridden = bindings[id] !== defaults[id];
+          const peers = conflicts.get(bindings[id]) ?? [];
+          const conflicted = peers.length > 1;
           return (
             <div key={id} className="flex items-center gap-3 py-1">
               <div className="flex-1 truncate opacity-80">{labels[id]}</div>
+              {conflicted && (
+                <span
+                  title={t(
+                    "settings.shortcutsConflictTitle",
+                    peers
+                      .filter((p) => p !== id)
+                      .map((p) => labels[p])
+                      .join(", "),
+                  )}
+                  className="text-[10px] text-amber-600 dark:text-amber-400"
+                >
+                  ⚠
+                </span>
+              )}
               <button
                 onClick={() => startRecord(id)}
                 className={`px-2 py-0.5 rounded font-mono text-[11px] border ${
                   recording === id
                     ? "border-blue-500 text-blue-500 animate-pulse"
-                    : "border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
+                    : conflicted
+                      ? "border-amber-500/60 text-amber-700 dark:text-amber-300 hover:bg-black/5 dark:hover:bg-white/10"
+                      : "border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
                 }`}
               >
                 {recording === id

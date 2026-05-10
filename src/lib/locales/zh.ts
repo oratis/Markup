@@ -40,6 +40,7 @@ export const zh: Strings = {
   "settings.shortcutsReset": "全部重置",
   "settings.shortcutsFilter": "过滤快捷键（名称或键位）…",
   "settings.shortcutsNoMatch": "无匹配快捷键。",
+  "settings.shortcutsConflictTitle": "与以下冲突：{0}",
   "settings.exportTheme": "导出主题",
   "settings.spellcheck": "拼写检查",
   "settings.spellcheckHint": "浏览器原生",

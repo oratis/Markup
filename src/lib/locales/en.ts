@@ -39,6 +39,7 @@ export const en = {
   "settings.shortcutsReset": "Reset all",
   "settings.shortcutsFilter": "Filter shortcuts (label or binding)…",
   "settings.shortcutsNoMatch": "No matching shortcuts.",
+  "settings.shortcutsConflictTitle": "Conflicts with: {0}",
   "settings.exportTheme": "Export theme",
   "settings.spellcheck": "Spell check",
   "settings.spellcheckHint": "Browser-native",

@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { defaults, labels } from "../lib/shortcuts";
+import { afterEach, describe, expect, it } from "vitest";
+import { defaults, labels, resetAll, setShortcut } from "../lib/shortcuts";
 import { ShortcutsEditor } from "./ShortcutsEditor";
+
+afterEach(() => resetAll());
 
 describe("ShortcutsEditor", () => {
   it("renders a row for every registered shortcut id", () => {
@@ -26,5 +28,14 @@ describe("ShortcutsEditor", () => {
       target: { value: "zzzzzzzz" },
     });
     expect(screen.getByText(/no matching shortcuts/i)).toBeInTheDocument();
+  });
+
+  it("flags duplicate bindings with a ⚠ glyph on each conflicting row", () => {
+    // Bind two different commands to the same key.
+    setShortcut("save", "Mod+Q");
+    setShortcut("saveAs", "Mod+Q");
+    render(<ShortcutsEditor />);
+    // Both rows show the warning glyph.
+    expect(screen.getAllByText("⚠").length).toBeGreaterThanOrEqual(2);
   });
 });
