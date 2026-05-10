@@ -31,7 +31,9 @@ html.theme-sepia {
   --markup-accent: #8b5a2b;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   background: var(--markup-bg);
   color: var(--markup-fg);
 }
@@ -67,9 +69,15 @@ body {
   line-height: 1.7;
 }
 
-.milkdown .editor h1 { font-size: 1.85em; }
-.milkdown .editor h2 { font-size: 1.55em; }
-.milkdown .editor h3 { font-size: 1.3em; }
+.milkdown .editor h1 {
+  font-size: 1.85em;
+}
+.milkdown .editor h2 {
+  font-size: 1.55em;
+}
+.milkdown .editor h3 {
+  font-size: 1.3em;
+}
 
 .milkdown .editor pre,
 .milkdown .editor code {

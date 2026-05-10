@@ -1,28 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Toolbar } from "./components/Toolbar";
-import { TabBar } from "./components/TabBar";
+import { AboutDialog } from "./components/AboutDialog";
+import { type Command, CommandPalette } from "./components/CommandPalette";
 import { MarkupEditor } from "./components/Editor";
 import { FileTree } from "./components/FileTree";
+import { FindBar } from "./components/FindBar";
 import { Outline } from "./components/Outline";
-import { StatusBar } from "./components/StatusBar";
 import { QuickOpen } from "./components/QuickOpen";
-import { SearchPanel } from "./components/SearchPanel";
 import { ReloadPrompt } from "./components/ReloadPrompt";
-import { CommandPalette, type Command } from "./components/CommandPalette";
-import { getActiveTab, useAppStore, type Theme } from "./store";
+import { SearchPanel } from "./components/SearchPanel";
+import { StatusBar } from "./components/StatusBar";
+import { TabBar } from "./components/TabBar";
+import { Toolbar } from "./components/Toolbar";
+import { exportHtml, exportPdfViaPrint } from "./lib/export";
+import { installFocusTypewriter } from "./lib/focus-typewriter";
+import { installImagePaste } from "./lib/image-paste";
 import {
+  listVaultFiles,
   listenMenu,
   listenVaultChanged,
-  listVaultFiles,
   openFileDialog,
   openVault,
+  pickSavePath,
   pickVault,
   readFile,
   writeFile,
 } from "./lib/tauri";
-import { installFocusTypewriter } from "./lib/focus-typewriter";
-import { installImagePaste } from "./lib/image-paste";
-import { exportHtml, exportPdfViaPrint } from "./lib/export";
+import { type Theme, getActiveTab, useAppStore } from "./store";
 
 const SAVE_DEBOUNCE_MS = 300;
 const THEME_KEY = "markup.theme";
@@ -77,9 +80,9 @@ export function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showRecentOpen, setShowRecentOpen] = useState(false);
-  const [reloadPromptDismissed, setReloadPromptDismissed] = useState<string | null>(
-    null,
-  );
+  const [showFindBar, setShowFindBar] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [reloadPromptDismissed, setReloadPromptDismissed] = useState<string | null>(null);
   const [externalMtime, setExternalMtime] = useState<number | null>(null);
 
   const editorScrollRef = useRef<HTMLElement | null>(null);
@@ -99,10 +102,15 @@ export function App() {
       if (recent) {
         try {
           const arr = JSON.parse(recent);
-          if (Array.isArray(arr)) setRecentFiles(arr.filter((x) => typeof x === "string"));
-        } catch {/*ignore*/}
+          if (Array.isArray(arr))
+            setRecentFiles(arr.filter((x) => typeof x === "string"));
+        } catch {
+          /*ignore*/
+        }
       }
-    } catch {/*ignore*/}
+    } catch {
+      /*ignore*/
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -111,27 +119,53 @@ export function App() {
     applyThemeToHtml(theme);
     try {
       localStorage.setItem(THEME_KEY, theme);
-    } catch {/*ignore*/}
+    } catch {
+      /*ignore*/
+    }
   }, [theme]);
   useEffect(() => {
-    try { localStorage.setItem(SOURCE_MODE_KEY, String(sourceMode)); } catch {/*ignore*/}
+    try {
+      localStorage.setItem(SOURCE_MODE_KEY, String(sourceMode));
+    } catch {
+      /*ignore*/
+    }
   }, [sourceMode]);
   useEffect(() => {
-    try { localStorage.setItem(SIDEBAR_KEY, String(sidebarOpen)); } catch {/*ignore*/}
+    try {
+      localStorage.setItem(SIDEBAR_KEY, String(sidebarOpen));
+    } catch {
+      /*ignore*/
+    }
   }, [sidebarOpen]);
   useEffect(() => {
-    try { localStorage.setItem(OUTLINE_KEY, String(outlineOpen)); } catch {/*ignore*/}
+    try {
+      localStorage.setItem(OUTLINE_KEY, String(outlineOpen));
+    } catch {
+      /*ignore*/
+    }
   }, [outlineOpen]);
   useEffect(() => {
     applyClass("focus-mode", focusMode);
-    try { localStorage.setItem(FOCUS_KEY, String(focusMode)); } catch {/*ignore*/}
+    try {
+      localStorage.setItem(FOCUS_KEY, String(focusMode));
+    } catch {
+      /*ignore*/
+    }
   }, [focusMode]);
   useEffect(() => {
     applyClass("typewriter-mode", typewriterMode);
-    try { localStorage.setItem(TYPEWRITER_KEY, String(typewriterMode)); } catch {/*ignore*/}
+    try {
+      localStorage.setItem(TYPEWRITER_KEY, String(typewriterMode));
+    } catch {
+      /*ignore*/
+    }
   }, [typewriterMode]);
   useEffect(() => {
-    try { localStorage.setItem(RECENT_KEY, JSON.stringify(recentFiles)); } catch {/*ignore*/}
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recentFiles));
+    } catch {
+      /*ignore*/
+    }
   }, [recentFiles]);
 
   // Push recent file when active tab changes to a real file
@@ -197,8 +231,7 @@ export function App() {
         ? state.tabs.find((x) => x.id === state.activeTabId)
         : null;
       if (!active?.path) return;
-      if (saveTimerRef.current !== null)
-        window.clearTimeout(saveTimerRef.current);
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = window.setTimeout(performSave, SAVE_DEBOUNCE_MS);
     },
     [updateActiveContent, performSave],
@@ -240,7 +273,9 @@ export function App() {
           setExternalMtime(match.mtime_ms);
         }
       }
-    } catch {/*ignore*/}
+    } catch {
+      /*ignore*/
+    }
   }, [setVaultFiles]);
 
   // Menu + vault listeners
@@ -249,34 +284,74 @@ export function App() {
     let unVault: (() => void) | null = null;
     listenMenu((id) => {
       switch (id) {
-        case "new_file": newScratchTab(); break;
-        case "open_file": handleOpenFile(); break;
-        case "open_vault": handleOpenVault(); break;
-        case "open_recent": setShowRecentOpen(true); break;
+        case "new_file":
+          newScratchTab();
+          break;
+        case "open_file":
+          handleOpenFile();
+          break;
+        case "open_vault":
+          handleOpenVault();
+          break;
+        case "open_recent":
+          setShowRecentOpen(true);
+          break;
         case "close_tab": {
           const a = useAppStore.getState().activeTabId;
           if (a) closeTab(a);
           break;
         }
-        case "save": performSave(); break;
-        case "find_in_vault": setShowSearch(true); break;
-        case "find_in_file": {
-          const ev = new KeyboardEvent("keydown", { key: "f", metaKey: true });
-          window.dispatchEvent(ev);
+        case "save":
+          performSave();
           break;
-        }
-        case "quick_open": setShowQuickOpen(true); break;
-        case "command_palette": setShowCommandPalette(true); break;
-        case "toggle_source_mode": toggleSourceMode(); break;
-        case "toggle_sidebar": toggleSidebar(); break;
-        case "toggle_outline": toggleOutline(); break;
-        case "toggle_focus": toggleFocusMode(); break;
-        case "toggle_typewriter": toggleTypewriterMode(); break;
-        case "theme_light": setTheme("light"); break;
-        case "theme_dark": setTheme("dark"); break;
-        case "theme_sepia": setTheme("sepia"); break;
-        case "export_html": handleExportHtml(); break;
-        case "export_pdf": handleExportPdf(); break;
+        case "save_as":
+          handleSaveAs();
+          break;
+        case "find_in_vault":
+          setShowSearch(true);
+          break;
+        case "find_in_file":
+          setShowFindBar(true);
+          break;
+        case "quick_open":
+          setShowQuickOpen(true);
+          break;
+        case "command_palette":
+          setShowCommandPalette(true);
+          break;
+        case "toggle_source_mode":
+          toggleSourceMode();
+          break;
+        case "toggle_sidebar":
+          toggleSidebar();
+          break;
+        case "toggle_outline":
+          toggleOutline();
+          break;
+        case "toggle_focus":
+          toggleFocusMode();
+          break;
+        case "toggle_typewriter":
+          toggleTypewriterMode();
+          break;
+        case "theme_light":
+          setTheme("light");
+          break;
+        case "theme_dark":
+          setTheme("dark");
+          break;
+        case "theme_sepia":
+          setTheme("sepia");
+          break;
+        case "export_html":
+          handleExportHtml();
+          break;
+        case "export_pdf":
+          handleExportPdf();
+          break;
+        case "about":
+          setShowAbout(true);
+          break;
       }
     }).then((u) => (unMenu = u));
 
@@ -307,6 +382,29 @@ export function App() {
     }
   }
 
+  const setActivePathAndName = useAppStore((s) => s.setActivePathAndName);
+
+  async function handleSaveAs() {
+    const state = useAppStore.getState();
+    const t = state.activeTabId
+      ? state.tabs.find((x) => x.id === state.activeTabId)
+      : null;
+    if (!t) return;
+    const defaultName = t.path
+      ? t.path.split("/").pop() || "Untitled.md"
+      : `${(t.name || "Untitled").replace(/\.[^.]+$/, "")}.md`;
+    try {
+      const target = await pickSavePath(defaultName);
+      if (!target) return;
+      const newMtime = await writeFile(target, t.content, null);
+      const fileName = target.split("/").pop() || target;
+      setActivePathAndName(target, fileName, newMtime);
+    } catch (e) {
+      console.error("saveAs failed", e);
+      setActiveStatus("error", String(e));
+    }
+  }
+
   // Keyboard shortcuts (mirror what the native menu offers, plus extras)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -331,7 +429,14 @@ export function App() {
           window.clearTimeout(saveTimerRef.current);
           saveTimerRef.current = null;
         }
-        performSave();
+        if (e.shiftKey) handleSaveAs();
+        else performSave();
+      } else if (k === "f" && !e.shiftKey) {
+        // ⌘F: open find bar — but only for WYSIWYG (CodeMirror has its own).
+        if (!sourceMode) {
+          e.preventDefault();
+          setShowFindBar(true);
+        }
       } else if (k === "/") {
         e.preventDefault();
         toggleSourceMode();
@@ -356,13 +461,39 @@ export function App() {
       { id: "open_file", label: "Open File…", shortcut: "⌘O", run: handleOpenFile },
       { id: "open_vault", label: "Open Vault…", shortcut: "⌘⇧O", run: handleOpenVault },
       { id: "save", label: "Save", shortcut: "⌘S", run: performSave },
-      { id: "quick_open", label: "Quick Open", shortcut: "⌘P", run: () => setShowQuickOpen(true) },
-      { id: "find_in_vault", label: "Find in Vault", shortcut: "⌘⇧F", run: () => setShowSearch(true) },
-      { id: "toggle_source_mode", label: "Toggle Source Mode", shortcut: "⌘/", run: toggleSourceMode },
-      { id: "toggle_sidebar", label: "Toggle Sidebar", shortcut: "⌘B", run: toggleSidebar },
+      { id: "save_as", label: "Save As…", shortcut: "⌘⇧S", run: handleSaveAs },
+      {
+        id: "quick_open",
+        label: "Quick Open",
+        shortcut: "⌘P",
+        run: () => setShowQuickOpen(true),
+      },
+      { id: "about", label: "About Markup", run: () => setShowAbout(true) },
+      {
+        id: "find_in_vault",
+        label: "Find in Vault",
+        shortcut: "⌘⇧F",
+        run: () => setShowSearch(true),
+      },
+      {
+        id: "toggle_source_mode",
+        label: "Toggle Source Mode",
+        shortcut: "⌘/",
+        run: toggleSourceMode,
+      },
+      {
+        id: "toggle_sidebar",
+        label: "Toggle Sidebar",
+        shortcut: "⌘B",
+        run: toggleSidebar,
+      },
       { id: "toggle_outline", label: "Toggle Outline", run: toggleOutline },
       { id: "toggle_focus", label: "Toggle Focus Mode", run: toggleFocusMode },
-      { id: "toggle_typewriter", label: "Toggle Typewriter Mode", run: toggleTypewriterMode },
+      {
+        id: "toggle_typewriter",
+        label: "Toggle Typewriter Mode",
+        run: toggleTypewriterMode,
+      },
       { id: "theme_light", label: "Theme: Light", run: () => setTheme("light") },
       { id: "theme_dark", label: "Theme: Dark", run: () => setTheme("dark") },
       { id: "theme_sepia", label: "Theme: Sepia", run: () => setTheme("sepia") },
@@ -431,6 +562,9 @@ export function App() {
         )}
       </main>
       <StatusBar />
+      {showFindBar && (
+        <FindBar sourceMode={sourceMode} onClose={() => setShowFindBar(false)} />
+      )}
       {showQuickOpen && <QuickOpen onClose={() => setShowQuickOpen(false)} />}
       {showSearch && <SearchPanel onClose={() => setShowSearch(false)} />}
       {showCommandPalette && (
@@ -445,6 +579,7 @@ export function App() {
           onClose={() => setShowRecentOpen(false)}
         />
       )}
+      {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
     </div>
   );
 }
@@ -460,4 +595,3 @@ function toVaultFileTs(f: RustVaultFile): StoreVaultFile {
     size: f.size,
   };
 }
-

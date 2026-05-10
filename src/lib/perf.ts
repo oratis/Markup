@@ -32,7 +32,10 @@ export function log(label: string, ms: number) {
 }
 
 /** Sample N input events: time from beforeinput → next animation frame. */
-export function startInputLatencyProbe(target: HTMLElement, samples = 60): Promise<{
+export function startInputLatencyProbe(
+  target: HTMLElement,
+  samples = 60,
+): Promise<{
   samples: number[];
   median: number;
   p95: number;

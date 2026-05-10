@@ -17,10 +17,7 @@ interface InsertOpts {
  * image as base64 — typically becomes nothing or breaks; better to require
  * a vault for image paste).
  */
-export function installImagePaste(
-  target: HTMLElement,
-  opts: InsertOpts,
-): () => void {
+export function installImagePaste(target: HTMLElement, opts: InsertOpts): () => void {
   const onPaste = async (e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -37,9 +34,7 @@ export function installImagePaste(
 
     const root = opts.vaultRoot;
     if (!root) {
-      console.warn(
-        "image paste: no vault open; ignoring (open a vault to enable)",
-      );
+      console.warn("image paste: no vault open; ignoring (open a vault to enable)");
       return;
     }
 

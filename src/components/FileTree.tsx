@@ -1,12 +1,7 @@
-import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useAppStore, type VaultFile } from "../store";
-import {
-  listVaultFiles,
-  readFile,
-  renameFile,
-  trashFile,
-} from "../lib/tauri";
+import { useMemo, useRef, useState } from "react";
+import { listVaultFiles, readFile, renameFile, trashFile } from "../lib/tauri";
+import { type VaultFile, useAppStore } from "../store";
 
 interface ContextState {
   file: VaultFile;
@@ -76,7 +71,9 @@ export function FileTree() {
         try {
           const loaded = await readFile(newPath);
           a.openLoadedFile(loaded);
-        } catch {/*ignore*/}
+        } catch {
+          /*ignore*/
+        }
       }
       await refresh();
     } catch (e) {
@@ -102,7 +99,9 @@ export function FileTree() {
   if (!vaultRoot) {
     return (
       <div className="text-xs opacity-60 px-3 py-3">
-        No vault open.<br />Use ⌘⇧O to open one.
+        No vault open.
+        <br />
+        Use ⌘⇧O to open one.
       </div>
     );
   }
@@ -150,11 +149,8 @@ export function FileTree() {
                 <span className="opacity-50 shrink-0">·</span>
                 {isRenaming ? (
                   <input
-                    autoFocus
                     value={renaming.value}
-                    onChange={(e) =>
-                      setRenaming({ file, value: e.target.value })
-                    }
+                    onChange={(e) => setRenaming({ file, value: e.target.value })}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") commitRename();
                       else if (e.key === "Escape") setRenaming(null);
@@ -190,8 +186,7 @@ export function FileTree() {
             },
             {
               label: "Rename…",
-              run: () =>
-                setRenaming({ file: ctx.file, value: ctx.file.name }),
+              run: () => setRenaming({ file: ctx.file, value: ctx.file.name }),
             },
             {
               label: "Move to Trash",

@@ -1,24 +1,24 @@
-import { useEffect, useRef } from "react";
 import {
   Editor,
-  rootCtx,
   defaultValueCtx,
   editorViewCtx,
   parserCtx,
+  rootCtx,
 } from "@milkdown/core";
-import { Slice } from "@milkdown/prose/model";
-import { log as perfLog } from "../lib/perf";
-import { commonmark } from "@milkdown/preset-commonmark";
-import { gfm } from "@milkdown/preset-gfm";
-import { history } from "@milkdown/plugin-history";
-import { listener, listenerCtx } from "@milkdown/plugin-listener";
 import { clipboard } from "@milkdown/plugin-clipboard";
 import { cursor } from "@milkdown/plugin-cursor";
-import { indent } from "@milkdown/plugin-indent";
-import { math } from "@milkdown/plugin-math";
 import { diagram } from "@milkdown/plugin-diagram";
-import { nord } from "@milkdown/theme-nord";
+import { history } from "@milkdown/plugin-history";
+import { indent } from "@milkdown/plugin-indent";
+import { listener, listenerCtx } from "@milkdown/plugin-listener";
+import { math } from "@milkdown/plugin-math";
+import { commonmark } from "@milkdown/preset-commonmark";
+import { gfm } from "@milkdown/preset-gfm";
+import { Slice } from "@milkdown/prose/model";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
+import { nord } from "@milkdown/theme-nord";
+import { useEffect, useRef } from "react";
+import { log as perfLog } from "../lib/perf";
 import { SourceEditor } from "./SourceEditor";
 
 interface MarkupEditorProps {
@@ -44,11 +44,9 @@ function WysiwygEditor({
       .config((ctx) => {
         ctx.set(rootCtx, root);
         ctx.set(defaultValueCtx, initialRef.current);
-        ctx
-          .get(listenerCtx)
-          .markdownUpdated((_, markdown, prevMarkdown) => {
-            if (markdown !== prevMarkdown) onChangeRef.current(markdown);
-          });
+        ctx.get(listenerCtx).markdownUpdated((_, markdown, prevMarkdown) => {
+          if (markdown !== prevMarkdown) onChangeRef.current(markdown);
+        });
       })
       .use(commonmark)
       .use(gfm)
@@ -72,17 +70,10 @@ function WysiwygEditor({
       if (!doc) return;
       const { state } = view;
       view.dispatch(
-        state.tr.replace(
-          0,
-          state.doc.content.size,
-          new Slice(doc.content, 0, 0),
-        ),
+        state.tr.replace(0, state.doc.content.size, new Slice(doc.content, 0, 0)),
       );
     });
-    perfLog(
-      `wysiwyg-load[${initialValue.length}b]`,
-      performance.now() - t0,
-    );
+    perfLog(`wysiwyg-load[${initialValue.length}b]`, performance.now() - t0);
   }, [fileKey, initialValue, get]);
 
   return <Milkdown />;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { searchVault, readFile } from "../lib/tauri";
-import { useAppStore } from "../store";
+import { readFile, searchVault } from "../lib/tauri";
 import type { SearchHit } from "../lib/types";
+import { useAppStore } from "../store";
 
 interface SearchPanelProps {
   onClose: () => void;
@@ -74,12 +74,8 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
           className="w-full px-4 py-3 text-[14px] bg-transparent outline-none border-b border-black/5 dark:border-white/10"
         />
         <div className="max-h-[60vh] overflow-auto no-scrollbar">
-          {busy && (
-            <div className="px-4 py-2 text-xs opacity-50">Searching…</div>
-          )}
-          {error && (
-            <div className="px-4 py-2 text-xs text-red-500">{error}</div>
-          )}
+          {busy && <div className="px-4 py-2 text-xs opacity-50">Searching…</div>}
+          {error && <div className="px-4 py-2 text-xs text-red-500">{error}</div>}
           {!busy && !error && hits.length === 0 && query.trim() && (
             <div className="px-4 py-2 text-xs opacity-50">No matches.</div>
           )}

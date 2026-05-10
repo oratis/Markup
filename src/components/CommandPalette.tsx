@@ -25,9 +25,7 @@ export function CommandPalette({ commands, onClose }: Props) {
   const matches = useMemo(() => {
     if (!query.trim()) return commands;
     const q = query.toLowerCase();
-    return commands.filter((c) =>
-      `${c.label} ${c.hint ?? ""}`.toLowerCase().includes(q),
-    );
+    return commands.filter((c) => `${c.label} ${c.hint ?? ""}`.toLowerCase().includes(q));
   }, [commands, query]);
 
   useEffect(() => {
@@ -84,9 +82,7 @@ export function CommandPalette({ commands, onClose }: Props) {
               <span className="flex-1 truncate">{c.label}</span>
               {c.hint && <span className="opacity-50 text-[11px]">{c.hint}</span>}
               {c.shortcut && (
-                <span className="text-[10px] opacity-50 font-mono">
-                  {c.shortcut}
-                </span>
+                <span className="text-[10px] opacity-50 font-mono">{c.shortcut}</span>
               )}
             </button>
           ))}
@@ -98,4 +94,3 @@ export function CommandPalette({ commands, onClose }: Props) {
     </div>
   );
 }
-

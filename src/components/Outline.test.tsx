@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 function parseHeadings(md: string) {
   const out: { level: number; text: string; line: number }[] = [];
@@ -10,8 +10,10 @@ function parseHeadings(md: string) {
     const trimmed = line.trimStart();
     const fenceMatch = trimmed.match(/^(```|~~~)/);
     if (fenceMatch) {
-      if (!inFence) { inFence = true; fenceMarker = fenceMatch[1]; }
-      else if (trimmed.startsWith(fenceMarker)) inFence = false;
+      if (!inFence) {
+        inFence = true;
+        fenceMarker = fenceMatch[1];
+      } else if (trimmed.startsWith(fenceMarker)) inFence = false;
       continue;
     }
     if (inFence) continue;

@@ -61,15 +61,11 @@ function parseHeadings(md: string): Heading[] {
 
 export function Outline() {
   const tab = useAppStore(getActiveTab);
-  const headings = useMemo(() => (tab ? parseHeadings(tab.content) : []), [
-    tab?.content,
-  ]);
+  const headings = useMemo(() => (tab ? parseHeadings(tab.content) : []), [tab?.content]);
 
   if (!tab) return null;
   if (headings.length === 0) {
-    return (
-      <div className="text-xs opacity-50 px-3 py-3">No headings.</div>
-    );
+    return <div className="text-xs opacity-50 px-3 py-3">No headings.</div>;
   }
 
   return (
@@ -84,7 +80,10 @@ export function Outline() {
             onClick={() => scrollToHeading(h.text, h.level)}
             title={h.text}
             className="w-full text-left text-[12px] py-0.5 hover:bg-black/5 dark:hover:bg-white/10 truncate block"
-            style={{ paddingLeft: `${0.75 + (h.level - 1) * 0.85}rem`, paddingRight: "0.5rem" }}
+            style={{
+              paddingLeft: `${0.75 + (h.level - 1) * 0.85}rem`,
+              paddingRight: "0.5rem",
+            }}
           >
             <span className="truncate">{h.text}</span>
           </button>
@@ -103,9 +102,7 @@ export function Outline() {
  */
 function scrollToHeading(text: string, level: number) {
   const tag = `H${level}`;
-  const candidates = document.querySelectorAll(
-    `.milkdown ${tag}, .cm-content ${tag}`,
-  );
+  const candidates = document.querySelectorAll(`.milkdown ${tag}, .cm-content ${tag}`);
   for (const node of Array.from(candidates)) {
     if ((node.textContent ?? "").trim() === text) {
       (node as HTMLElement).scrollIntoView({

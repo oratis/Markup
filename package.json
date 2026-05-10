@@ -13,7 +13,10 @@
     "tauri:build": "tauri build --target x86_64-apple-darwin",
     "test": "vitest",
     "test:rust": "cd src-tauri && cargo test",
-    "bench:spike03": "cd src-tauri && cargo test --release --test spike_03 -- --nocapture --ignored"
+    "bench:spike03": "cd src-tauri && cargo test --release --test spike_03 -- --nocapture --ignored",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@codemirror/commands": "^6.7.1",
@@ -52,6 +55,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@tauri-apps/cli": "^2.0.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

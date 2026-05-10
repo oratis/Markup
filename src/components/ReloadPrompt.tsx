@@ -1,5 +1,5 @@
-import { getActiveTab, useAppStore } from "../store";
 import { readFile } from "../lib/tauri";
+import { getActiveTab, useAppStore } from "../store";
 
 interface Props {
   onReload?: () => void;
@@ -32,8 +32,8 @@ export function ReloadPrompt({ onReload, onDismiss }: Props) {
   return (
     <div className="bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border-b border-amber-300 dark:border-amber-700 px-4 py-2 flex items-center gap-3 text-[12px]">
       <span className="flex-1">
-        File changed on disk since you opened it. Reload to see the latest
-        version (your unsaved edits will be discarded).
+        File changed on disk since you opened it. Reload to see the latest version (your
+        unsaved edits will be discarded).
       </span>
       <button
         onClick={reload}

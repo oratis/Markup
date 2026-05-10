@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAppStore } from "../store";
 import { readFile } from "../lib/tauri";
+import { useAppStore } from "../store";
 
 interface QuickOpenProps {
   onClose: () => void;
@@ -25,7 +25,7 @@ export function QuickOpen({ onClose }: QuickOpenProps) {
         const score = scoreSubsequence(f.relPath.toLowerCase(), q);
         return { f, score };
       })
-      .filter((x) => x.score > -Infinity)
+      .filter((x) => x.score > Number.NEGATIVE_INFINITY)
       .sort((a, b) => b.score - a.score)
       .slice(0, 50)
       .map((x) => x.f);
@@ -106,7 +106,7 @@ function scoreSubsequence(haystack: string, needle: string): number {
   let lastMatchH = -1;
   for (let n = 0; n < needle.length; n++) {
     while (h < haystack.length && haystack[h] !== needle[n]) h++;
-    if (h >= haystack.length) return -Infinity;
+    if (h >= haystack.length) return Number.NEGATIVE_INFINITY;
     // bonuses: consecutive runs, after a separator
     if (lastMatchH === h - 1) score += 3;
     else score += 1;

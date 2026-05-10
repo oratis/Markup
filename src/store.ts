@@ -181,6 +181,14 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => {
       const idx = state.tabs.findIndex((t) => t.id === id);
       if (idx < 0) return state;
+      const target = state.tabs[idx];
+      // Confirm if dirty (and we're closing a real file, not a scratch buffer)
+      if (target.status === "dirty" && target.path) {
+        const ok = window.confirm(
+          `"${target.name}" has unsaved changes that will be lost. Close anyway?`,
+        );
+        if (!ok) return state;
+      }
       const tabs = state.tabs.filter((t) => t.id !== id);
       if (tabs.length === 0) {
         return {
@@ -189,9 +197,7 @@ export const useAppStore = create<AppState>((set) => ({
         };
       }
       const activeTabId =
-        state.activeTabId === id
-          ? tabs[Math.max(0, idx - 1)].id
-          : state.activeTabId;
+        state.activeTabId === id ? tabs[Math.max(0, idx - 1)].id : state.activeTabId;
       return { tabs, activeTabId };
     }),
 
@@ -219,9 +225,7 @@ export const useAppStore = create<AppState>((set) => ({
       const id = state.activeTabId;
       if (!id) return state;
       return {
-        tabs: state.tabs.map((t) =>
-          t.id === id ? { ...t, status, errorMessage } : t,
-        ),
+        tabs: state.tabs.map((t) => (t.id === id ? { ...t, status, errorMessage } : t)),
       };
     }),
 
@@ -240,9 +244,7 @@ export const useAppStore = create<AppState>((set) => ({
       if (!id) return state;
       return {
         tabs: state.tabs.map((t) =>
-          t.id === id
-            ? { ...t, id: path, path, name, mtimeMs, status: "saved" }
-            : t,
+          t.id === id ? { ...t, id: path, path, name, mtimeMs, status: "saved" } : t,
         ),
         activeTabId: path,
       };
@@ -257,15 +259,11 @@ export const useAppStore = create<AppState>((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleOutline: () => set((s) => ({ outlineOpen: !s.outlineOpen })),
   toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
-  toggleTypewriterMode: () =>
-    set((s) => ({ typewriterMode: !s.typewriterMode })),
+  toggleTypewriterMode: () => set((s) => ({ typewriterMode: !s.typewriterMode })),
 
   pushRecentFile: (path) =>
     set((state) => {
-      const next = [path, ...state.recentFiles.filter((p) => p !== path)].slice(
-        0,
-        20,
-      );
+      const next = [path, ...state.recentFiles.filter((p) => p !== path)].slice(0, 20);
       return { recentFiles: next };
     }),
   setRecentFiles: (paths) => set({ recentFiles: paths }),

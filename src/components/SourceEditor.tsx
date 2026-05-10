@@ -1,18 +1,18 @@
-import { useEffect, useRef } from "react";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { markdown } from "@codemirror/lang-markdown";
+import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { search, searchKeymap } from "@codemirror/search";
 import { EditorState } from "@codemirror/state";
+import { oneDark } from "@codemirror/theme-one-dark";
 import {
   EditorView,
+  drawSelection,
+  highlightActiveLine,
+  highlightActiveLineGutter,
   keymap,
   lineNumbers,
-  highlightActiveLineGutter,
-  highlightActiveLine,
-  drawSelection,
 } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { searchKeymap, search } from "@codemirror/search";
-import { markdown } from "@codemirror/lang-markdown";
-import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
-import { oneDark } from "@codemirror/theme-one-dark";
+import { useEffect, useRef } from "react";
 import { log as perfLog } from "../lib/perf";
 
 interface SourceEditorProps {

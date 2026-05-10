@@ -1,6 +1,19 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { LoadedFile, VaultOpened, VaultFile, SearchHit } from "./types";
+import { type UnlistenFn, listen } from "@tauri-apps/api/event";
+import { save as saveDialog } from "@tauri-apps/plugin-dialog";
+import type { LoadedFile, SearchHit, VaultFile, VaultOpened } from "./types";
+
+export { getVersion };
+
+export async function pickSavePath(defaultName: string): Promise<string | null> {
+  const path = await saveDialog({
+    title: "Save Markdown File",
+    defaultPath: defaultName,
+    filters: [{ name: "Markdown", extensions: ["md", "markdown", "mdx"] }],
+  });
+  return path ?? null;
+}
 
 export async function openFileDialog(): Promise<LoadedFile | null> {
   return await invoke<LoadedFile | null>("open_file");
@@ -44,10 +57,7 @@ export async function writeImage(
   });
 }
 
-export async function renderHtml(
-  content: string,
-  title: string | null,
-): Promise<string> {
+export async function renderHtml(content: string, title: string | null): Promise<string> {
   return await invoke<string>("render_html", { content, title });
 }
 
@@ -71,21 +81,14 @@ export async function currentVault(): Promise<string | null> {
   return await invoke<string | null>("current_vault");
 }
 
-export async function searchVault(
-  query: string,
-  limit = 50,
-): Promise<SearchHit[]> {
+export async function searchVault(query: string, limit = 50): Promise<SearchHit[]> {
   return await invoke<SearchHit[]>("search_vault", { query, limit });
 }
 
-export async function listenMenu(
-  cb: (id: string) => void,
-): Promise<UnlistenFn> {
+export async function listenMenu(cb: (id: string) => void): Promise<UnlistenFn> {
   return await listen<string>("menu-event", (e) => cb(e.payload));
 }
 
-export async function listenVaultChanged(
-  cb: () => void,
-): Promise<UnlistenFn> {
+export async function listenVaultChanged(cb: () => void): Promise<UnlistenFn> {
   return await listen<void>("vault-changed", () => cb());
 }

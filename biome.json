@@ -1,0 +1,66 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "ignore": [
+      "dist",
+      "node_modules",
+      "src-tauri/target",
+      "src-tauri/gen",
+      "test-fixtures",
+      "pnpm-lock.yaml"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 90
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "noUnusedTemplateLiteral": "off",
+        "useImportType": "warn",
+        "noNonNullAssertion": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noAssignInExpressions": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "off",
+        "noInvalidPositionAtImportRule": "off",
+        "noUnknownFunction": "off"
+      },
+      "a11y": {
+        "useKeyWithClickEvents": "off",
+        "useButtonType": "off",
+        "useGenericFontNames": "off"
+      },
+      "complexity": {
+        "noForEach": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "include": ["src/test/setup.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": { "noAssignInExpressions": "off" }
+        }
+      }
+    }
+  ]
+}

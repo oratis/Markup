@@ -26,14 +26,20 @@ export function installFocusTypewriter(opts: {
     let n: Node | null = node;
     while (n && n.nodeType !== 1) n = n.parentNode;
     let el = n as HTMLElement | null;
-    while (el && el.parentElement) {
+    while (el?.parentElement) {
       const tag = el.tagName;
       if (
         tag === "P" ||
-        tag === "H1" || tag === "H2" || tag === "H3" ||
-        tag === "H4" || tag === "H5" || tag === "H6" ||
-        tag === "LI" || tag === "BLOCKQUOTE" ||
-        tag === "PRE" || tag === "TABLE"
+        tag === "H1" ||
+        tag === "H2" ||
+        tag === "H3" ||
+        tag === "H4" ||
+        tag === "H5" ||
+        tag === "H6" ||
+        tag === "LI" ||
+        tag === "BLOCKQUOTE" ||
+        tag === "PRE" ||
+        tag === "TABLE"
       ) {
         return el;
       }
