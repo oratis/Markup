@@ -1836,6 +1836,26 @@ export function App() {
         },
       },
       {
+        id: "copy_line_up",
+        label: "Copy Line Up (Source)",
+        run: async () => {
+          const view = getActiveSourceView();
+          if (!view) return;
+          const { copyLineUp } = await import("@codemirror/commands");
+          copyLineUp(view);
+        },
+      },
+      {
+        id: "copy_line_down",
+        label: "Copy Line Down (Source)",
+        run: async () => {
+          const view = getActiveSourceView();
+          if (!view) return;
+          const { copyLineDown } = await import("@codemirror/commands");
+          copyLineDown(view);
+        },
+      },
+      {
         id: "toggle_blockquote",
         label: "Toggle Blockquote (Source)",
         run: () => {
