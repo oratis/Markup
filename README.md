@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/oratis/Markup/actions/workflows/ci.yml/badge.svg)](https://github.com/oratis/Markup/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/oratis/Markup?label=release)](https://github.com/oratis/Markup/releases)
+[![codecov](https://codecov.io/gh/oratis/Markup/branch/main/graph/badge.svg)](https://codecov.io/gh/oratis/Markup)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 设计与决策见 [docs/README.md](./docs/README.md)。

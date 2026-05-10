@@ -3,6 +3,7 @@ mod commands_vault;
 mod menu;
 
 pub mod error;
+pub mod i18n;
 pub mod index;
 pub mod scanner;
 pub mod vault;

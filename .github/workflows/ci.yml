@@ -40,9 +40,17 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Run unit tests
-        run: pnpm test --run
+      - name: Run unit tests with coverage
+        run: pnpm test:coverage
         if: hashFiles('vitest.config.ts') != ''
+
+      - name: Upload coverage to Codecov
+        if: hashFiles('coverage/lcov.info') != ''
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/lcov.info
+          flags: frontend
+          fail_ci_if_error: false
 
   rust:
     name: Rust (build + test)

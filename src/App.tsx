@@ -16,6 +16,7 @@ import { Toolbar } from "./components/Toolbar";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { useT } from "./lib/i18n";
+import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import {
@@ -286,28 +287,32 @@ export function App() {
     );
   }
 
-  // Image paste in WYSIWYG (Milkdown / contenteditable). Source-mode paste is
-  // installed inside SourceEditor where the CM6 view is reachable.
+  // Image paste / drop in WYSIWYG (Milkdown / contenteditable). Source-mode
+  // paste + drop are installed inside SourceEditor where the CM6 view is
+  // reachable for direct dispatch.
   useEffect(() => {
     if (sourceMode) return;
     const host = editorScrollRef.current;
     if (!host) return;
-    const dispose = installImagePaste(host, {
+    const insertAtSelection = (md: string) => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(document.createTextNode(md));
+      sel.collapseToEnd();
+    };
+    const opts = {
       vaultRoot: useAppStore.getState().vaultRoot,
       imageDir: useAppStore.getState().imagePasteDir,
-      insert: (md) => {
-        const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0) return;
-        // Insert plain text via execCommand-style fallback
-        const range = sel.getRangeAt(0);
-        range.deleteContents();
-        range.insertNode(document.createTextNode(md));
-        sel.collapseToEnd();
-        // Notify the editor onChange will fire via the standard input event
-        // path; for source mode, CodeMirror picks it up natively.
-      },
-    });
-    return dispose;
+      insert: insertAtSelection,
+    };
+    const detachPaste = installImagePaste(host, opts);
+    const detachDrop = installImageDrop(host, opts);
+    return () => {
+      detachPaste();
+      detachDrop();
+    };
   }, [tab?.id, sourceMode]);
 
   const performSave = useCallback(async () => {

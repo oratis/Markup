@@ -13,6 +13,7 @@ import {
   lineNumbers,
 } from "@codemirror/view";
 import { useEffect, useRef } from "react";
+import { installImageDrop } from "../lib/image-drop";
 import { installImagePaste } from "../lib/image-paste";
 import { log as perfLog } from "../lib/perf";
 import { useAppStore } from "../store";
@@ -58,24 +59,28 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     viewRef.current = view;
     perfLog(`source-load[${value.length}b]`, performance.now() - t0);
 
-    // Image paste → write to vault, dispatch CM6 transaction inserting the
-    // markdown reference at the current selection.
-    const detachPaste = installImagePaste(hostRef.current, {
+    // Image paste / drop → write to vault, dispatch CM6 transaction
+    // inserting the markdown reference at the current selection.
+    const insertAtSelection = (md: string) => {
+      const v = viewRef.current;
+      if (!v) return;
+      const { from, to } = v.state.selection.main;
+      v.dispatch({
+        changes: { from, to, insert: md },
+        selection: { anchor: from + md.length },
+      });
+    };
+    const imageOpts = {
       vaultRoot: useAppStore.getState().vaultRoot,
       imageDir: useAppStore.getState().imagePasteDir,
-      insert: (md) => {
-        const v = viewRef.current;
-        if (!v) return;
-        const { from, to } = v.state.selection.main;
-        v.dispatch({
-          changes: { from, to, insert: md },
-          selection: { anchor: from + md.length },
-        });
-      },
-    });
+      insert: insertAtSelection,
+    };
+    const detachPaste = installImagePaste(hostRef.current, imageOpts);
+    const detachDrop = installImageDrop(hostRef.current, imageOpts);
 
     return () => {
       detachPaste();
+      detachDrop();
       view.destroy();
       viewRef.current = null;
     };

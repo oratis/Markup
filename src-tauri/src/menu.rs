@@ -1,15 +1,22 @@
 //! Native macOS menu bar. Items emit `menu-event` notifications which the
-//! React side listens for via `listen('menu-event', ...)`.
+//! React side listens for via `listen('menu-event', ...)`. Labels are
+//! localised via [`crate::i18n`].
 
+use crate::i18n::{self, Locale};
 use tauri::menu::{Menu, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Wry};
 
 pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
+    let loc = i18n::detect();
+    build_with_locale(app, loc)
+}
+
+pub fn build_with_locale(app: &AppHandle, loc: Locale) -> tauri::Result<Menu<Wry>> {
     let app_submenu = SubmenuBuilder::new(app, "Markup")
-        .item(&PredefinedMenuItem::about(app, Some("About Markup"), None)?)
+        .item(&PredefinedMenuItem::about(app, Some(i18n::t(loc, "menu.about")), None)?)
         .separator()
         .item(
-            &MenuItemBuilder::with_id("settings", "Settings…")
+            &MenuItemBuilder::with_id("settings", i18n::t(loc, "menu.settings"))
                 .accelerator("CmdOrCtrl+,")
                 .build(app)?,
         )
@@ -23,59 +30,59 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(&PredefinedMenuItem::quit(app, None)?)
         .build()?;
 
-    let file_submenu = SubmenuBuilder::new(app, "File")
+    let file_submenu = SubmenuBuilder::new(app, i18n::t(loc, "menu.file"))
         .item(
-            &MenuItemBuilder::with_id("new_file", "New File")
+            &MenuItemBuilder::with_id("new_file", i18n::t(loc, "menu.new"))
                 .accelerator("CmdOrCtrl+N")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("open_file", "Open File…")
+            &MenuItemBuilder::with_id("open_file", i18n::t(loc, "menu.open"))
                 .accelerator("CmdOrCtrl+O")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("open_recent", "Open Recent…")
+            &MenuItemBuilder::with_id("open_recent", i18n::t(loc, "menu.openRecent"))
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("open_vault", "Open Vault…")
+            &MenuItemBuilder::with_id("open_vault", i18n::t(loc, "menu.openVault"))
                 .accelerator("CmdOrCtrl+Shift+O")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("close_vault", "Close Vault")
+            &MenuItemBuilder::with_id("close_vault", i18n::t(loc, "menu.closeVault"))
                 .build(app)?,
         )
         .separator()
         .item(
-            &MenuItemBuilder::with_id("save", "Save")
+            &MenuItemBuilder::with_id("save", i18n::t(loc, "menu.save"))
                 .accelerator("CmdOrCtrl+S")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("save_as", "Save As…")
+            &MenuItemBuilder::with_id("save_as", i18n::t(loc, "menu.saveAs"))
                 .accelerator("CmdOrCtrl+Shift+S")
                 .build(app)?,
         )
         .separator()
         .item(
-            &MenuItemBuilder::with_id("export_html", "Export as HTML…")
+            &MenuItemBuilder::with_id("export_html", i18n::t(loc, "menu.exportHtml"))
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("export_pdf", "Export as PDF (Print)…")
+            &MenuItemBuilder::with_id("export_pdf", i18n::t(loc, "menu.exportPdf"))
                 .build(app)?,
         )
         .separator()
         .item(
-            &MenuItemBuilder::with_id("close_tab", "Close Tab")
+            &MenuItemBuilder::with_id("close_tab", i18n::t(loc, "menu.closeTab"))
                 .accelerator("CmdOrCtrl+W")
                 .build(app)?,
         )
         .build()?;
 
-    let edit_submenu = SubmenuBuilder::new(app, "Edit")
+    let edit_submenu = SubmenuBuilder::new(app, i18n::t(loc, "menu.edit"))
         .item(&PredefinedMenuItem::undo(app, None)?)
         .item(&PredefinedMenuItem::redo(app, None)?)
         .separator()
@@ -85,71 +92,77 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(&PredefinedMenuItem::select_all(app, None)?)
         .separator()
         .item(
-            &MenuItemBuilder::with_id("find_in_file", "Find in File")
+            &MenuItemBuilder::with_id("find_in_file", i18n::t(loc, "menu.findInFile"))
                 .accelerator("CmdOrCtrl+F")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("find_in_vault", "Find in Vault")
+            &MenuItemBuilder::with_id("find_in_vault", i18n::t(loc, "menu.findInVault"))
                 .accelerator("CmdOrCtrl+Shift+F")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("quick_open", "Quick Open")
+            &MenuItemBuilder::with_id("quick_open", i18n::t(loc, "menu.quickOpen"))
                 .accelerator("CmdOrCtrl+P")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("command_palette", "Command Palette")
+            &MenuItemBuilder::with_id("command_palette", i18n::t(loc, "menu.commandPalette"))
                 .accelerator("CmdOrCtrl+Shift+P")
                 .build(app)?,
         )
         .build()?;
 
-    let view_submenu = SubmenuBuilder::new(app, "View")
+    let view_submenu = SubmenuBuilder::new(app, i18n::t(loc, "menu.view"))
         .item(
-            &MenuItemBuilder::with_id("toggle_source_mode", "Toggle Source Mode")
-                .accelerator("CmdOrCtrl+/")
-                .build(app)?,
+            &MenuItemBuilder::with_id(
+                "toggle_source_mode",
+                i18n::t(loc, "menu.toggleSourceMode"),
+            )
+            .accelerator("CmdOrCtrl+/")
+            .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("toggle_sidebar", "Toggle Sidebar")
+            &MenuItemBuilder::with_id("toggle_sidebar", i18n::t(loc, "menu.toggleSidebar"))
                 .accelerator("CmdOrCtrl+B")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("toggle_outline", "Toggle Outline")
+            &MenuItemBuilder::with_id("toggle_outline", i18n::t(loc, "menu.toggleOutline"))
                 .build(app)?,
         )
         .separator()
         .item(
-            &MenuItemBuilder::with_id("toggle_focus", "Focus Mode")
+            &MenuItemBuilder::with_id("toggle_focus", i18n::t(loc, "menu.focusMode"))
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("toggle_typewriter", "Typewriter Mode")
+            &MenuItemBuilder::with_id("toggle_typewriter", i18n::t(loc, "menu.typewriterMode"))
                 .build(app)?,
         )
         .separator()
         .item(
-            &MenuItemBuilder::with_id("theme_light", "Light Theme").build(app)?,
+            &MenuItemBuilder::with_id("theme_light", i18n::t(loc, "menu.themeLight"))
+                .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("theme_dark", "Dark Theme").build(app)?,
+            &MenuItemBuilder::with_id("theme_dark", i18n::t(loc, "menu.themeDark"))
+                .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("theme_sepia", "Sepia Theme").build(app)?,
+            &MenuItemBuilder::with_id("theme_sepia", i18n::t(loc, "menu.themeSepia"))
+                .build(app)?,
         )
         .build()?;
 
-    let window_submenu = SubmenuBuilder::new(app, "Window")
+    let window_submenu = SubmenuBuilder::new(app, i18n::t(loc, "menu.window"))
         .item(&PredefinedMenuItem::minimize(app, None)?)
         .item(&PredefinedMenuItem::maximize(app, None)?)
         .item(&PredefinedMenuItem::fullscreen(app, None)?)
         .build()?;
 
-    let help_submenu = SubmenuBuilder::new(app, "Help")
-        .item(&MenuItemBuilder::with_id("about", "About Markup").build(app)?)
+    let help_submenu = SubmenuBuilder::new(app, i18n::t(loc, "menu.help"))
+        .item(&MenuItemBuilder::with_id("about", i18n::t(loc, "menu.about")).build(app)?)
         .build()?;
 
     Menu::with_items(
