@@ -57,6 +57,8 @@ export const en = {
   "settings.restore": "Restore defaults",
   "settings.done": "Done",
 
+  "cheatsheet.title": "Keyboard shortcuts",
+
   "about.tagline": "High-performance Markdown editor for macOS",
   "about.version": "Version",
   "about.close": "Close",

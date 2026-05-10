@@ -58,6 +58,8 @@ export const zh: Strings = {
   "settings.restore": "恢复默认",
   "settings.done": "完成",
 
+  "cheatsheet.title": "键盘快捷键",
+
   "about.tagline": "面向 macOS 的高性能 Markdown 编辑器",
   "about.version": "版本",
   "about.close": "关闭",

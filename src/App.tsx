@@ -11,6 +11,7 @@ import { ReloadPrompt } from "./components/ReloadPrompt";
 import { Resizer } from "./components/Resizer";
 import { SearchPanel } from "./components/SearchPanel";
 import { SettingsDialog } from "./components/SettingsDialog";
+import { ShortcutsCheatsheet } from "./components/ShortcutsCheatsheet";
 import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
 import { ToastHost, showToast } from "./components/Toast";
@@ -146,6 +147,7 @@ export function App() {
   const [showRecentOpen, setShowRecentOpen] = useState(false);
   const [showFindBar, setShowFindBar] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showCheatsheet, setShowCheatsheet] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWikilinkPicker, setShowWikilinkPicker] = useState(false);
@@ -2052,6 +2054,11 @@ export function App() {
       },
       { id: "about", label: "About Markup", run: () => setShowAbout(true) },
       {
+        id: "shortcuts_cheatsheet",
+        label: "Shortcuts Cheatsheet",
+        run: () => setShowCheatsheet(true),
+      },
+      {
         id: "settings",
         label: "Settings…",
         shortcut: "⌘,",
@@ -2311,6 +2318,7 @@ export function App() {
         />
       )}
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
+      {showCheatsheet && <ShortcutsCheatsheet onClose={() => setShowCheatsheet(false)} />}
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
       {showOnboarding && (
         <Onboarding
