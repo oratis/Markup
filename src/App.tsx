@@ -579,6 +579,24 @@ export function App() {
     setExternalMtime(null);
   }, []);
 
+  // beforeunload guard: warn the user before closing the window when any
+  // path-backed tab is dirty. Tauri's main window respects the standard
+  // beforeunload prompt; in regular browser dev mode it shows the native
+  // "Leave site? Changes you made may not be saved." dialog.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      const dirty = useAppStore
+        .getState()
+        .tabs.some((tx) => tx.path && tx.status === "dirty");
+      if (!dirty) return;
+      e.preventDefault();
+      // Some browsers gate the prompt on a non-empty returnValue.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   // Save All silently when the window loses focus, if the user opted in.
   // This is a safety net: avoids losing work to crashes / power loss while
   // the editor is in a background tab. Errors are swallowed (the per-tab
@@ -1648,7 +1666,7 @@ export function App() {
 
   return (
     <div className="flex flex-col h-full">
-      <Toolbar />
+      <Toolbar onInsertLink={promptInsertLink} />
       <TabBar />
       {showReload && (
         <ReloadPrompt

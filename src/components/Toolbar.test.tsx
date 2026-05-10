@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "../store";
 import { Toolbar } from "./Toolbar";
 
@@ -62,5 +62,21 @@ describe("Toolbar", () => {
     const btn = screen.getByTitle(/show sidebar/i);
     fireEvent.click(btn);
     expect(useAppStore.getState().sidebarOpen).toBe(true);
+  });
+
+  it("renders the inline formatting cluster (B / I / Code / Link / HR)", () => {
+    render(<Toolbar />);
+    expect(screen.getByLabelText(/bold/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/italic/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/inline code/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/insert link/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/horizontal rule/i)).toBeInTheDocument();
+  });
+
+  it("link button calls the supplied onInsertLink prop", () => {
+    const onInsertLink = vi.fn();
+    render(<Toolbar onInsertLink={onInsertLink} />);
+    fireEvent.click(screen.getByLabelText(/insert link/i));
+    expect(onInsertLink).toHaveBeenCalledTimes(1);
   });
 });
