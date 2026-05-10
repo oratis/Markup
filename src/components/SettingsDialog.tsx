@@ -25,6 +25,7 @@ export function SettingsDialog({ onClose }: Props) {
   const trimOnSave = useAppStore((s) => s.trimOnSave);
   const showLineNumbers = useAppStore((s) => s.showLineNumbers);
   const wordCountGoal = useAppStore((s) => s.wordCountGoal);
+  const showToolbar = useAppStore((s) => s.showToolbar);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
@@ -39,6 +40,7 @@ export function SettingsDialog({ onClose }: Props) {
     trimOnSave,
     showLineNumbers,
     wordCountGoal,
+    showToolbar,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -224,6 +226,7 @@ export function SettingsDialog({ onClose }: Props) {
                 trimOnSave: false,
                 showLineNumbers: true,
                 wordCountGoal: 0,
+                showToolbar: true,
               });
             }}
             className="opacity-70 hover:opacity-100 underline"

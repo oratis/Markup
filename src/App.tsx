@@ -288,6 +288,7 @@ export function App() {
   const trimOnSave = useAppStore((s) => s.trimOnSave);
   const showLineNumbers = useAppStore((s) => s.showLineNumbers);
   const wordCountGoal = useAppStore((s) => s.wordCountGoal);
+  const showToolbar = useAppStore((s) => s.showToolbar);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -309,6 +310,7 @@ export function App() {
           trimOnSave,
           showLineNumbers,
           wordCountGoal,
+          showToolbar,
         }),
       );
     } catch {
@@ -328,6 +330,7 @@ export function App() {
     trimOnSave,
     showLineNumbers,
     wordCountGoal,
+    showToolbar,
   ]);
 
   // Push recent file when active tab changes to a real file. Mirror to
@@ -1358,6 +1361,60 @@ export function App() {
         run: reloadFromDisk,
       },
       {
+        id: "reload_all_files",
+        label: "Reload All Files from Disk",
+        run: async () => {
+          const state = useAppStore.getState();
+          const targets = state.tabs.filter((tx) => tx.path);
+          if (targets.length === 0) return;
+          // Confirm if any targeted tab has unsaved changes.
+          const dirty = targets.find((tx) => tx.status === "dirty");
+          if (dirty) {
+            const ok = window.confirm(tr("reload.confirmDirtyAll", dirty.name));
+            if (!ok) return;
+          }
+          let reloaded = 0;
+          let failed = 0;
+          await Promise.allSettled(
+            targets.map(async (tx) => {
+              try {
+                const loaded = await readFile(String(tx.path));
+                useAppStore.setState((s) => ({
+                  tabs: s.tabs.map((c) =>
+                    c.id === tx.id
+                      ? {
+                          ...c,
+                          content: loaded.content,
+                          mtimeMs: loaded.mtime_ms,
+                          status: "saved",
+                          errorMessage: null,
+                        }
+                      : c,
+                  ),
+                }));
+                reloaded += 1;
+              } catch {
+                failed += 1;
+              }
+            }),
+          );
+          setExternalMtime(null);
+          if (failed === 0) {
+            showToast(tr("toast.reloadedAll", reloaded));
+          } else {
+            showToast(tr("toast.reloadAllPartial", reloaded, failed));
+          }
+        },
+      },
+      {
+        id: "toggle_toolbar",
+        label: "Toggle Toolbar",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ showToolbar: !s.showToolbar });
+        },
+      },
+      {
         id: "reveal_in_tree",
         label: "Reveal in File Tree",
         run: () => {
@@ -1422,6 +1479,7 @@ export function App() {
               trimOnSave: s.trimOnSave,
               showLineNumbers: s.showLineNumbers,
               wordCountGoal: s.wordCountGoal,
+              showToolbar: s.showToolbar,
             },
             null,
             2,
@@ -1838,6 +1896,7 @@ export function App() {
             trimOnSave: false,
             showLineNumbers: true,
             wordCountGoal: 0,
+            showToolbar: true,
           });
           s.setTheme("auto");
           s.setRecentFiles([]);
@@ -1947,7 +2006,7 @@ export function App() {
 
   return (
     <div className="flex flex-col h-full">
-      <Toolbar onInsertLink={promptInsertLink} />
+      {showToolbar && <Toolbar onInsertLink={promptInsertLink} />}
       <TabBar />
       {showReload && (
         <ReloadPrompt

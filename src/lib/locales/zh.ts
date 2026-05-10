@@ -87,6 +87,8 @@ export const zh: Strings = {
   "toast.saveAllFailed": "已保存 {0}，{1} 个失败",
   "toast.tableSizeBad": "格式：行 x 列（例如 3x4）",
   "toast.reloaded": "已从磁盘重新加载",
+  "toast.reloadedAll": "已重新加载 {0} 个文件",
+  "toast.reloadAllPartial": "已重新加载 {0}，{1} 个失败",
   "toast.renameNoFile": "没有可重命名的文件",
   "toast.renameBadName": "文件名不能包含 '/'",
   "toast.renameFailed": "重命名失败",
@@ -106,6 +108,8 @@ export const zh: Strings = {
   "prompt.codeBlockLang": "语言（留空表示无）：",
   "prompt.wordGoal": "字数目标（0 = 关闭）：",
   "reload.confirmDirty": "「{0}」有未保存的修改，重新加载会丢失。继续吗？",
+  "reload.confirmDirtyAll":
+    "至少有一个标签页有未保存的修改（例如「{0}」）。仍然重新加载全部吗？",
   "toast.wikilinkMiss": "Vault 里没有匹配的文件：{0}",
   "toast.openFailed": "打开 {0} 失败",
   "toast.largeFileSource": "大文件（{0}）— 已切换到源码模式",

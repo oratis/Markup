@@ -86,6 +86,8 @@ export const en = {
   "toast.saveAllFailed": "Saved {0}, {1} failed",
   "toast.tableSizeBad": "Format: rows x cols (e.g. 3x4)",
   "toast.reloaded": "Reloaded from disk",
+  "toast.reloadedAll": "Reloaded {0} files",
+  "toast.reloadAllPartial": "Reloaded {0}, {1} failed",
   "toast.renameNoFile": "No file to rename",
   "toast.renameBadName": "Name can't contain '/'",
   "toast.renameFailed": "Rename failed",
@@ -106,6 +108,8 @@ export const en = {
   "prompt.wordGoal": "Word-count goal (0 = off):",
   "reload.confirmDirty":
     '"{0}" has unsaved changes that will be lost on reload. Continue?',
+  "reload.confirmDirtyAll":
+    'At least one tab has unsaved changes (e.g. "{0}"). Reload all anyway?',
   "toast.wikilinkMiss": 'No vault file matches "{0}"',
   "toast.openFailed": "Failed to open {0}",
   "toast.largeFileSource": "Large file ({0}) — switched to source mode",

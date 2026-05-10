@@ -73,6 +73,8 @@ interface AppState {
   showLineNumbers: boolean;
   /** Word-count goal for the active doc; status bar shows progress. 0 = off. */
   wordCountGoal: number;
+  /** Show the top toolbar. Off = zen mode. */
+  showToolbar: boolean;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -141,6 +143,7 @@ export interface Settings {
   trimOnSave: boolean;
   showLineNumbers: boolean;
   wordCountGoal: number;
+  showToolbar: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -157,6 +160,7 @@ export const DEFAULT_SETTINGS: Settings = {
   trimOnSave: false,
   showLineNumbers: true,
   wordCountGoal: 0,
+  showToolbar: true,
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -258,6 +262,7 @@ export const useAppStore = create<AppState>((set) => ({
   trimOnSave: DEFAULT_SETTINGS.trimOnSave,
   showLineNumbers: DEFAULT_SETTINGS.showLineNumbers,
   wordCountGoal: DEFAULT_SETTINGS.wordCountGoal,
+  showToolbar: DEFAULT_SETTINGS.showToolbar,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -548,6 +553,7 @@ export const useAppStore = create<AppState>((set) => ({
       const trimOnSave = patch.trimOnSave ?? state.trimOnSave;
       const showLineNumbers = patch.showLineNumbers ?? state.showLineNumbers;
       const wordCountGoal = clamp(patch.wordCountGoal ?? state.wordCountGoal, 0, 100_000);
+      const showToolbar = patch.showToolbar ?? state.showToolbar;
       return {
         fontSize,
         proseMaxWidth,
@@ -562,6 +568,7 @@ export const useAppStore = create<AppState>((set) => ({
         trimOnSave,
         showLineNumbers,
         wordCountGoal,
+        showToolbar,
       };
     }),
 
