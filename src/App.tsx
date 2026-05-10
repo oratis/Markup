@@ -2132,6 +2132,22 @@ export function App() {
         },
       },
       {
+        id: "prose_wider",
+        label: "Prose: Wider Column",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ proseMaxWidth: s.proseMaxWidth + 40 });
+        },
+      },
+      {
+        id: "prose_narrower",
+        label: "Prose: Narrower Column",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ proseMaxWidth: s.proseMaxWidth - 40 });
+        },
+      },
+      {
         id: "insert_link",
         label: "Insert Link…",
         shortcut: "⌘K",
