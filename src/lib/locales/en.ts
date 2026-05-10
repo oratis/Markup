@@ -37,6 +37,8 @@ export const en = {
   "settings.spellcheckHint": "Browser-native",
   "settings.lineWrap": "Line wrap",
   "settings.lineWrapHint": "Source mode",
+  "settings.saveOnBlur": "Save on blur",
+  "settings.saveOnBlurHint": "Window unfocus",
   "settings.on": "On",
   "settings.off": "Off",
   "settings.restore": "Restore defaults",

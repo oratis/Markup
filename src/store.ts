@@ -59,6 +59,12 @@ interface AppState {
   /** Source-mode soft line wrapping. When false, long lines scroll
    * horizontally instead of wrapping. */
   lineWrap: boolean;
+  /** Width of the file-tree sidebar in px (when open). */
+  sidebarWidth: number;
+  /** Width of the outline panel in px (when open). */
+  outlineWidth: number;
+  /** Trigger Save All silently when the window loses focus. */
+  saveOnBlur: boolean;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -114,6 +120,9 @@ export interface Settings {
   exportTheme: "github" | "plain" | "tufte";
   spellcheck: boolean;
   lineWrap: boolean;
+  sidebarWidth: number;
+  outlineWidth: number;
+  saveOnBlur: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -124,6 +133,9 @@ export const DEFAULT_SETTINGS: Settings = {
   exportTheme: "github",
   spellcheck: false,
   lineWrap: true,
+  sidebarWidth: 260,
+  outlineWidth: 220,
+  saveOnBlur: false,
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -218,6 +230,9 @@ export const useAppStore = create<AppState>((set) => ({
   exportTheme: DEFAULT_SETTINGS.exportTheme,
   spellcheck: DEFAULT_SETTINGS.spellcheck,
   lineWrap: DEFAULT_SETTINGS.lineWrap,
+  sidebarWidth: DEFAULT_SETTINGS.sidebarWidth,
+  outlineWidth: DEFAULT_SETTINGS.outlineWidth,
+  saveOnBlur: DEFAULT_SETTINGS.saveOnBlur,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -482,6 +497,9 @@ export const useAppStore = create<AppState>((set) => ({
       const exportTheme = patch.exportTheme ?? state.exportTheme;
       const spellcheck = patch.spellcheck ?? state.spellcheck;
       const lineWrap = patch.lineWrap ?? state.lineWrap;
+      const sidebarWidth = clamp(patch.sidebarWidth ?? state.sidebarWidth, 160, 600);
+      const outlineWidth = clamp(patch.outlineWidth ?? state.outlineWidth, 160, 600);
+      const saveOnBlur = patch.saveOnBlur ?? state.saveOnBlur;
       return {
         fontSize,
         proseMaxWidth,
@@ -490,6 +508,9 @@ export const useAppStore = create<AppState>((set) => ({
         exportTheme,
         spellcheck,
         lineWrap,
+        sidebarWidth,
+        outlineWidth,
+        saveOnBlur,
       };
     }),
 

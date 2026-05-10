@@ -38,6 +38,8 @@ export const zh: Strings = {
   "settings.spellcheckHint": "浏览器原生",
   "settings.lineWrap": "自动换行",
   "settings.lineWrapHint": "源码模式",
+  "settings.saveOnBlur": "失焦时自动保存",
+  "settings.saveOnBlurHint": "窗口失去焦点",
   "settings.on": "开启",
   "settings.off": "关闭",
   "settings.restore": "恢复默认",

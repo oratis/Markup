@@ -52,4 +52,18 @@ describe("settings", () => {
     useAppStore.getState().setSettings({ fontSize: Number.NaN });
     expect(useAppStore.getState().fontSize).toBe(11);
   });
+
+  it("clamps sidebar / outline widths to [160, 600]", () => {
+    useAppStore.getState().setSettings({ sidebarWidth: 50, outlineWidth: 9999 });
+    const s = useAppStore.getState();
+    expect(s.sidebarWidth).toBe(160);
+    expect(s.outlineWidth).toBe(600);
+  });
+
+  it("toggles saveOnBlur boolean", () => {
+    useAppStore.getState().setSettings({ saveOnBlur: true });
+    expect(useAppStore.getState().saveOnBlur).toBe(true);
+    useAppStore.getState().setSettings({ saveOnBlur: false });
+    expect(useAppStore.getState().saveOnBlur).toBe(false);
+  });
 });

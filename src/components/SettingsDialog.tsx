@@ -19,6 +19,9 @@ export function SettingsDialog({ onClose }: Props) {
   const exportTheme = useAppStore((s) => s.exportTheme);
   const spellcheck = useAppStore((s) => s.spellcheck);
   const lineWrap = useAppStore((s) => s.lineWrap);
+  const sidebarWidth = useAppStore((s) => s.sidebarWidth);
+  const outlineWidth = useAppStore((s) => s.outlineWidth);
+  const saveOnBlur = useAppStore((s) => s.saveOnBlur);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
@@ -27,6 +30,9 @@ export function SettingsDialog({ onClose }: Props) {
     exportTheme,
     spellcheck,
     lineWrap,
+    sidebarWidth,
+    outlineWidth,
+    saveOnBlur,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -152,6 +158,19 @@ export function SettingsDialog({ onClose }: Props) {
               </span>
             </label>
           </Row>
+
+          <Row label={t("settings.saveOnBlur")} hint={t("settings.saveOnBlurHint")}>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={draft.saveOnBlur}
+                onChange={(e) => commit({ saveOnBlur: e.target.checked })}
+              />
+              <span className="opacity-70">
+                {draft.saveOnBlur ? t("settings.on") : t("settings.off")}
+              </span>
+            </label>
+          </Row>
         </div>
 
         <ShortcutsEditor />
@@ -167,6 +186,9 @@ export function SettingsDialog({ onClose }: Props) {
                 exportTheme: "github",
                 spellcheck: false,
                 lineWrap: true,
+                sidebarWidth: 260,
+                outlineWidth: 220,
+                saveOnBlur: false,
               });
             }}
             className="opacity-70 hover:opacity-100 underline"

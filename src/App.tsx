@@ -8,6 +8,7 @@ import { Onboarding } from "./components/Onboarding";
 import { Outline } from "./components/Outline";
 import { QuickOpen } from "./components/QuickOpen";
 import { ReloadPrompt } from "./components/ReloadPrompt";
+import { Resizer } from "./components/Resizer";
 import { SearchPanel } from "./components/SearchPanel";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { StatusBar } from "./components/StatusBar";
@@ -236,6 +237,9 @@ export function App() {
   const imagePasteDir = useAppStore((s) => s.imagePasteDir);
   const spellcheck = useAppStore((s) => s.spellcheck);
   const lineWrap = useAppStore((s) => s.lineWrap);
+  const sidebarWidth = useAppStore((s) => s.sidebarWidth);
+  const outlineWidth = useAppStore((s) => s.outlineWidth);
+  const saveOnBlur = useAppStore((s) => s.saveOnBlur);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -251,6 +255,9 @@ export function App() {
           exportTheme,
           spellcheck,
           lineWrap,
+          sidebarWidth,
+          outlineWidth,
+          saveOnBlur,
         }),
       );
     } catch {
@@ -264,6 +271,9 @@ export function App() {
     exportTheme,
     spellcheck,
     lineWrap,
+    sidebarWidth,
+    outlineWidth,
+    saveOnBlur,
   ]);
 
   // Push recent file when active tab changes to a real file. Mirror to
@@ -485,6 +495,46 @@ export function App() {
       setActiveStatus("error", String(err));
     }
   }, [setActiveStatus, setActiveMtime]);
+
+  const saveAllSilent = useCallback(async () => {
+    const dirty = useAppStore
+      .getState()
+      .tabs.filter((tx) => tx.path && tx.status === "dirty");
+    if (dirty.length === 0) return;
+    const results = await Promise.allSettled(
+      dirty.map((tx) => writeFile(String(tx.path), tx.content, tx.mtimeMs)),
+    );
+    useAppStore.setState((s) => ({
+      tabs: s.tabs.map((tx) => {
+        const i = dirty.findIndex((d) => d.id === tx.id);
+        if (i < 0) return tx;
+        const r = results[i];
+        if (r.status === "fulfilled") {
+          return {
+            ...tx,
+            status: "saved",
+            mtimeMs: r.value,
+            errorMessage: null,
+          };
+        }
+        return { ...tx, status: "error", errorMessage: String(r.reason) };
+      }),
+    }));
+    setExternalMtime(null);
+  }, []);
+
+  // Save All silently when the window loses focus, if the user opted in.
+  // This is a safety net: avoids losing work to crashes / power loss while
+  // the editor is in a background tab. Errors are swallowed (the per-tab
+  // status flips to "error" via saveAllSilent's per-tab patching).
+  useEffect(() => {
+    if (!saveOnBlur) return;
+    const onBlur = () => {
+      saveAllSilent();
+    };
+    window.addEventListener("blur", onBlur);
+    return () => window.removeEventListener("blur", onBlur);
+  }, [saveOnBlur, saveAllSilent]);
 
   const saveAll = useCallback(async () => {
     const dirty = useAppStore
@@ -1011,6 +1061,9 @@ export function App() {
             exportTheme: "github",
             spellcheck: false,
             lineWrap: true,
+            sidebarWidth: 260,
+            outlineWidth: 220,
+            saveOnBlur: false,
           });
           s.setTheme("auto");
           s.setRecentFiles([]);
@@ -1108,9 +1161,20 @@ export function App() {
       )}
       <main className="flex-1 min-h-0 flex">
         {sidebarOpen && (
-          <aside className="w-[260px] shrink-0 border-r border-black/5 dark:border-white/10 flex flex-col">
-            <FileTree />
-          </aside>
+          <>
+            <aside
+              className="shrink-0 border-r border-black/5 dark:border-white/10 flex flex-col"
+              style={{ width: sidebarWidth }}
+            >
+              <FileTree />
+            </aside>
+            <Resizer
+              side="right"
+              width={sidebarWidth}
+              onChange={(w) => setSettings({ sidebarWidth: w })}
+              label="Resize sidebar"
+            />
+          </>
         )}
         <section
           className="flex-1 min-w-0 overflow-auto"
@@ -1126,9 +1190,20 @@ export function App() {
           />
         </section>
         {outlineOpen && (
-          <aside className="w-[220px] shrink-0 border-l border-black/5 dark:border-white/10 flex flex-col">
-            <Outline />
-          </aside>
+          <>
+            <Resizer
+              side="left"
+              width={outlineWidth}
+              onChange={(w) => setSettings({ outlineWidth: w })}
+              label="Resize outline"
+            />
+            <aside
+              className="shrink-0 border-l border-black/5 dark:border-white/10 flex flex-col"
+              style={{ width: outlineWidth }}
+            >
+              <Outline />
+            </aside>
+          </>
         )}
       </main>
       <StatusBar />
