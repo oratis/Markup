@@ -56,6 +56,9 @@ interface AppState {
   imagePasteDir: string; // relative to vault root
   exportTheme: "github" | "plain" | "tufte";
   spellcheck: boolean;
+  /** Source-mode soft line wrapping. When false, long lines scroll
+   * horizontally instead of wrapping. */
+  lineWrap: boolean;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -77,6 +80,10 @@ interface AppState {
   setActiveStatus: (status: SaveStatus, errorMessage?: string | null) => void;
   setActiveMtime: (mtimeMs: number) => void;
   setActivePathAndName: (path: string, name: string, mtimeMs: number) => void;
+  /** Replace active tab content + mtime in one shot, marking it saved.
+   * Used when reloading from disk (so the content swap doesn't flip the
+   * dirty flag the way `updateActiveContent` would). */
+  reloadActiveFromDisk: (content: string, mtimeMs: number) => void;
 
   // vault
   setVault: (root: string | null, files: VaultFile[]) => void;
@@ -106,6 +113,7 @@ export interface Settings {
   imagePasteDir: string;
   exportTheme: "github" | "plain" | "tufte";
   spellcheck: boolean;
+  lineWrap: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -115,6 +123,7 @@ export const DEFAULT_SETTINGS: Settings = {
   imagePasteDir: "assets",
   exportTheme: "github",
   spellcheck: false,
+  lineWrap: true,
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -208,6 +217,7 @@ export const useAppStore = create<AppState>((set) => ({
   imagePasteDir: DEFAULT_SETTINGS.imagePasteDir,
   exportTheme: DEFAULT_SETTINGS.exportTheme,
   spellcheck: DEFAULT_SETTINGS.spellcheck,
+  lineWrap: DEFAULT_SETTINGS.lineWrap,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -439,6 +449,19 @@ export const useAppStore = create<AppState>((set) => ({
       };
     }),
 
+  reloadActiveFromDisk: (content, mtimeMs) =>
+    set((state) => {
+      const id = state.activeTabId;
+      if (!id) return state;
+      return {
+        tabs: state.tabs.map((t) =>
+          t.id === id
+            ? { ...t, content, mtimeMs, status: "saved", errorMessage: null }
+            : t,
+        ),
+      };
+    }),
+
   setVault: (root, files) => set({ vaultRoot: root, vaultFiles: files }),
   setVaultFiles: (files) => set({ vaultFiles: files }),
 
@@ -458,6 +481,7 @@ export const useAppStore = create<AppState>((set) => ({
       const imagePasteDir = (patch.imagePasteDir ?? state.imagePasteDir).trim();
       const exportTheme = patch.exportTheme ?? state.exportTheme;
       const spellcheck = patch.spellcheck ?? state.spellcheck;
+      const lineWrap = patch.lineWrap ?? state.lineWrap;
       return {
         fontSize,
         proseMaxWidth,
@@ -465,6 +489,7 @@ export const useAppStore = create<AppState>((set) => ({
         imagePasteDir: imagePasteDir || "assets",
         exportTheme,
         spellcheck,
+        lineWrap,
       };
     }),
 

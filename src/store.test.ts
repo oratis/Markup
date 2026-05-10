@@ -258,6 +258,20 @@ describe("app store", () => {
     expect(popRecentlyClosed()).toBeNull();
   });
 
+  it("reloadActiveFromDisk swaps content + mtime and clears dirty status", () => {
+    const { openLoadedFile, updateActiveContent, reloadActiveFromDisk } =
+      useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "v1", mtime_ms: 100 });
+    updateActiveContent("v1 + edit");
+    expect(useAppStore.getState().tabs[0].status).toBe("dirty");
+    reloadActiveFromDisk("v2 from disk", 200);
+    const t0 = useAppStore.getState().tabs[0];
+    expect(t0.content).toBe("v2 from disk");
+    expect(t0.mtimeMs).toBe(200);
+    expect(t0.status).toBe("saved");
+    expect(t0.errorMessage).toBeNull();
+  });
+
   it("setActivePathAndName updates id/path/name/mtime + clears dirty", () => {
     const { newScratchTab, updateActiveContent, setActivePathAndName } =
       useAppStore.getState();

@@ -235,6 +235,7 @@ export function App() {
   const exportTheme = useAppStore((s) => s.exportTheme);
   const imagePasteDir = useAppStore((s) => s.imagePasteDir);
   const spellcheck = useAppStore((s) => s.spellcheck);
+  const lineWrap = useAppStore((s) => s.lineWrap);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -249,12 +250,21 @@ export function App() {
           imagePasteDir,
           exportTheme,
           spellcheck,
+          lineWrap,
         }),
       );
     } catch {
       /*ignore*/
     }
-  }, [fontSize, proseMaxWidth, autosaveMs, imagePasteDir, exportTheme, spellcheck]);
+  }, [
+    fontSize,
+    proseMaxWidth,
+    autosaveMs,
+    imagePasteDir,
+    exportTheme,
+    spellcheck,
+    lineWrap,
+  ]);
 
   // Push recent file when active tab changes to a real file. Mirror to
   // the Rust-side store so other windows + next launches see it without
@@ -540,6 +550,27 @@ export function App() {
       console.error("open_file failed", e);
     }
   }, [openLoadedFile]);
+
+  const reloadFromDisk = useCallback(async () => {
+    const state = useAppStore.getState();
+    const cur = state.activeTabId
+      ? state.tabs.find((x) => x.id === state.activeTabId)
+      : null;
+    if (!cur?.path) return;
+    if (cur.status === "dirty") {
+      const ok = window.confirm(tr("reload.confirmDirty", cur.name));
+      if (!ok) return;
+    }
+    try {
+      const loaded = await readFile(cur.path);
+      state.reloadActiveFromDisk(loaded.content, loaded.mtime_ms);
+      setExternalMtime(null);
+      showToast(tr("toast.reloaded"));
+    } catch (e) {
+      console.error("reload_from_disk failed", e);
+      showToast(tr("toast.openFailed", cur.path));
+    }
+  }, [tr]);
 
   const reopenLastClosed = useCallback(async () => {
     const path = useAppStore.getState().popRecentlyClosed();
@@ -881,6 +912,32 @@ export function App() {
         },
       },
       {
+        id: "reload_from_disk",
+        label: "Reload from Disk",
+        run: reloadFromDisk,
+      },
+      {
+        id: "reveal_in_tree",
+        label: "Reveal in File Tree",
+        run: () => {
+          const s = useAppStore.getState();
+          if (!s.sidebarOpen) s.toggleSidebar();
+          // Defer the event so React commits the open-sidebar state and
+          // mounts FileTree before the listener fires.
+          window.setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("markup:reveal-active"));
+          }, 0);
+        },
+      },
+      {
+        id: "toggle_line_wrap",
+        label: "Toggle Line Wrap (Source)",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ lineWrap: !s.lineWrap });
+        },
+      },
+      {
         id: "new_window",
         label: "New Window",
         shortcut: "⌘⇧N",
@@ -953,6 +1010,7 @@ export function App() {
             imagePasteDir: "assets",
             exportTheme: "github",
             spellcheck: false,
+            lineWrap: true,
           });
           s.setTheme("auto");
           s.setRecentFiles([]);

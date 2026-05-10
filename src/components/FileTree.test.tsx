@@ -27,4 +27,24 @@ describe("FileTree (state-driven branches)", () => {
   // Note: full row-rendering tests require a non-zero layout viewport that
   // jsdom can't provide for @tanstack/react-virtual. Covered by the
   // upcoming Playwright E2E layer.
+
+  it("dispatching markup:reveal-active doesn't throw when there's no active file", () => {
+    useAppStore.setState({
+      vaultRoot: "/v",
+      vaultFiles: [
+        {
+          path: "/v/a.md",
+          relPath: "a.md",
+          name: "a.md",
+          mtimeMs: 1,
+          size: 0,
+        },
+      ],
+      activeTabId: null,
+    });
+    render(<FileTree />);
+    expect(() => {
+      window.dispatchEvent(new CustomEvent("markup:reveal-active"));
+    }).not.toThrow();
+  });
 });

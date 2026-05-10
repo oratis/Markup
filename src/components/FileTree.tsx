@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../lib/i18n";
 import { listVaultFiles, readFile, renameFile, trashFile } from "../lib/tauri";
 import { type VaultFile, useAppStore } from "../store";
@@ -36,6 +36,24 @@ export function FileTree() {
     estimateSize: () => 26,
     overscan: 12,
   });
+
+  // Listen for "Reveal in Tree" palette command — scroll to the active
+  // file's row and centre it. The active row's bold styling does the
+  // visual highlight, so no extra flash needed.
+  useEffect(() => {
+    const onReveal = () => {
+      const id = useAppStore.getState().activeTabId;
+      if (!id) return;
+      const idx = sorted.findIndex((f) => f.path === id);
+      if (idx < 0) return;
+      // Defer one frame so the sidebar has time to mount if it just opened.
+      window.requestAnimationFrame(() => {
+        rowVirtualizer.scrollToIndex(idx, { align: "center" });
+      });
+    };
+    window.addEventListener("markup:reveal-active", onReveal);
+    return () => window.removeEventListener("markup:reveal-active", onReveal);
+  }, [sorted, rowVirtualizer]);
 
   async function refresh() {
     try {

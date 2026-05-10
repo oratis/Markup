@@ -9,7 +9,7 @@ import {
   syntaxHighlighting,
 } from "@codemirror/language";
 import { search, searchKeymap } from "@codemirror/search";
-import { EditorState } from "@codemirror/state";
+import { Compartment, EditorState } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import {
   EditorView,
@@ -38,8 +38,10 @@ interface SourceEditorProps {
 export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const wrapCompartmentRef = useRef<Compartment | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const lineWrap = useAppStore((s) => s.lineWrap);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -67,6 +69,9 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
           autoClosePairs(),
         ];
 
+    const wrapCompartment = new Compartment();
+    wrapCompartmentRef.current = wrapCompartment;
+    const initialLineWrap = useAppStore.getState().lineWrap;
     const state = EditorState.create({
       doc: value,
       extensions: [
@@ -75,7 +80,7 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
         drawSelection(),
         search({ top: true }),
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...foldKeymap]),
-        EditorView.lineWrapping,
+        wrapCompartment.of(initialLineWrap ? EditorView.lineWrapping : []),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
             onChangeRef.current(u.state.doc.toString());
@@ -134,6 +139,16 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     // Recreate on file or theme change to avoid mismatched extensions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileKey, isDark]);
+
+  // Live-toggle soft line wrapping without recreating the editor.
+  useEffect(() => {
+    const view = viewRef.current;
+    const compartment = wrapCompartmentRef.current;
+    if (!view || !compartment) return;
+    view.dispatch({
+      effects: compartment.reconfigure(lineWrap ? EditorView.lineWrapping : []),
+    });
+  }, [lineWrap]);
 
   // External value updates while editing in another tab/source: replace doc only
   // when it diverges from current state, to avoid clobbering active typing.

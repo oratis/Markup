@@ -18,6 +18,7 @@ export function SettingsDialog({ onClose }: Props) {
 
   const exportTheme = useAppStore((s) => s.exportTheme);
   const spellcheck = useAppStore((s) => s.spellcheck);
+  const lineWrap = useAppStore((s) => s.lineWrap);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
@@ -25,6 +26,7 @@ export function SettingsDialog({ onClose }: Props) {
     imagePasteDir,
     exportTheme,
     spellcheck,
+    lineWrap,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -137,6 +139,19 @@ export function SettingsDialog({ onClose }: Props) {
               </span>
             </label>
           </Row>
+
+          <Row label={t("settings.lineWrap")} hint={t("settings.lineWrapHint")}>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={draft.lineWrap}
+                onChange={(e) => commit({ lineWrap: e.target.checked })}
+              />
+              <span className="opacity-70">
+                {draft.lineWrap ? t("settings.on") : t("settings.off")}
+              </span>
+            </label>
+          </Row>
         </div>
 
         <ShortcutsEditor />
@@ -151,6 +166,7 @@ export function SettingsDialog({ onClose }: Props) {
                 imagePasteDir: "assets",
                 exportTheme: "github",
                 spellcheck: false,
+                lineWrap: true,
               });
             }}
             className="opacity-70 hover:opacity-100 underline"
