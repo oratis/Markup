@@ -16,6 +16,12 @@ import { TabBar } from "./components/TabBar";
 import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { WikilinkPicker } from "./components/WikilinkPicker";
+import {
+  duplicateLine,
+  moveLineDown,
+  moveLineUp,
+  toggleBlockquote,
+} from "./lib/cm-line-ops";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { useT } from "./lib/i18n";
@@ -919,6 +925,30 @@ export function App() {
         wrapMarkdown("~~", "~~");
         return;
       }
+      if (matchesShortcut(e, "moveLineUp")) {
+        if (moveLineUp()) {
+          e.preventDefault();
+          return;
+        }
+      }
+      if (matchesShortcut(e, "moveLineDown")) {
+        if (moveLineDown()) {
+          e.preventDefault();
+          return;
+        }
+      }
+      if (matchesShortcut(e, "duplicateLine")) {
+        if (duplicateLine()) {
+          e.preventDefault();
+          return;
+        }
+      }
+      if (matchesShortcut(e, "toggleBlockquote")) {
+        if (toggleBlockquote()) {
+          e.preventDefault();
+          return;
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1066,6 +1096,37 @@ export function App() {
           const mm = String(d.getMonth() + 1).padStart(2, "0");
           const dd = String(d.getDate()).padStart(2, "0");
           insertMarkdown(`${yyyy}-${mm}-${dd}`);
+        },
+      },
+      {
+        id: "move_line_up",
+        label: "Move Line Up (Source)",
+        shortcut: "⌥↑",
+        run: () => {
+          moveLineUp();
+        },
+      },
+      {
+        id: "move_line_down",
+        label: "Move Line Down (Source)",
+        shortcut: "⌥↓",
+        run: () => {
+          moveLineDown();
+        },
+      },
+      {
+        id: "duplicate_line",
+        label: "Duplicate Line (Source)",
+        shortcut: "⇧⌥↓",
+        run: () => {
+          duplicateLine();
+        },
+      },
+      {
+        id: "toggle_blockquote",
+        label: "Toggle Blockquote (Source)",
+        run: () => {
+          toggleBlockquote();
         },
       },
       {

@@ -32,7 +32,11 @@ export type ShortcutId =
   | "fmtBold"
   | "fmtItalic"
   | "fmtCode"
-  | "fmtStrike";
+  | "fmtStrike"
+  | "moveLineUp"
+  | "moveLineDown"
+  | "duplicateLine"
+  | "toggleBlockquote";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -54,6 +58,10 @@ export const defaults: Record<ShortcutId, string> = {
   fmtItalic: "Mod+I",
   fmtCode: "Mod+E",
   fmtStrike: "Mod+Shift+X",
+  moveLineUp: "Alt+ArrowUp",
+  moveLineDown: "Alt+ArrowDown",
+  duplicateLine: "Shift+Alt+ArrowDown",
+  toggleBlockquote: "Mod+'",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -76,6 +84,10 @@ export const labels: Record<ShortcutId, string> = {
   fmtItalic: "Italic",
   fmtCode: "Inline Code",
   fmtStrike: "Strikethrough",
+  moveLineUp: "Move Line Up",
+  moveLineDown: "Move Line Down",
+  duplicateLine: "Duplicate Line",
+  toggleBlockquote: "Toggle Blockquote",
 };
 
 const STORAGE_KEY = "markup.shortcuts";
