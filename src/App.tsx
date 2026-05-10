@@ -95,6 +95,7 @@ function applyClass(htmlClass: string, on: boolean) {
 export function App() {
   const tr = useT();
   const tab = useAppStore(getActiveTab);
+  const tabs = useAppStore((s) => s.tabs);
   const sourceMode = useAppStore((s) => s.sourceMode);
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
   const outlineOpen = useAppStore((s) => s.outlineOpen);
@@ -1229,6 +1230,16 @@ export function App() {
         toggleOutline();
         return;
       }
+      if (matchesShortcut(e, "moveTabLeft")) {
+        e.preventDefault();
+        useAppStore.getState().moveActiveTab("left");
+        return;
+      }
+      if (matchesShortcut(e, "moveTabRight")) {
+        e.preventDefault();
+        useAppStore.getState().moveActiveTab("right");
+        return;
+      }
       // Cmd+1..9 = jump to tab N (last digit = last tab; matches browser).
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         const n = Number(e.key);
@@ -1732,9 +1743,17 @@ export function App() {
         openRecentVault(p);
       },
     }));
-    return [...base, ...recents, ...recentVaultCmds];
+    // Switch-to-tab entries: present every open tab as a palette command
+    // so the user can fuzzy-search by name across all open documents.
+    const switchTabCmds: Command[] = tabs.map((tx, i) => ({
+      id: `switch_tab:${tx.id}`,
+      label: `Switch to Tab: ${tx.name}`,
+      hint: tx.path ?? `(unsaved · index ${i + 1})`,
+      run: () => useAppStore.getState().setActiveTab(tx.id),
+    }));
+    return [...base, ...switchTabCmds, ...recents, ...recentVaultCmds];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab?.path, tab?.content, recentFiles, recentVaults]);
+  }, [tab?.path, tab?.content, recentFiles, recentVaults, tabs]);
 
   // Recent-file picker uses CommandPalette wrapped with file commands
   const recentCommands: Command[] = useMemo(() => {

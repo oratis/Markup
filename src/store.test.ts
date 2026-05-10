@@ -242,6 +242,37 @@ describe("app store", () => {
     expect(useAppStore.getState().activeTabId).toBe("/a.md");
   });
 
+  it("moveActiveTab swaps the active tab with its neighbour", () => {
+    const { openLoadedFile, moveActiveTab, setActiveTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    setActiveTab("/b.md");
+    moveActiveTab("right");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual([
+      "/a.md",
+      "/c.md",
+      "/b.md",
+    ]);
+    moveActiveTab("left");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual([
+      "/a.md",
+      "/b.md",
+      "/c.md",
+    ]);
+  });
+
+  it("moveActiveTab refuses to cross the pinned/unpinned boundary", () => {
+    const { openLoadedFile, toggleTabPinned, moveActiveTab, setActiveTab } =
+      useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    toggleTabPinned("/a.md");
+    setActiveTab("/b.md");
+    moveActiveTab("left");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/a.md", "/b.md"]);
+  });
+
   it("closeTab pushes the path onto recentlyClosed; popRecentlyClosed returns it", () => {
     const { openLoadedFile, closeTab, popRecentlyClosed } = useAppStore.getState();
     openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });

@@ -48,7 +48,9 @@ export type ShortcutId =
   | "insertLink"
   | "nextHeading"
   | "prevHeading"
-  | "toggleOutline";
+  | "toggleOutline"
+  | "moveTabLeft"
+  | "moveTabRight";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -86,6 +88,8 @@ export const defaults: Record<ShortcutId, string> = {
   nextHeading: "Mod+Shift+J",
   prevHeading: "Mod+Shift+K",
   toggleOutline: "Mod+Alt+B",
+  moveTabLeft: "Mod+Shift+Alt+ArrowLeft",
+  moveTabRight: "Mod+Shift+Alt+ArrowRight",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -124,6 +128,8 @@ export const labels: Record<ShortcutId, string> = {
   nextHeading: "Next Heading",
   prevHeading: "Previous Heading",
   toggleOutline: "Toggle Outline",
+  moveTabLeft: "Move Active Tab Left",
+  moveTabRight: "Move Active Tab Right",
 };
 
 const STORAGE_KEY = "markup.shortcuts";

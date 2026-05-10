@@ -86,6 +86,9 @@ interface AppState {
   activatePrevTab: () => void;
   /** Activate the tab at the given 0-based index. No-op when out of range. */
   activateTabAt: (index: number) => void;
+  /** Swap the active tab with its immediate neighbour. Pinned/unpinned
+   * boundary is respected — never crosses it. */
+  moveActiveTab: (direction: "left" | "right") => void;
   /** Pops the latest entry from `recentlyClosed` and returns its path
    * (caller is responsible for reading + opening it). Returns null when
    * the stack is empty. */
@@ -427,6 +430,20 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => {
       if (index < 0 || index >= state.tabs.length) return state;
       return { activeTabId: state.tabs[index].id };
+    }),
+
+  moveActiveTab: (direction) =>
+    set((state) => {
+      if (state.tabs.length < 2 || !state.activeTabId) return state;
+      const i = state.tabs.findIndex((t) => t.id === state.activeTabId);
+      if (i < 0) return state;
+      const j = direction === "left" ? i - 1 : i + 1;
+      if (j < 0 || j >= state.tabs.length) return state;
+      // Don't let drag-reorder mix pinned and unpinned groups.
+      if (Boolean(state.tabs[i].pinned) !== Boolean(state.tabs[j].pinned)) return state;
+      const tabs = [...state.tabs];
+      [tabs[i], tabs[j]] = [tabs[j], tabs[i]];
+      return { tabs };
     }),
 
   popRecentlyClosed: () => {
