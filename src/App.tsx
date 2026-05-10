@@ -29,7 +29,12 @@ import {
   toggleBlockquote,
   toggleList,
 } from "./lib/cm-line-ops";
-import { moveSectionDown, moveSectionUp } from "./lib/cm-section";
+import {
+  moveSectionDown,
+  moveSectionToBottom,
+  moveSectionToTop,
+  moveSectionUp,
+} from "./lib/cm-section";
 import { formatTable, toggleTaskCheckboxOnLine } from "./lib/cm-table-format";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
@@ -1836,6 +1841,20 @@ export function App() {
         label: "Move Section Down (Source)",
         run: () => {
           moveSectionDown();
+        },
+      },
+      {
+        id: "move_section_to_top",
+        label: "Move Section to Top (Source)",
+        run: () => {
+          moveSectionToTop();
+        },
+      },
+      {
+        id: "move_section_to_bottom",
+        label: "Move Section to Bottom (Source)",
+        run: () => {
+          moveSectionToBottom();
         },
       },
       {

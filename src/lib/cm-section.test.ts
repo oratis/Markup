@@ -2,7 +2,12 @@ import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { afterEach, describe, expect, it } from "vitest";
 import { setActiveSourceView } from "./active-source-view";
-import { moveSectionDown, moveSectionUp } from "./cm-section";
+import {
+  moveSectionDown,
+  moveSectionToBottom,
+  moveSectionToTop,
+  moveSectionUp,
+} from "./cm-section";
 
 function mountView(doc: string, anchor: number): EditorView {
   const view = new EditorView({
@@ -69,5 +74,42 @@ describe("moveSectionDown", () => {
     const idx = SAMPLE.indexOf("c1");
     mountView(SAMPLE, idx);
     expect(moveSectionDown()).toBe(false);
+  });
+});
+
+describe("moveSectionToTop / moveSectionToBottom", () => {
+  it("toTop moves the cursor's section just after the parent heading", () => {
+    // Cursor on c1 — section "## C" should land right after "# Top".
+    const idx = SAMPLE.indexOf("c1");
+    const view = mountView(SAMPLE, idx);
+    expect(moveSectionToTop()).toBe(true);
+    const out = view.state.doc.toString();
+    // ## C precedes ## A in the new ordering.
+    const cPos = out.indexOf("## C");
+    const aPos = out.indexOf("## A");
+    expect(cPos).toBeLessThan(aPos);
+  });
+
+  it("toTop is a no-op when the section is already first", () => {
+    const idx = SAMPLE.indexOf("a1");
+    mountView(SAMPLE, idx);
+    expect(moveSectionToTop()).toBe(false);
+  });
+
+  it("toBottom moves the cursor's section to the end of its parent's scope", () => {
+    // Cursor on a1 — section "## A" should drop past ## B and ## C.
+    const idx = SAMPLE.indexOf("a1");
+    const view = mountView(SAMPLE, idx);
+    expect(moveSectionToBottom()).toBe(true);
+    const out = view.state.doc.toString();
+    const aPos = out.indexOf("## A");
+    const cPos = out.indexOf("## C");
+    expect(cPos).toBeLessThan(aPos);
+  });
+
+  it("toBottom is a no-op when the section is already last", () => {
+    const idx = SAMPLE.indexOf("c1");
+    mountView(SAMPLE, idx);
+    expect(moveSectionToBottom()).toBe(false);
   });
 });

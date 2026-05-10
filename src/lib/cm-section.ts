@@ -121,9 +121,41 @@ export function moveSectionUp(): boolean {
   const endPos = view.state.doc.line(section.endLine + 1).to;
   view.dispatch({
     changes: { from: startPos, to: endPos, insert: newSlice },
+    // Anchor the cursor at the moved section's new heading line so
+    // moveSectionToTop / iterative callers can re-find it cleanly.
+    selection: { anchor: startPos },
     userEvent: "move.section",
   });
   return true;
+}
+
+/**
+ * Move the section enclosing the cursor to the top of its parent's
+ * scope — repeatedly moves it past previous siblings until none remain.
+ * No-op when there are no previous siblings.
+ */
+export function moveSectionToTop(): boolean {
+  let moved = false;
+  // Bound the loop to prevent infinite recursion on pathological docs.
+  for (let i = 0; i < 1000; i++) {
+    if (!moveSectionUp()) break;
+    moved = true;
+  }
+  return moved;
+}
+
+/**
+ * Move the section enclosing the cursor to the bottom of its parent's
+ * scope — repeatedly moves it past next siblings until none remain.
+ * No-op when there are no next siblings.
+ */
+export function moveSectionToBottom(): boolean {
+  let moved = false;
+  for (let i = 0; i < 1000; i++) {
+    if (!moveSectionDown()) break;
+    moved = true;
+  }
+  return moved;
 }
 
 /** Move the section enclosing the cursor down past the next sibling.
@@ -147,8 +179,12 @@ export function moveSectionDown(): boolean {
   const newSlice = [...nextLines, ...sectionLines].join("\n");
   const startPos = view.state.doc.line(section.headingLine + 1).from;
   const endPos = view.state.doc.line(next.endLine + 1).to;
+  // The moved section's new heading line starts right after the
+  // inserted prev-block (+1 for the joining "\n").
+  const newSectionStart = startPos + nextLines.join("\n").length + 1;
   view.dispatch({
     changes: { from: startPos, to: endPos, insert: newSlice },
+    selection: { anchor: newSectionStart },
     userEvent: "move.section",
   });
   return true;
