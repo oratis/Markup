@@ -11,19 +11,10 @@ import {
   subscribe,
 } from "../lib/shortcuts";
 
-const IDS: ShortcutId[] = [
-  "save",
-  "saveAs",
-  "openFile",
-  "openVault",
-  "quickOpen",
-  "findInFile",
-  "findInVault",
-  "commandPalette",
-  "toggleSourceMode",
-  "toggleSidebar",
-  "settings",
-];
+// Every registered shortcut becomes editable — derived from the defaults
+// map so new bindings light up here automatically as they're added in
+// lib/shortcuts.ts.
+const IDS = Object.keys(defaults) as ShortcutId[];
 
 function prettify(s: string): string {
   return s
@@ -65,7 +56,7 @@ export function ShortcutsEditor() {
     <div className="border-t border-black/5 dark:border-white/10 pt-4 mt-4">
       <div className="text-[12px] font-medium mb-1">{t("settings.shortcuts")}</div>
       <div className="text-[10px] opacity-60 mb-2">{t("settings.shortcutsHint")}</div>
-      <div className="space-y-0.5 max-h-[180px] overflow-auto no-scrollbar text-[12px]">
+      <div className="space-y-0.5 max-h-[260px] overflow-auto no-scrollbar text-[12px]">
         {IDS.map((id) => {
           const overridden = bindings[id] !== defaults[id];
           return (
