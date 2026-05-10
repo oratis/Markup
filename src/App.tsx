@@ -22,6 +22,7 @@ import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { matches as matchesShortcut } from "./lib/shortcuts";
+import { resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
 import {
   listVaultFiles,
   listenMenu,
@@ -48,9 +49,10 @@ const SETTINGS_KEY = "markup.settings";
 
 function applyThemeToHtml(theme: Theme) {
   const root = document.documentElement;
+  const resolved = resolveTheme(theme);
   root.classList.remove("theme-light", "theme-dark", "theme-sepia");
-  root.classList.add(`theme-${theme}`);
-  if (theme === "dark") root.classList.add("dark");
+  root.classList.add(`theme-${resolved}`);
+  if (resolved === "dark") root.classList.add("dark");
   else root.classList.remove("dark");
 }
 
@@ -114,7 +116,7 @@ export function App() {
   useEffect(() => {
     try {
       const t = localStorage.getItem(THEME_KEY) as Theme | null;
-      if (t === "light" || t === "dark" || t === "sepia") setTheme(t);
+      if (t === "light" || t === "dark" || t === "sepia" || t === "auto") setTheme(t);
       if (localStorage.getItem(SOURCE_MODE_KEY) === "true") setSourceMode(true);
       if (localStorage.getItem(SIDEBAR_KEY) === "true") toggleSidebar();
       if (localStorage.getItem(OUTLINE_KEY) === "true") toggleOutline();
@@ -161,7 +163,8 @@ export function App() {
     setShowOnboarding(false);
   }
 
-  // Persist + apply theme/source mode/sidebar
+  // Persist + apply theme; if theme is "auto", subscribe to system changes
+  // so flipping macOS Light/Dark Mode updates the editor live.
   useEffect(() => {
     applyThemeToHtml(theme);
     try {
@@ -169,6 +172,7 @@ export function App() {
     } catch {
       /*ignore*/
     }
+    return subscribeSystemTheme(theme, () => applyThemeToHtml(theme));
   }, [theme]);
   useEffect(() => {
     try {
@@ -672,7 +676,7 @@ export function App() {
 
   const fileKey = tab?.id ?? "__none__";
   const initialValue = tab?.content ?? "";
-  const isDark = theme === "dark";
+  const isDark = resolveTheme(theme) === "dark";
 
   // Build commands for the palette
   const commands: Command[] = useMemo(() => {
@@ -733,6 +737,7 @@ export function App() {
         label: "Toggle Typewriter Mode",
         run: toggleTypewriterMode,
       },
+      { id: "theme_auto", label: "Theme: Auto (system)", run: () => setTheme("auto") },
       { id: "theme_light", label: "Theme: Light", run: () => setTheme("light") },
       { id: "theme_dark", label: "Theme: Dark", run: () => setTheme("dark") },
       { id: "theme_sepia", label: "Theme: Sepia", run: () => setTheme("sepia") },

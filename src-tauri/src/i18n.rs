@@ -26,6 +26,14 @@ impl Locale {
 }
 
 pub fn detect() -> Locale {
+    // 1. Check the persisted preference from a previous JS-side `set_locale`
+    //    call (the menu locale must reflect the in-app choice across
+    //    restarts; reading $LANG alone breaks when the user picked a
+    //    non-system locale in Settings).
+    if let Some(stored) = load_persisted_locale() {
+        return stored;
+    }
+    // 2. Fall back to the OS locale environment variables.
     let lang = std::env::var("LANG")
         .or_else(|_| std::env::var("LC_ALL"))
         .or_else(|_| std::env::var("LC_MESSAGES"))
@@ -36,6 +44,41 @@ pub fn detect() -> Locale {
     } else {
         Locale::En
     }
+}
+
+/// Where the persisted locale lives.
+fn locale_path() -> Option<std::path::PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    let p = std::path::PathBuf::from(home)
+        .join("Library")
+        .join("Application Support")
+        .join("markup")
+        .join("locale");
+    Some(p)
+}
+
+fn load_persisted_locale() -> Option<Locale> {
+    let p = locale_path()?;
+    let raw = std::fs::read_to_string(&p).ok()?;
+    match raw.trim() {
+        "zh" => Some(Locale::Zh),
+        "en" => Some(Locale::En),
+        _ => None,
+    }
+}
+
+/// Persist the user's locale choice so the next launch's menu reflects it.
+/// Best-effort — failures are ignored; we just fall back to env detection.
+pub fn persist_locale(loc: Locale) {
+    let Some(p) = locale_path() else { return };
+    if let Some(parent) = p.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let s = match loc {
+        Locale::Zh => "zh",
+        Locale::En => "en",
+    };
+    let _ = std::fs::write(&p, s);
 }
 
 pub fn t(loc: Locale, key: &str) -> &'static str {

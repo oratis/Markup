@@ -12,6 +12,9 @@ use tauri::{AppHandle, Manager};
 #[tauri::command]
 pub fn set_locale(app: AppHandle, locale: String) -> AppResult<()> {
     let loc = Locale::from_str(&locale);
+    // Persist so the *next* startup's menu also picks this up before any
+    // JS code runs (Tauri's setup hook fires before the WebView).
+    crate::i18n::persist_locale(loc);
     let new_menu = menu::build_with_locale(&app, loc)
         .map_err(|e| AppError::Other(format!("rebuild menu: {e}")))?;
     app.set_menu(new_menu)

@@ -34,17 +34,30 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
   useEffect(() => {
     if (!hostRef.current) return;
     const t0 = performance.now();
+
+    // Big-file safety net: above 500 KB of source, skip the heavier
+    // extensions (line numbers, active-line gutter, syntax highlighting).
+    // CodeMirror's virtual scrolling already handles the doc itself; the
+    // expensive bit on monster files is repeatedly tokenising as the user
+    // scrolls. The user keeps the basic editing keymap + lineWrapping.
+    const isHuge = value.length > 500_000;
+    const heavyExts = isHuge
+      ? []
+      : [
+          lineNumbers(),
+          highlightActiveLineGutter(),
+          highlightActiveLine(),
+          markdown(),
+          syntaxHighlighting(defaultHighlightStyle),
+        ];
+
     const state = EditorState.create({
       doc: value,
       extensions: [
-        lineNumbers(),
-        highlightActiveLineGutter(),
-        highlightActiveLine(),
+        ...heavyExts,
         history(),
         drawSelection(),
         search({ top: true }),
-        markdown(),
-        syntaxHighlighting(defaultHighlightStyle),
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
         EditorView.lineWrapping,
         EditorView.updateListener.of((u) => {
@@ -57,7 +70,10 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     });
     const view = new EditorView({ state, parent: hostRef.current });
     viewRef.current = view;
-    perfLog(`source-load[${value.length}b]`, performance.now() - t0);
+    perfLog(
+      `source-load[${value.length}b]${isHuge ? " huge" : ""}`,
+      performance.now() - t0,
+    );
 
     // Image paste / drop → write to vault, dispatch CM6 transaction
     // inserting the markdown reference at the current selection.

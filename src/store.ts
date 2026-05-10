@@ -3,7 +3,9 @@ import { t } from "./lib/i18n";
 import type { LoadedFile } from "./lib/types";
 
 export type SaveStatus = "saved" | "dirty" | "saving" | "error";
-export type Theme = "light" | "dark" | "sepia";
+/** "auto" resolves to light or dark via prefers-color-scheme. */
+export type Theme = "light" | "dark" | "sepia" | "auto";
+export type ResolvedTheme = "light" | "dark" | "sepia";
 
 export interface Tab {
   /** Stable key for React lists. Synthetic for unsaved/welcome tabs. */
