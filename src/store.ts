@@ -48,6 +48,8 @@ interface AppState {
   /** LIFO stack of recently closed file paths — latest first. Capped at
    * RECENTLY_CLOSED_MAX. Survives only the current session; not persisted. */
   recentlyClosed: string[];
+  /** MRU list of vault root paths the user has opened. */
+  recentVaults: string[];
 
   // settings
   fontSize: number; // base font size px (12-22)
@@ -109,6 +111,8 @@ interface AppState {
   // recent files
   pushRecentFile: (path: string) => void;
   setRecentFiles: (paths: string[]) => void;
+  pushRecentVault: (root: string) => void;
+  setRecentVaults: (roots: string[]) => void;
 
   // settings
   setSettings: (patch: Partial<Settings>) => void;
@@ -226,6 +230,7 @@ export const useAppStore = create<AppState>((set) => ({
   typewriterMode: false,
   recentFiles: [],
   recentlyClosed: [],
+  recentVaults: [],
 
   fontSize: DEFAULT_SETTINGS.fontSize,
   proseMaxWidth: DEFAULT_SETTINGS.proseMaxWidth,
@@ -527,6 +532,13 @@ export const useAppStore = create<AppState>((set) => ({
       return { recentFiles: next };
     }),
   setRecentFiles: (paths) => set({ recentFiles: paths }),
+
+  pushRecentVault: (root) =>
+    set((state) => {
+      const next = [root, ...state.recentVaults.filter((p) => p !== root)].slice(0, 10);
+      return { recentVaults: next };
+    }),
+  setRecentVaults: (roots) => set({ recentVaults: roots }),
 }));
 
 export function getActiveTab(state: AppState): Tab | null {

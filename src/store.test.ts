@@ -17,6 +17,7 @@ function reset() {
     typewriterMode: false,
     recentFiles: [],
     recentlyClosed: [],
+    recentVaults: [],
   });
 }
 
@@ -256,6 +257,17 @@ describe("app store", () => {
     const id = useAppStore.getState().activeTabId!;
     closeTab(id);
     expect(popRecentlyClosed()).toBeNull();
+  });
+
+  it("pushRecentVault dedupes and caps to the 10 most recent", () => {
+    const { pushRecentVault } = useAppStore.getState();
+    for (let i = 0; i < 12; i++) pushRecentVault(`/v/${i}`);
+    pushRecentVault("/v/3");
+    const list = useAppStore.getState().recentVaults;
+    expect(list).toHaveLength(10);
+    expect(list[0]).toBe("/v/3");
+    // /v/0 and /v/1 fell off the end (oldest); /v/3 deduped to the front.
+    expect(list).not.toContain("/v/0");
   });
 
   it("reloadActiveFromDisk swaps content + mtime and clears dirty status", () => {

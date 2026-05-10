@@ -90,6 +90,8 @@ export const en = {
   // outline
   "outline.title": "Outline",
   "outline.empty": "No headings.",
+  "outline.filter": "Filter headings…",
+  "outline.noFilterMatch": "No matching headings.",
 
   // find bar
   "find.placeholder": "Find…",

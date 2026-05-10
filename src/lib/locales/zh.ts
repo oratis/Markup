@@ -90,6 +90,8 @@ export const zh: Strings = {
   // outline
   "outline.title": "大纲",
   "outline.empty": "没有标题。",
+  "outline.filter": "过滤标题…",
+  "outline.noFilterMatch": "无匹配标题。",
 
   // find bar
   "find.placeholder": "查找…",

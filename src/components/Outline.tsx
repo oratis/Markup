@@ -106,8 +106,15 @@ export function Outline() {
     };
   }, [tab?.content]);
 
-  const headings =
+  const allHeadings =
     tab && tab.content.length > WORKER_THRESHOLD ? workerHeadings : inlineHeadings;
+
+  const [filter, setFilter] = useState("");
+  const headings = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return allHeadings;
+    return allHeadings.filter((h) => h.text.toLowerCase().includes(q));
+  }, [allHeadings, filter]);
 
   // Track the active heading via cursor position. selectionchange fires
   // whenever the user clicks / arrows / types in either editor.
@@ -145,7 +152,7 @@ export function Outline() {
   }, [tab?.content, headings, sourceMode]);
 
   if (!tab) return null;
-  if (headings.length === 0) {
+  if (allHeadings.length === 0) {
     return <div className="text-xs opacity-50 px-3 py-3">{t("outline.empty")}</div>;
   }
 
@@ -154,7 +161,21 @@ export function Outline() {
       <div className="px-3 py-2 text-[11px] uppercase tracking-wider opacity-50">
         {t("outline.title")}
       </div>
+      <div className="px-3 pb-2">
+        <input
+          type="text"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder={t("outline.filter")}
+          className="w-full text-[12px] px-2 py-1 rounded border border-black/10 dark:border-white/15 bg-transparent outline-none focus:border-blue-500"
+        />
+      </div>
       <nav className="flex-1 min-h-0 overflow-auto no-scrollbar pb-2">
+        {headings.length === 0 && (
+          <div className="text-[11px] opacity-50 px-3 py-2">
+            {t("outline.noFilterMatch")}
+          </div>
+        )}
         {headings.map((h, i) => {
           const isActive = i === activeIdx;
           return (

@@ -68,6 +68,7 @@ const OUTLINE_KEY = "markup.outline";
 const FOCUS_KEY = "markup.focus";
 const TYPEWRITER_KEY = "markup.typewriter";
 const RECENT_KEY = "markup.recentFiles";
+const RECENT_VAULTS_KEY = "markup.recentVaults";
 const SETTINGS_KEY = "markup.settings";
 
 function applyThemeToHtml(theme: Theme) {
@@ -111,6 +112,8 @@ export function App() {
   const setTheme = useAppStore((s) => s.setTheme);
   const pushRecentFile = useAppStore((s) => s.pushRecentFile);
   const setRecentFiles = useAppStore((s) => s.setRecentFiles);
+  const setRecentVaults = useAppStore((s) => s.setRecentVaults);
+  const recentVaults = useAppStore((s) => s.recentVaults);
 
   const [showQuickOpen, setShowQuickOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -151,6 +154,16 @@ export function App() {
           const arr = JSON.parse(recent);
           if (Array.isArray(arr))
             setRecentFiles(arr.filter((x) => typeof x === "string"));
+        } catch {
+          /*ignore*/
+        }
+      }
+      const recentV = localStorage.getItem(RECENT_VAULTS_KEY);
+      if (recentV) {
+        try {
+          const arr = JSON.parse(recentV);
+          if (Array.isArray(arr))
+            setRecentVaults(arr.filter((x) => typeof x === "string"));
         } catch {
           /*ignore*/
         }
@@ -243,10 +256,11 @@ export function App() {
   useEffect(() => {
     try {
       localStorage.setItem(RECENT_KEY, JSON.stringify(recentFiles));
+      localStorage.setItem(RECENT_VAULTS_KEY, JSON.stringify(recentVaults));
     } catch {
       /*ignore*/
     }
-  }, [recentFiles]);
+  }, [recentFiles, recentVaults]);
 
   // Settings → CSS variables + persist
   const exportTheme = useAppStore((s) => s.exportTheme);
@@ -689,10 +703,26 @@ export function App() {
       const opened = await openVault(root);
       const files = await listVaultFiles();
       setVault(opened.root, files.map(toVaultFileTs));
+      useAppStore.getState().pushRecentVault(opened.root);
     } catch (e) {
       console.error("open_vault failed", e);
     }
   }, [setVault]);
+
+  const openRecentVault = useCallback(
+    async (root: string) => {
+      try {
+        const opened = await openVault(root);
+        const files = await listVaultFiles();
+        setVault(opened.root, files.map(toVaultFileTs));
+        useAppStore.getState().pushRecentVault(opened.root);
+      } catch (e) {
+        console.error("open_recent_vault failed", e);
+        showToast(tr("toast.openFailed", root));
+      }
+    },
+    [setVault, tr],
+  );
 
   const refreshVault = useCallback(async () => {
     try {
@@ -1381,9 +1411,17 @@ export function App() {
         openRecent(p);
       },
     }));
-    return [...base, ...recents];
+    const recentVaultCmds: Command[] = recentVaults.slice(0, 10).map((p) => ({
+      id: `open_recent_vault:${p}`,
+      label: `Open Recent Vault: ${p.split("/").pop() ?? p}`,
+      hint: p,
+      run: () => {
+        openRecentVault(p);
+      },
+    }));
+    return [...base, ...recents, ...recentVaultCmds];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab?.path, tab?.content, recentFiles]);
+  }, [tab?.path, tab?.content, recentFiles, recentVaults]);
 
   // Recent-file picker uses CommandPalette wrapped with file commands
   const recentCommands: Command[] = useMemo(() => {
