@@ -21,7 +21,7 @@ import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { useT } from "./lib/i18n";
 import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
-import { buildTableMarkdown, insertMarkdown } from "./lib/insert-md";
+import { buildTableMarkdown, insertMarkdown, wrapMarkdown } from "./lib/insert-md";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
@@ -899,6 +899,26 @@ export function App() {
         reopenLastClosed();
         return;
       }
+      if (matchesShortcut(e, "fmtBold")) {
+        e.preventDefault();
+        wrapMarkdown("**", "**");
+        return;
+      }
+      if (matchesShortcut(e, "fmtItalic")) {
+        e.preventDefault();
+        wrapMarkdown("*", "*");
+        return;
+      }
+      if (matchesShortcut(e, "fmtCode")) {
+        e.preventDefault();
+        wrapMarkdown("`", "`");
+        return;
+      }
+      if (matchesShortcut(e, "fmtStrike")) {
+        e.preventDefault();
+        wrapMarkdown("~~", "~~");
+        return;
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1003,6 +1023,49 @@ export function App() {
         label: "Insert Horizontal Rule",
         run: () => {
           insertMarkdown("\n\n---\n\n");
+        },
+      },
+      {
+        id: "format_bold",
+        label: "Bold",
+        shortcut: "⌘B",
+        run: () => {
+          wrapMarkdown("**", "**");
+        },
+      },
+      {
+        id: "format_italic",
+        label: "Italic",
+        shortcut: "⌘I",
+        run: () => {
+          wrapMarkdown("*", "*");
+        },
+      },
+      {
+        id: "format_inline_code",
+        label: "Inline Code",
+        shortcut: "⌘E",
+        run: () => {
+          wrapMarkdown("`", "`");
+        },
+      },
+      {
+        id: "format_strike",
+        label: "Strikethrough",
+        shortcut: "⌘⇧X",
+        run: () => {
+          wrapMarkdown("~~", "~~");
+        },
+      },
+      {
+        id: "insert_today",
+        label: "Insert Today's Date",
+        run: () => {
+          const d = new Date();
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          insertMarkdown(`${yyyy}-${mm}-${dd}`);
         },
       },
       {

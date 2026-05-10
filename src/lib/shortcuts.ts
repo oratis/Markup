@@ -28,7 +28,11 @@ export type ShortcutId =
   | "settings"
   | "nextTab"
   | "prevTab"
-  | "reopenClosed";
+  | "reopenClosed"
+  | "fmtBold"
+  | "fmtItalic"
+  | "fmtCode"
+  | "fmtStrike";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -46,6 +50,10 @@ export const defaults: Record<ShortcutId, string> = {
   nextTab: "Mod+Alt+]",
   prevTab: "Mod+Alt+[",
   reopenClosed: "Mod+Shift+T",
+  fmtBold: "Mod+B",
+  fmtItalic: "Mod+I",
+  fmtCode: "Mod+E",
+  fmtStrike: "Mod+Shift+X",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -64,6 +72,10 @@ export const labels: Record<ShortcutId, string> = {
   nextTab: "Next Tab",
   prevTab: "Previous Tab",
   reopenClosed: "Reopen Last Closed Tab",
+  fmtBold: "Bold",
+  fmtItalic: "Italic",
+  fmtCode: "Inline Code",
+  fmtStrike: "Strikethrough",
 };
 
 const STORAGE_KEY = "markup.shortcuts";

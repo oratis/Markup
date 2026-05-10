@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { setActiveSourceView } from "./active-source-view";
-import { buildTableMarkdown, insertMarkdown } from "./insert-md";
+import { buildTableMarkdown, insertMarkdown, wrapMarkdown } from "./insert-md";
 
 afterEach(() => setActiveSourceView(null));
 
@@ -27,6 +27,40 @@ describe("buildTableMarkdown", () => {
     // 1 col header
     expect(md).toContain("Col 1");
     expect(md).not.toContain("Col 2");
+  });
+});
+
+describe("wrapMarkdown (WYSIWYG path)", () => {
+  it("wraps a non-empty selection with the open / close markers", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    host.contentEditable = "true";
+    host.textContent = "the quick fox";
+    const range = document.createRange();
+    range.setStart(host.firstChild!, 4);
+    range.setEnd(host.firstChild!, 9); // "quick"
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    expect(wrapMarkdown("**", "**")).toBe(true);
+    expect(host.textContent).toBe("the **quick** fox");
+    document.body.removeChild(host);
+  });
+
+  it("inserts the marker pair at the caret when the selection is empty", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    host.contentEditable = "true";
+    host.textContent = "abc";
+    const range = document.createRange();
+    range.setStart(host.firstChild!, 3);
+    range.setEnd(host.firstChild!, 3);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    expect(wrapMarkdown("`", "`")).toBe(true);
+    expect(host.textContent).toBe("abc``");
+    document.body.removeChild(host);
   });
 });
 
