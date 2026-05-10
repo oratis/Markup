@@ -16,8 +16,18 @@ function mount(doc: string, anchor: number): EditorView {
 function pressEnter(view: EditorView): boolean {
   // The keymap returns true if it handled it. Invoke the handler directly
   // since jsdom can't synthesise CM6 key events fully.
-  const handler = continueListKeymap[0].run!;
-  return handler(view);
+  const handler = continueListKeymap.find((b) => b.key === "Enter")?.run;
+  return handler ? handler(view) : false;
+}
+
+function pressTab(view: EditorView): boolean {
+  const handler = continueListKeymap.find((b) => b.key === "Tab")?.run;
+  return handler ? handler(view) : false;
+}
+
+function pressShiftTab(view: EditorView): boolean {
+  const handler = continueListKeymap.find((b) => b.key === "Shift-Tab")?.run;
+  return handler ? handler(view) : false;
 }
 
 describe("continueListKeymap", () => {
@@ -65,5 +75,27 @@ describe("continueListKeymap", () => {
   it("returns false when cursor is mid-line (not at end)", () => {
     const view = mount("- item", 3);
     expect(pressEnter(view)).toBe(false);
+  });
+
+  it("Tab indents a list line by 2 spaces", () => {
+    const view = mount("- item", 6);
+    expect(pressTab(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("  - item");
+  });
+
+  it("Shift-Tab outdents an indented list line", () => {
+    const view = mount("  - item", 8);
+    expect(pressShiftTab(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("- item");
+  });
+
+  it("Tab is a no-op on non-list lines (lets default tab run)", () => {
+    const view = mount("plain", 5);
+    expect(pressTab(view)).toBe(false);
+  });
+
+  it("Shift-Tab on an unindented list line is a no-op", () => {
+    const view = mount("- item", 6);
+    expect(pressShiftTab(view)).toBe(false);
   });
 });

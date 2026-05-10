@@ -1,4 +1,4 @@
-import type { KeyBinding } from "@codemirror/view";
+import type { EditorView, KeyBinding } from "@codemirror/view";
 
 /**
  * On Enter at the end of a list line, auto-insert the next marker:
@@ -15,8 +15,49 @@ import type { KeyBinding } from "@codemirror/view";
 const BULLET_RE = /^(\s*)([-*+])\s+(.*)$/;
 const NUMBERED_RE = /^(\s*)(\d+)([.)])\s+(.*)$/;
 const TASK_RE = /^(\s*)([-*+])\s+\[[ xX]\]\s+(.*)$/;
+const INDENT = "  ";
+
+/** Detect whether a line looks like any flavour of list item. */
+function isListLine(text: string): boolean {
+  return TASK_RE.test(text) || NUMBERED_RE.test(text) || BULLET_RE.test(text);
+}
+
+/** Add or remove one level of indentation on the current list line.
+ * No-op when the cursor isn't on a list line. */
+function changeListIndent(view: EditorView, direction: "in" | "out"): boolean {
+  const sel = view.state.selection.main;
+  if (sel.from !== sel.to) return false;
+  const line = view.state.doc.lineAt(sel.from);
+  if (!isListLine(line.text)) return false;
+  if (direction === "in") {
+    view.dispatch({
+      changes: { from: line.from, insert: INDENT },
+      selection: { anchor: sel.from + INDENT.length },
+      userEvent: "input.indent",
+    });
+    return true;
+  }
+  // Outdent: strip up to INDENT.length leading spaces.
+  const lead = line.text.match(/^[\t ]*/)?.[0] ?? "";
+  if (lead.length === 0) return false;
+  const removeCount = lead.startsWith(INDENT) ? INDENT.length : 1;
+  view.dispatch({
+    changes: { from: line.from, to: line.from + removeCount, insert: "" },
+    selection: { anchor: Math.max(line.from, sel.from - removeCount) },
+    userEvent: "delete.outdent",
+  });
+  return true;
+}
 
 export const continueListKeymap: KeyBinding[] = [
+  {
+    key: "Tab",
+    run: (view) => changeListIndent(view, "in"),
+  },
+  {
+    key: "Shift-Tab",
+    run: (view) => changeListIndent(view, "out"),
+  },
   {
     key: "Enter",
     run: (view) => {
