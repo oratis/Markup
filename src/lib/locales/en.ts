@@ -10,6 +10,7 @@ export const en = {
   "status.selection": "Selected: {0} words, {1} chars",
   "status.caret": "Ln {0}, Col {1}",
   "status.vaultFiles": "{0} files",
+  "status.dirtyCount": "{0} unsaved",
   "status.mode.wysiwyg": "WYSIWYG",
   "status.mode.source": "Source",
 
@@ -80,9 +81,13 @@ export const en = {
   "toast.saveAllFailed": "Saved {0}, {1} failed",
   "toast.tableSizeBad": "Format: rows x cols (e.g. 3x4)",
   "toast.reloaded": "Reloaded from disk",
+  "toast.renameNoFile": "No file to rename",
+  "toast.renameBadName": "Name can't contain '/'",
+  "toast.renameFailed": "Rename failed",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",
+  "prompt.rename": "New file name:",
   "reload.confirmDirty":
     '"{0}" has unsaved changes that will be lost on reload. Continue?',
   "toast.wikilinkMiss": 'No vault file matches "{0}"',

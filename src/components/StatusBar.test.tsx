@@ -60,7 +60,46 @@ describe("StatusBar word count", () => {
   it("renders the vault root path when one is open", () => {
     setActive("body", { vault: "/Users/test/vault" });
     render(<StatusBar />);
-    expect(screen.getByText("/Users/test/vault")).toBeInTheDocument();
+    expect(screen.getByText(/\/Users\/test\/vault/)).toBeInTheDocument();
+  });
+
+  it("shows the unsaved-tab count badge when at least one path-backed tab is dirty", () => {
+    useAppStore.setState({
+      sourceMode: false,
+      vaultRoot: null,
+      tabs: [
+        {
+          id: "/a.md",
+          path: "/a.md",
+          name: "a.md",
+          content: "a",
+          mtimeMs: 1,
+          status: "dirty",
+          errorMessage: null,
+        },
+        {
+          id: "/b.md",
+          path: "/b.md",
+          name: "b.md",
+          content: "b",
+          mtimeMs: 1,
+          status: "saved",
+          errorMessage: null,
+        },
+        {
+          id: "/c.md",
+          path: "/c.md",
+          name: "c.md",
+          content: "c",
+          mtimeMs: 1,
+          status: "dirty",
+          errorMessage: null,
+        },
+      ],
+      activeTabId: "/a.md",
+    });
+    render(<StatusBar />);
+    expect(screen.getByText("2 unsaved")).toBeInTheDocument();
   });
 });
 

@@ -62,6 +62,7 @@ import {
   pickVault,
   pushRecentFileNative,
   readFile,
+  renameFile,
   writeFile,
 } from "./lib/tauri";
 import { checkForUpdates } from "./lib/updater";
@@ -699,6 +700,35 @@ export function App() {
     }
   }, []);
 
+  const renameActiveFile = useCallback(async () => {
+    const t2 = getActiveTab(useAppStore.getState());
+    if (!t2?.path) {
+      showToast(tr("toast.renameNoFile"));
+      return;
+    }
+    const lastSlash = t2.path.lastIndexOf("/");
+    const dir = lastSlash >= 0 ? t2.path.slice(0, lastSlash + 1) : "";
+    const oldName = t2.name;
+    const newName = window.prompt(tr("prompt.rename"), oldName);
+    if (!newName || newName.trim() === "" || newName === oldName) return;
+    const cleanName = newName.trim();
+    if (cleanName.includes("/")) {
+      showToast(tr("toast.renameBadName"));
+      return;
+    }
+    const newPath = dir + cleanName;
+    try {
+      await renameFile(t2.path, newPath);
+      // Re-open the renamed file: the watcher will refresh the tree, but
+      // the current tab keeps the old (now-stale) path. Swap it in place.
+      const s = useAppStore.getState();
+      s.setActivePathAndName(newPath, cleanName, t2.mtimeMs ?? Date.now());
+    } catch (e) {
+      console.error("rename_active failed", e);
+      showToast(tr("toast.renameFailed"));
+    }
+  }, [tr]);
+
   const promptInsertLink = useCallback(() => {
     const url = window.prompt(tr("prompt.linkUrl"), "https://");
     if (!url) return;
@@ -1260,6 +1290,11 @@ export function App() {
       { id: "save", label: "Save", shortcut: "⌘S", run: performSave },
       { id: "save_as", label: "Save As…", shortcut: "⌘⇧S", run: handleSaveAs },
       { id: "save_all", label: "Save All", run: saveAll },
+      {
+        id: "rename_file",
+        label: "Rename Active File…",
+        run: renameActiveFile,
+      },
       {
         id: "insert_hr",
         label: "Insert Horizontal Rule",

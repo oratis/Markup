@@ -60,6 +60,9 @@ export function StatusBar() {
   const sourceMode = useAppStore((s) => s.sourceMode);
   const vaultRoot = useAppStore((s) => s.vaultRoot);
   const vaultFileCount = useAppStore((s) => s.vaultFiles.length);
+  const dirtyCount = useAppStore(
+    (s) => s.tabs.filter((tx) => tx.path && tx.status === "dirty").length,
+  );
 
   const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
   const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
@@ -178,6 +181,12 @@ export function StatusBar() {
         </>
       )}
       <span className="flex-1" />
+      {dirtyCount > 0 && (
+        <>
+          <span aria-live="polite">{t("status.dirtyCount", dirtyCount)}</span>
+          <span className="opacity-30">|</span>
+        </>
+      )}
       {vaultRoot && (
         <span className="truncate max-w-[260px]" title={vaultRoot}>
           {vaultRoot}
