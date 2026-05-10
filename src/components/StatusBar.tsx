@@ -21,6 +21,14 @@ function readSelection(sourceMode: boolean): string {
   return window.getSelection()?.toString() ?? "";
 }
 
+function readCaret(): { line: number; col: number } | null {
+  const v = getActiveSourceView();
+  if (!v) return null;
+  const head = v.state.selection.main.head;
+  const line = v.state.doc.lineAt(head);
+  return { line: line.number, col: head - line.from + 1 };
+}
+
 interface Stats {
   words: number;
   chars: number;
@@ -38,6 +46,7 @@ export function StatusBar() {
 
   const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
   const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
+  const [caret, setCaret] = useState<{ line: number; col: number } | null>(null);
 
   // Recompute synchronously for small docs, debounced for big ones to keep
   // input latency tight (countWords scans the full string + a couple of
@@ -66,18 +75,17 @@ export function StatusBar() {
   // (ProseMirror) and CodeMirror both surface their selection through the
   // DOM Selection API, so a single global listener covers both modes. We
   // run on the next animation frame so the read happens after the editor
-  // has applied the new selection.
+  // has applied the new selection. The same listener also feeds the
+  // caret position display in source mode.
   useEffect(() => {
     let raf = 0;
     const update = () => {
       raf = 0;
       const text = readSelection(sourceMode);
-      if (!text) {
-        setSelStats(null);
-        return;
-      }
-      setSelStats({ words: countWords(text), chars: text.length });
+      setSelStats(text ? { words: countWords(text), chars: text.length } : null);
+      setCaret(sourceMode ? readCaret() : null);
     };
+    update();
     const onChange = () => {
       if (raf) return;
       raf = window.requestAnimationFrame(update);
@@ -106,6 +114,12 @@ export function StatusBar() {
       <span>{t("status.words", stats.words)}</span>
       <span>{t("status.chars", stats.chars)}</span>
       <span>{t("status.lines", stats.lines)}</span>
+      {caret && (
+        <>
+          <span className="opacity-30">|</span>
+          <span aria-live="polite">{t("status.caret", caret.line, caret.col)}</span>
+        </>
+      )}
       {selStats && (
         <>
           <span className="opacity-30">|</span>

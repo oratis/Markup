@@ -45,6 +45,9 @@ interface AppState {
   focusMode: boolean;
   typewriterMode: boolean;
   recentFiles: string[];
+  /** LIFO stack of recently closed file paths — latest first. Capped at
+   * RECENTLY_CLOSED_MAX. Survives only the current session; not persisted. */
+  recentlyClosed: string[];
 
   // settings
   fontSize: number; // base font size px (12-22)
@@ -66,6 +69,10 @@ interface AppState {
   toggleTabPinned: (id: string) => void;
   activateNextTab: () => void;
   activatePrevTab: () => void;
+  /** Pops the latest entry from `recentlyClosed` and returns its path
+   * (caller is responsible for reading + opening it). Returns null when
+   * the stack is empty. */
+  popRecentlyClosed: () => string | null;
   updateActiveContent: (content: string) => void;
   setActiveStatus: (status: SaveStatus, errorMessage?: string | null) => void;
   setActiveMtime: (mtimeMs: number) => void;
@@ -157,6 +164,18 @@ function hello(name: string): string {
 
 let scratchCounter = 0;
 
+const RECENTLY_CLOSED_MAX = 10;
+
+/** Add closed paths to the recently-closed stack, deduped + capped. */
+function pushClosed(stack: string[], paths: Array<string | null | undefined>): string[] {
+  const real = paths.filter((p): p is string => Boolean(p));
+  if (real.length === 0) return stack;
+  // Newest entries lead; drop earlier instances of the same path.
+  const seen = new Set(real);
+  const next = [...real, ...stack.filter((p) => !seen.has(p))];
+  return next.slice(0, RECENTLY_CLOSED_MAX);
+}
+
 function welcomeTab(): Tab {
   return {
     id: `${SCRATCH_PREFIX}welcome`,
@@ -181,6 +200,7 @@ export const useAppStore = create<AppState>((set) => ({
   focusMode: false,
   typewriterMode: false,
   recentFiles: [],
+  recentlyClosed: [],
 
   fontSize: DEFAULT_SETTINGS.fontSize,
   proseMaxWidth: DEFAULT_SETTINGS.proseMaxWidth,
@@ -237,15 +257,17 @@ export const useAppStore = create<AppState>((set) => ({
         if (!ok) return state;
       }
       const tabs = state.tabs.filter((t) => t.id !== id);
+      const recentlyClosed = pushClosed(state.recentlyClosed, [target.path]);
       if (tabs.length === 0) {
         return {
           tabs: [welcomeTab()],
           activeTabId: `${SCRATCH_PREFIX}welcome`,
+          recentlyClosed,
         };
       }
       const activeTabId =
         state.activeTabId === id ? tabs[Math.max(0, idx - 1)].id : state.activeTabId;
-      return { tabs, activeTabId };
+      return { tabs, activeTabId, recentlyClosed };
     }),
 
   setActiveTab: (id) => set({ activeTabId: id }),
@@ -272,8 +294,15 @@ export const useAppStore = create<AppState>((set) => ({
       const keep = state.tabs.find((t) => t.id === id);
       if (!keep) return state;
       // Pinned tabs survive "close others" — they're explicitly anchored.
+      const closed = state.tabs
+        .filter((t) => t.id !== id && !t.pinned)
+        .map((t) => t.path);
       const tabs = state.tabs.filter((t) => t.id === id || t.pinned);
-      return { tabs, activeTabId: keep.id };
+      return {
+        tabs,
+        activeTabId: keep.id,
+        recentlyClosed: pushClosed(state.recentlyClosed, closed),
+      };
     }),
 
   closeTabsToRight: (id) =>
@@ -283,12 +312,15 @@ export const useAppStore = create<AppState>((set) => ({
       const head = state.tabs.slice(0, idx + 1);
       // Keep pinned tabs that lived to the right of `id` so the user
       // doesn't lose their anchored ones via this gesture.
-      const pinnedRight = state.tabs.slice(idx + 1).filter((t) => t.pinned);
+      const right = state.tabs.slice(idx + 1);
+      const pinnedRight = right.filter((t) => t.pinned);
+      const closed = right.filter((t) => !t.pinned).map((t) => t.path);
       const tabs = [...head, ...pinnedRight];
       const activeStillVisible = tabs.some((t) => t.id === state.activeTabId);
       return {
         tabs,
         activeTabId: activeStillVisible ? state.activeTabId : id,
+        recentlyClosed: pushClosed(state.recentlyClosed, closed),
       };
     }),
 
@@ -300,16 +332,20 @@ export const useAppStore = create<AppState>((set) => ({
         if (!ok) return state;
       }
       const pinned = state.tabs.filter((t) => t.pinned);
+      const closed = state.tabs.filter((t) => !t.pinned).map((t) => t.path);
+      const recentlyClosed = pushClosed(state.recentlyClosed, closed);
       if (pinned.length === 0) {
         return {
           tabs: [welcomeTab()],
           activeTabId: `${SCRATCH_PREFIX}welcome`,
+          recentlyClosed,
         };
       }
       const stillActive = pinned.some((t) => t.id === state.activeTabId);
       return {
         tabs: pinned,
         activeTabId: stillActive ? state.activeTabId : pinned[0].id,
+        recentlyClosed,
       };
     }),
 
@@ -344,6 +380,17 @@ export const useAppStore = create<AppState>((set) => ({
       const prev = state.tabs[(i - 1 + state.tabs.length) % state.tabs.length];
       return { activeTabId: prev.id };
     }),
+
+  popRecentlyClosed: () => {
+    let popped: string | null = null;
+    set((state) => {
+      if (state.recentlyClosed.length === 0) return state;
+      const [head, ...rest] = state.recentlyClosed;
+      popped = head;
+      return { recentlyClosed: rest };
+    });
+    return popped;
+  },
 
   updateActiveContent: (content) =>
     set((state) => {

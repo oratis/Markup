@@ -500,6 +500,31 @@ export function App() {
     }
   }, [openLoadedFile]);
 
+  const reopenLastClosed = useCallback(async () => {
+    const path = useAppStore.getState().popRecentlyClosed();
+    if (!path) return;
+    try {
+      const loaded = await readFile(path);
+      openLoadedFile(loaded);
+    } catch (e) {
+      console.error("reopen_closed failed", e);
+      showToast(tr("toast.openFailed", path));
+    }
+  }, [openLoadedFile, tr]);
+
+  const openRecent = useCallback(
+    async (path: string) => {
+      try {
+        const loaded = await readFile(path);
+        openLoadedFile(loaded);
+      } catch (e) {
+        console.error("open_recent failed", e);
+        showToast(tr("toast.openFailed", path));
+      }
+    },
+    [openLoadedFile, tr],
+  );
+
   const handleOpenVault = useCallback(async () => {
     try {
       const root = await pickVault();
@@ -742,6 +767,11 @@ export function App() {
         useAppStore.getState().activatePrevTab();
         return;
       }
+      if (matchesShortcut(e, "reopenClosed")) {
+        e.preventDefault();
+        reopenLastClosed();
+        return;
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -779,6 +809,14 @@ export function App() {
         run: () => {
           const id = useAppStore.getState().activeTabId;
           if (id) useAppStore.getState().toggleTabPinned(id);
+        },
+      },
+      {
+        id: "reopen_closed_tab",
+        label: "Reopen Last Closed Tab",
+        shortcut: "⌘⇧T",
+        run: () => {
+          reopenLastClosed();
         },
       },
       {
@@ -895,9 +933,19 @@ export function App() {
       { id: "export_html", label: "Export as HTML…", run: handleExportHtml },
       { id: "export_pdf", label: "Export as PDF (Print)…", run: handleExportPdf },
     ];
-    return base;
+    // Attach Open Recent entries inline so users can fuzzy-search by
+    // basename or full path without opening the dedicated quick-open UI.
+    const recents: Command[] = recentFiles.slice(0, 10).map((p) => ({
+      id: `open_recent:${p}`,
+      label: `Open Recent: ${p.split("/").pop() ?? p}`,
+      hint: p,
+      run: () => {
+        openRecent(p);
+      },
+    }));
+    return [...base, ...recents];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab?.path, tab?.content]);
+  }, [tab?.path, tab?.content, recentFiles]);
 
   // Recent-file picker uses CommandPalette wrapped with file commands
   const recentCommands: Command[] = useMemo(() => {

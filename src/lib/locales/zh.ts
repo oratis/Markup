@@ -10,6 +10,7 @@ export const zh: Strings = {
   "status.chars": "{0} 字符",
   "status.lines": "{0} 行",
   "status.selection": "已选：{0} 字 / {1} 字符",
+  "status.caret": "行 {0}，列 {1}",
   "status.mode.wysiwyg": "所见即所得",
   "status.mode.source": "源码",
 

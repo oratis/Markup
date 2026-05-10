@@ -8,6 +8,7 @@ export const en = {
   "status.chars": "{0} chars",
   "status.lines": "{0} lines",
   "status.selection": "Selected: {0} words, {1} chars",
+  "status.caret": "Ln {0}, Col {1}",
   "status.mode.wysiwyg": "WYSIWYG",
   "status.mode.source": "Source",
 

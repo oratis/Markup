@@ -16,6 +16,7 @@ function reset() {
     focusMode: false,
     typewriterMode: false,
     recentFiles: [],
+    recentlyClosed: [],
   });
 }
 
@@ -220,6 +221,41 @@ describe("app store", () => {
     setActiveTab("/a.md");
     activatePrevTab();
     expect(useAppStore.getState().activeTabId).toBe("/b.md");
+  });
+
+  it("closeTab pushes the path onto recentlyClosed; popRecentlyClosed returns it", () => {
+    const { openLoadedFile, closeTab, popRecentlyClosed } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    closeTab("/a.md");
+    closeTab("/b.md");
+    // Newest closed comes off the stack first.
+    expect(popRecentlyClosed()).toBe("/b.md");
+    expect(popRecentlyClosed()).toBe("/a.md");
+    expect(popRecentlyClosed()).toBeNull();
+  });
+
+  it("closeAllTabs records every closed file path on recentlyClosed", () => {
+    const { openLoadedFile, closeAllTabs, popRecentlyClosed } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    closeAllTabs();
+    const popped: string[] = [];
+    let p = popRecentlyClosed();
+    while (p) {
+      popped.push(p);
+      p = popRecentlyClosed();
+    }
+    expect(popped.sort()).toEqual(["/a.md", "/b.md", "/c.md"]);
+  });
+
+  it("scratch tabs (no path) don't pollute recentlyClosed", () => {
+    const { newScratchTab, closeTab, popRecentlyClosed } = useAppStore.getState();
+    newScratchTab();
+    const id = useAppStore.getState().activeTabId!;
+    closeTab(id);
+    expect(popRecentlyClosed()).toBeNull();
   });
 
   it("setActivePathAndName updates id/path/name/mtime + clears dirty", () => {

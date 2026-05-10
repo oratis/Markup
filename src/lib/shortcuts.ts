@@ -26,7 +26,8 @@ export type ShortcutId =
   | "toggleSidebar"
   | "settings"
   | "nextTab"
-  | "prevTab";
+  | "prevTab"
+  | "reopenClosed";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -42,6 +43,7 @@ export const defaults: Record<ShortcutId, string> = {
   settings: "Mod+,",
   nextTab: "Mod+Alt+]",
   prevTab: "Mod+Alt+[",
+  reopenClosed: "Mod+Shift+T",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -58,6 +60,7 @@ export const labels: Record<ShortcutId, string> = {
   settings: "Settings",
   nextTab: "Next Tab",
   prevTab: "Previous Tab",
+  reopenClosed: "Reopen Last Closed Tab",
 };
 
 const STORAGE_KEY = "markup.shortcuts";
