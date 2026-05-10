@@ -28,6 +28,7 @@ import {
   listenMenu,
   listenVaultChanged,
   openFileDialog,
+  openNewWindow,
   openVault,
   pickSavePath,
   pickVault,
@@ -480,6 +481,9 @@ export function App() {
         case "new_file":
           newScratchTab();
           break;
+        case "new_window":
+          openNewWindow().catch((e) => console.error("new_window failed", e));
+          break;
         case "open_file":
           handleOpenFile();
           break;
@@ -682,6 +686,12 @@ export function App() {
   const commands: Command[] = useMemo(() => {
     const base: Command[] = [
       { id: "new_file", label: "New File", shortcut: "⌘N", run: newScratchTab },
+      {
+        id: "new_window",
+        label: "New Window",
+        shortcut: "⌘⇧N",
+        run: () => openNewWindow().catch(console.error),
+      },
       { id: "open_file", label: "Open File…", shortcut: "⌘O", run: handleOpenFile },
       { id: "open_vault", label: "Open Vault…", shortcut: "⌘⇧O", run: handleOpenVault },
       { id: "save", label: "Save", shortcut: "⌘S", run: performSave },

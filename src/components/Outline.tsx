@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "../lib/i18n";
+import { parseHeadingsAsync } from "../lib/outline-client";
 import { getActiveTab, useAppStore } from "../store";
 
 interface Heading {
@@ -8,6 +9,10 @@ interface Heading {
   /** 0-based line index in source markdown */
   line: number;
 }
+
+/** Above this size we delegate parsing to the worker. Below it the inline
+ *  scanner is faster than the postMessage round-trip. */
+const WORKER_THRESHOLD = 50_000;
 
 /**
  * Cheap heading parser: scans the markdown line-by-line. Treats `# ` through
@@ -63,7 +68,35 @@ function parseHeadings(md: string): Heading[] {
 export function Outline() {
   const t = useT();
   const tab = useAppStore(getActiveTab);
-  const headings = useMemo(() => (tab ? parseHeadings(tab.content) : []), [tab?.content]);
+
+  // Inline path for small docs (no async cost), worker for big ones to
+  // keep input latency under 16ms even on 1MB+ files.
+  const inlineHeadings = useMemo(() => {
+    if (!tab) return [];
+    return tab.content.length <= WORKER_THRESHOLD ? parseHeadings(tab.content) : [];
+  }, [tab?.content]);
+
+  const [workerHeadings, setWorkerHeadings] = useState<Heading[]>([]);
+  useEffect(() => {
+    if (!tab) {
+      setWorkerHeadings([]);
+      return;
+    }
+    if (tab.content.length <= WORKER_THRESHOLD) {
+      setWorkerHeadings([]);
+      return;
+    }
+    let cancelled = false;
+    parseHeadingsAsync(tab.content).then((h) => {
+      if (!cancelled) setWorkerHeadings(h);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab?.content]);
+
+  const headings =
+    tab && tab.content.length > WORKER_THRESHOLD ? workerHeadings : inlineHeadings;
 
   if (!tab) return null;
   if (headings.length === 0) {

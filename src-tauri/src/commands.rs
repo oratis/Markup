@@ -178,6 +178,7 @@ pub async fn render_html(
 <title>{}</title>
 <style>
 {}
+{}
 </style>
 </head>
 <body>
@@ -187,6 +188,7 @@ pub async fn render_html(
 "#,
         html_escape(&title),
         css,
+        PRINT_RULES,
         body
     );
     Ok(html)
@@ -199,6 +201,19 @@ fn theme_css(name: &str) -> &'static str {
         _ => GITHUB_CSS,
     }
 }
+
+/// Print-only directives applied on top of every theme: A4 page, sensible
+/// margins, repeating page numbers in the footer, and avoid-break hints
+/// for images / pre / table / heading-followed-by-paragraph.
+const PRINT_RULES: &str = r#"
+@media print {
+  @page { size: A4; margin: 1.6cm 1.4cm; }
+  body { margin: 0; max-width: none; }
+  pre, blockquote, table, img { break-inside: avoid; page-break-inside: avoid; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; page-break-after: avoid; }
+  hr { break-after: page; page-break-after: always; border: none; }
+}
+"#;
 
 const GITHUB_CSS: &str = r#"
 body {
@@ -287,11 +302,19 @@ mod render_tests {
         let title = title.unwrap_or("Markup export");
         let css = theme_css(theme.unwrap_or("github"));
         format!(
-            "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>{}</title>\n<style>\n{}\n</style>\n</head>\n<body>\n{}\n</body>\n</html>\n",
+            "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>{}</title>\n<style>\n{}\n{}\n</style>\n</head>\n<body>\n{}\n</body>\n</html>\n",
             html_escape(title),
             css,
+            PRINT_RULES,
             body
         )
+    }
+
+    #[test]
+    fn print_rules_include_page_size_and_break_hints() {
+        assert!(PRINT_RULES.contains("@page"));
+        assert!(PRINT_RULES.contains("size: A4"));
+        assert!(PRINT_RULES.contains("break-inside: avoid"));
     }
 
     #[test]

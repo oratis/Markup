@@ -1,6 +1,7 @@
 mod commands;
 mod commands_locale;
 mod commands_vault;
+mod commands_window;
 mod menu;
 
 pub mod error;
@@ -15,6 +16,7 @@ use commands::{
     write_image,
 };
 use commands_locale::set_locale;
+use commands_window::new_window;
 use commands_vault::{
     close_vault, current_vault, list_vault_files, open_vault, pick_vault, search_vault,
 };
@@ -57,6 +59,7 @@ pub fn run() {
             render_html,
             log_perf,
             set_locale,
+            new_window,
             pick_vault,
             open_vault,
             close_vault,

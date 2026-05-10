@@ -37,6 +37,11 @@ pub fn build_with_locale(app: &AppHandle, loc: Locale) -> tauri::Result<Menu<Wry
                 .build(app)?,
         )
         .item(
+            &MenuItemBuilder::with_id("new_window", i18n::t(loc, "menu.newWindow"))
+                .accelerator("CmdOrCtrl+Shift+N")
+                .build(app)?,
+        )
+        .item(
             &MenuItemBuilder::with_id("open_file", i18n::t(loc, "menu.open"))
                 .accelerator("CmdOrCtrl+O")
                 .build(app)?,

@@ -97,6 +97,10 @@ export async function setNativeLocale(locale: "auto" | "en" | "zh"): Promise<voi
   await invoke("set_locale", { locale });
 }
 
+export async function openNewWindow(): Promise<void> {
+  await invoke("new_window");
+}
+
 export async function listenVaultChanged(cb: () => void): Promise<UnlistenFn> {
   return await listen<void>("vault-changed", () => cb());
 }

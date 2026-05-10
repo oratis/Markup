@@ -103,6 +103,7 @@ fn en(key: &str) -> &'static str {
 
         // File
         "menu.new" => "New File",
+        "menu.newWindow" => "New Window",
         "menu.open" => "Open File…",
         "menu.openRecent" => "Open Recent…",
         "menu.openVault" => "Open Vault…",
@@ -146,6 +147,7 @@ fn zh(key: &str) -> &'static str {
         "menu.settings" => "设置…",
 
         "menu.new" => "新建文件",
+        "menu.newWindow" => "新建窗口",
         "menu.open" => "打开文件…",
         "menu.openRecent" => "打开最近的…",
         "menu.openVault" => "打开 Vault…",
@@ -214,7 +216,8 @@ mod tests {
         // unknown keys. We compare the two arms against a static list.
         let known = [
             "menu.file", "menu.edit", "menu.view", "menu.window", "menu.help",
-            "menu.about", "menu.settings", "menu.new", "menu.open",
+            "menu.about", "menu.settings", "menu.new", "menu.newWindow",
+            "menu.open",
             "menu.openRecent", "menu.openVault", "menu.closeVault",
             "menu.save", "menu.saveAs", "menu.exportHtml", "menu.exportPdf",
             "menu.closeTab", "menu.findInFile", "menu.findInVault",
