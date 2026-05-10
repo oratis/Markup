@@ -25,4 +25,23 @@ describe("scroll-memory", () => {
     expect(getScroll("/a.md")).toBe(100);
     expect(getScroll("/b.md")).toBe(200);
   });
+
+  it("persists path-keyed entries to localStorage", () => {
+    setScroll("/persist.md", 777);
+    const raw = localStorage.getItem("markup.scrollMemory");
+    expect(raw).toBeTruthy();
+    const parsed = JSON.parse(raw as string);
+    expect(parsed["/persist.md"]).toBe(777);
+  });
+
+  it("does NOT persist scratch ids (no leading slash)", () => {
+    setScroll("scratch:welcome", 500);
+    // The cache has it, but localStorage shouldn't.
+    expect(getScroll("scratch:welcome")).toBe(500);
+    const raw = localStorage.getItem("markup.scrollMemory");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      expect(parsed["scratch:welcome"]).toBeUndefined();
+    }
+  });
 });
