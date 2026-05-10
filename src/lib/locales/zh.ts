@@ -96,6 +96,7 @@ export const zh: Strings = {
   "toast.newFileNoVault": "请先打开 Vault",
   "toast.newFileFailed": "创建文件失败：{0}",
   "toast.wordGoalBad": "目标必须是非负整数",
+  "toast.frontmatterExists": "已存在 frontmatter",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "prompt.linkUrl": "链接 URL：",
   "prompt.linkText": "链接文本：",

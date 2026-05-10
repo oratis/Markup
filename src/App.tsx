@@ -27,6 +27,7 @@ import {
   toggleBlockquote,
   toggleList,
 } from "./lib/cm-line-ops";
+import { moveSectionDown, moveSectionUp } from "./lib/cm-section";
 import { formatTable, toggleTaskCheckboxOnLine } from "./lib/cm-table-format";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
@@ -1614,6 +1615,37 @@ export function App() {
         label: "Format Table (Source)",
         run: () => {
           formatTable();
+        },
+      },
+      {
+        id: "move_section_up",
+        label: "Move Section Up (Source)",
+        run: () => {
+          moveSectionUp();
+        },
+      },
+      {
+        id: "move_section_down",
+        label: "Move Section Down (Source)",
+        run: () => {
+          moveSectionDown();
+        },
+      },
+      {
+        id: "insert_frontmatter",
+        label: "Insert YAML Frontmatter",
+        run: () => {
+          if (!tab) return;
+          if (tab.content.startsWith("---\n")) {
+            showToast(tr("toast.frontmatterExists"));
+            return;
+          }
+          const d = new Date();
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const fm = `---\ntitle: ${tab.name.replace(/\.md$/i, "")}\ndate: ${yyyy}-${mm}-${dd}\n---\n\n`;
+          updateActiveContent(fm + tab.content);
         },
       },
       {

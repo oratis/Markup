@@ -95,6 +95,7 @@ export const en = {
   "toast.newFileNoVault": "Open a vault first",
   "toast.newFileFailed": "Create file failed: {0}",
   "toast.wordGoalBad": "Goal must be a non-negative integer",
+  "toast.frontmatterExists": "Frontmatter already present",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",
