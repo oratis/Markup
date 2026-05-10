@@ -1740,6 +1740,13 @@ export function App() {
         },
       },
       {
+        id: "wrap_html_comment",
+        label: "Wrap Selection in HTML Comment",
+        run: () => {
+          wrapMarkdown("<!-- ", " -->");
+        },
+      },
+      {
         id: "insert_today",
         label: "Insert Today's Date",
         run: () => {
