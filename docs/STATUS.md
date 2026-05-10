@@ -1,20 +1,106 @@
-# Status — Autonomous run completed 2026-05-10
+# Status — Last updated 2026-05-10 (16 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has two commits:
-- `4116ec4` initial scaffold (Tauri 2 + React + Milkdown)
-- `1b5eff0` M1 features + Spike 0.3 modules + Spike 0.4 signing script
+`main` branch has 30+ commits across **16 feature batches**, all CI-green.
+`v0.1.1` released as a published GitHub Release (unsigned DMG). The app
+compiles, type-checks, lint-clean, **105 React tests + 17 Rust unit + 9
+integration**, double-Codecov coverage upload, and runs cleanly in dev.
 
-The app **compiles, type-checks, runs in dev mode**. M1 P0 features are
-in place. Spike 0.2 instrumentation is wired but final numbers require
-you to manually open the 5MB fixture (autonomous run can't drive the GUI).
-Spike 0.3 bench is ready to run with one `cargo test` command. Spike 0.4
-signing must be run by you (needs your Apple ID app-specific password).
+What's still on you:
+- **Spike 0.2** quantitative numbers — instrumentation is wired; you open
+  `test-fixtures/big.md` and read `~/Library/Logs/markup/perf.log`.
+- **Spike 0.4** signing+notarization — `scripts/sign-and-notarize.sh` is
+  ready; needs your Apple ID app-specific password.
+- **Auto-updater** key-pair generation — `lib/updater.ts` documents the
+  3-step setup; release.yml reads `TAURI_SIGNING_PRIVATE_KEY` secrets
+  if present and emits `latest.json`.
+- Replace placeholder app icons.
+- Decide if you want to merge any of the open Dependabot PRs (most are
+  major bumps — risk-managed by you, not me).
 
-## What's done (✅)
+## Feature highlights
+
+### Editor
+- WYSIWYG (Milkdown) ↔ Source mode (CodeMirror 6, fold gutter, `⌘/`)
+- Multi-tab with HTML5 drag-drop reorder + right-click "Close / Others
+  / To the Right" + dirty-on-close confirm
+- Find in File (`⌘F`) with match counter (n / 9999+) — uses
+  `window.find()` for WYSIWYG; CM6 has its own search panel in source
+- Save / Save As (atomic temp+rename, mtime stale-check, autosave
+  debounce configurable 0–2000ms)
+- 5MB+ docs auto-fall back to source mode
+- 500KB+ docs in source mode skip line numbers / syntax highlighting
+- KaTeX math, Mermaid diagrams, Shiki code highlighting, GFM tables,
+  task lists
+
+### Wikilinks
+- `[[name]]` clicks open the matching vault file (basename / case-
+  insensitive / extension-tolerant fallback)
+- Typing `[[` in WYSIWYG auto-pops the wikilink picker (completion mode)
+- Manual "Insert Wikilink…" command opens the picker (full mode)
+- Inline ProseMirror decoration tints `[[xxx]]` in WYSIWYG
+
+### Vault management
+- Open vault, virtualised file tree (@tanstack/react-virtual)
+- Right-click in tree: Rename / Move to Trash
+- Quick Open (`⌘P`, fuzzy subsequence)
+- Full-text search (`⌘⇧F`, Tantivy index)
+- File watcher → vault refresh + reload-on-external-edit prompt
+- Recent files (capped 20, persisted to localStorage AND
+  `~/Library/Application Support/markup/recent.json` — survives
+  cross-window + first-launch)
+
+### Editor flow
+- Outline panel with cursor-tracking active-heading highlight + click
+  to scroll (Milkdown DOM in WYSIWYG, CM6 line dispatch in source)
+- Outline parsing in a Web Worker for docs > 50KB
+- Focus / Typewriter modes (CSS attribute + selectionchange handler)
+- Command Palette (`⌘⇧P`) — ~22 commands
+- Copy Link to Paragraph → `[[file#heading]]` in clipboard
+- Image paste / drag-drop into vault `assets/` (or configurable dir)
+- Drop a `.md` file from Finder onto the editor → opens it
+- Toast queue (cap 3, fade animation)
+
+### Settings
+- Font size / prose width / autosave delay / image-paste folder
+- Export theme (GitHub / Plain / Tufte)
+- Language (Auto / English / 中文) — also drives native macOS menu
+- Custom keyboard shortcuts (11 commands, click-to-record)
+- Reset All Settings command (palette)
+- All persisted to localStorage; locale also persisted to disk so the
+  next launch's menu reflects the choice
+
+### Native macOS integration
+- Full menu bar (File / Edit / View / Window / Help) localised to
+  en/zh, JS-side locale picker rebuilds it live via `set_locale`
+- File associations: `.md` / `.markdown` / `.mdx` / `.mkd`
+- New Window (`⌘⇧N`)
+- About dialog with version + bundle ID + repo link
+- First-launch onboarding modal with shortcut cheatsheet
+- System theme follow ("Auto" theme) — flips light/dark with macOS
+
+### Distribution
+- Two GH Actions workflows:
+  - `ci.yml`: lint + tsc + Vite build + cargo test + cargo build —
+    every push & PR. Uploads frontend + Rust coverage to Codecov.
+  - `release.yml`: tag-triggered. Builds .app + plain hdiutil DMG,
+    SHA256SUMS, optional `latest.json` (when updater secrets set),
+    attaches to the GitHub Release with auto-generated notes.
+- Tauri-plugin-updater wired (active=false until you set the pubkey)
+- Three published commits, two tags (v0.1.0, v0.1.1), one full release
+- Dependabot watches npm / cargo / GH Actions weekly with grouping
+
+### Engineering
+- Biome 1.9 lint + format with project-fitted rules (no warnings)
+- React tests: 105 across 20 files (Vitest + jsdom + RTL)
+- Rust tests: 17 unit + 9 integration + 2 spike (release-only, ignored
+  by default; reproduce via `pnpm bench:spike03`)
+- Coverage flowed to Codecov with separate `frontend` / `rust` flags
+
+## Spike status
 
 ### Spike 0.1 — Tauri + Milkdown boot
 - App built and launched in dev mode
