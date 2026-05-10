@@ -49,6 +49,29 @@ describe("TabBar", () => {
     expect(useAppStore.getState().activeTabId).toBe("/b.md");
   });
 
+  it("middle-click on a tab closes it", () => {
+    useAppStore.setState({
+      tabs: [makeTab("/a.md", "a.md"), makeTab("/b.md", "b.md")],
+      activeTabId: "/a.md",
+    });
+    render(<TabBar />);
+    const aRow = screen.getByText("a.md").parentElement!;
+    fireEvent.mouseDown(aRow, { button: 1 });
+    const ids = useAppStore.getState().tabs.map((t) => t.id);
+    expect(ids).toEqual(["/b.md"]);
+  });
+
+  it("middle-click on a pinned tab is a no-op", () => {
+    useAppStore.setState({
+      tabs: [{ ...makeTab("/a.md", "a.md"), pinned: true }, makeTab("/b.md", "b.md")],
+      activeTabId: "/a.md",
+    });
+    render(<TabBar />);
+    const aRow = screen.getByText("a.md").parentElement!;
+    fireEvent.mouseDown(aRow, { button: 1 });
+    expect(useAppStore.getState().tabs).toHaveLength(2);
+  });
+
   it("hides the close button on pinned tabs and shows a pin glyph", () => {
     useAppStore.setState({
       tabs: [{ ...makeTab("/a.md", "a.md"), pinned: true }, makeTab("/b.md", "b.md")],

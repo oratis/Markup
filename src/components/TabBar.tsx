@@ -68,6 +68,14 @@ export function TabBar() {
               e.preventDefault();
               setCtx({ id: tab.id, x: e.clientX, y: e.clientY });
             }}
+            onMouseDown={(e) => {
+              // Middle-click closes the tab (browser convention).
+              // Pinned tabs ignore the gesture; explicit unpin first.
+              if (e.button === 1 && !tab.pinned) {
+                e.preventDefault();
+                closeTab(tab.id);
+              }
+            }}
             className={`group titlebar-no-drag relative flex items-center gap-2 pl-3 pr-1 py-1.5 text-[12px] cursor-pointer border-r border-black/5 dark:border-white/10 select-none ${
               isActive
                 ? "bg-canvas-light dark:bg-canvas-dark text-ink-light dark:text-ink-dark"

@@ -1314,6 +1314,54 @@ export function App() {
         run: renameActiveFile,
       },
       {
+        id: "export_settings",
+        label: "Export Settings (Copy JSON)",
+        run: () => {
+          const s = useAppStore.getState();
+          const payload = JSON.stringify(
+            {
+              fontSize: s.fontSize,
+              proseMaxWidth: s.proseMaxWidth,
+              autosaveMs: s.autosaveMs,
+              imagePasteDir: s.imagePasteDir,
+              exportTheme: s.exportTheme,
+              spellcheck: s.spellcheck,
+              lineWrap: s.lineWrap,
+              sidebarWidth: s.sidebarWidth,
+              outlineWidth: s.outlineWidth,
+              saveOnBlur: s.saveOnBlur,
+              trimOnSave: s.trimOnSave,
+              showLineNumbers: s.showLineNumbers,
+            },
+            null,
+            2,
+          );
+          navigator.clipboard
+            .writeText(payload)
+            .then(() => showToast(tr("toast.settingsCopied")))
+            .catch(() => showToast(tr("toast.copyFailed")));
+        },
+      },
+      {
+        id: "import_settings",
+        label: "Import Settings…",
+        run: () => {
+          const raw = window.prompt(tr("prompt.importSettings"), "");
+          if (!raw) return;
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === "object") {
+              useAppStore.getState().setSettings(parsed);
+              showToast(tr("toast.settingsImported"));
+            } else {
+              showToast(tr("toast.settingsImportBad"));
+            }
+          } catch {
+            showToast(tr("toast.settingsImportBad"));
+          }
+        },
+      },
+      {
         id: "insert_hr",
         label: "Insert Horizontal Rule",
         run: () => {
