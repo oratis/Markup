@@ -47,7 +47,8 @@ export type ShortcutId =
   | "zoomReset"
   | "insertLink"
   | "nextHeading"
-  | "prevHeading";
+  | "prevHeading"
+  | "toggleOutline";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -84,6 +85,7 @@ export const defaults: Record<ShortcutId, string> = {
   insertLink: "Mod+K",
   nextHeading: "Mod+Shift+J",
   prevHeading: "Mod+Shift+K",
+  toggleOutline: "Mod+Alt+B",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -121,6 +123,7 @@ export const labels: Record<ShortcutId, string> = {
   insertLink: "Insert Link",
   nextHeading: "Next Heading",
   prevHeading: "Previous Heading",
+  toggleOutline: "Toggle Outline",
 };
 
 const STORAGE_KEY = "markup.shortcuts";

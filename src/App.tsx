@@ -718,6 +718,40 @@ export function App() {
     }
   }, []);
 
+  const newFileInVault = useCallback(async () => {
+    const root = useAppStore.getState().vaultRoot;
+    if (!root) {
+      showToast(tr("toast.newFileNoVault"));
+      return;
+    }
+    const name = window.prompt(tr("prompt.newFileName"), "untitled.md");
+    if (!name) return;
+    const cleanName = name.trim();
+    if (!cleanName || cleanName.includes("/")) {
+      showToast(tr("toast.renameBadName"));
+      return;
+    }
+    const finalName = cleanName.toLowerCase().endsWith(".md")
+      ? cleanName
+      : `${cleanName}.md`;
+    const sep = root.endsWith("/") ? "" : "/";
+    const newPath = `${root}${sep}${finalName}`;
+    try {
+      const mtime = await writeFile(newPath, "", null);
+      openLoadedFile({ path: newPath, content: "", mtime_ms: mtime });
+      // Refresh the vault file list so the sidebar picks up the newcomer.
+      try {
+        const files = await listVaultFiles();
+        useAppStore.getState().setVaultFiles(files.map(toVaultFileTs));
+      } catch {
+        /*ignore — watcher will pick it up too*/
+      }
+    } catch (e) {
+      console.error("new_file_in_vault failed", e);
+      showToast(tr("toast.newFileFailed", String(e)));
+    }
+  }, [openLoadedFile, tr]);
+
   const renameActiveFile = useCallback(async () => {
     const t2 = getActiveTab(useAppStore.getState());
     if (!t2?.path) {
@@ -1190,6 +1224,11 @@ export function App() {
         jumpToHeading("prev");
         return;
       }
+      if (matchesShortcut(e, "toggleOutline")) {
+        e.preventDefault();
+        toggleOutline();
+        return;
+      }
       // Cmd+1..9 = jump to tab N (last digit = last tab; matches browser).
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         const n = Number(e.key);
@@ -1215,6 +1254,11 @@ export function App() {
   const commands: Command[] = useMemo(() => {
     const base: Command[] = [
       { id: "new_file", label: "New File", shortcut: "⌘N", run: newScratchTab },
+      {
+        id: "new_file_in_vault",
+        label: "New File in Vault…",
+        run: newFileInVault,
+      },
       {
         id: "close_all_tabs",
         label: "Close All Tabs",
