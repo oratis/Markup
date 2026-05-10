@@ -67,6 +67,10 @@ export const en = {
   // toasts
   "toast.copied": "Copied {0}",
   "toast.copyFailed": "Copy failed",
+  "toast.savedAll": "Saved {0} files",
+  "toast.saveAllFailed": "Saved {0}, {1} failed",
+  "toast.tableSizeBad": "Format: rows x cols (e.g. 3x4)",
+  "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "toast.wikilinkMiss": 'No vault file matches "{0}"',
   "toast.openFailed": "Failed to open {0}",
   "toast.largeFileSource": "Large file ({0}) — switched to source mode",

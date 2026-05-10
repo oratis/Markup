@@ -20,6 +20,7 @@ import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { useT } from "./lib/i18n";
 import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
+import { buildTableMarkdown, insertMarkdown } from "./lib/insert-md";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
@@ -475,6 +476,46 @@ export function App() {
     }
   }, [setActiveStatus, setActiveMtime]);
 
+  const saveAll = useCallback(async () => {
+    const dirty = useAppStore
+      .getState()
+      .tabs.filter((tx) => tx.path && tx.status === "dirty");
+    if (dirty.length === 0) return;
+    const results = await Promise.allSettled(
+      dirty.map((tx) => writeFile(String(tx.path), tx.content, tx.mtimeMs)),
+    );
+    let savedCount = 0;
+    let failedCount = 0;
+    useAppStore.setState((s) => ({
+      tabs: s.tabs.map((tx) => {
+        const i = dirty.findIndex((d) => d.id === tx.id);
+        if (i < 0) return tx;
+        const r = results[i];
+        if (r.status === "fulfilled") {
+          savedCount += 1;
+          return {
+            ...tx,
+            status: "saved",
+            mtimeMs: r.value,
+            errorMessage: null,
+          };
+        }
+        failedCount += 1;
+        return {
+          ...tx,
+          status: "error",
+          errorMessage: String(r.reason),
+        };
+      }),
+    }));
+    setExternalMtime(null);
+    if (failedCount === 0) {
+      showToast(tr("toast.savedAll", savedCount));
+    } else {
+      showToast(tr("toast.saveAllFailed", savedCount, failedCount));
+    }
+  }, [tr]);
+
   const handleEditorChange = useCallback(
     (md: string) => {
       updateActiveContent(md);
@@ -704,6 +745,11 @@ export function App() {
         performSave();
         return;
       }
+      if (matchesShortcut(e, "saveAll")) {
+        e.preventDefault();
+        saveAll();
+        return;
+      }
       if (matchesShortcut(e, "saveAs")) {
         e.preventDefault();
         handleSaveAs();
@@ -776,7 +822,7 @@ export function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [performSave, sourceMode]);
+  }, [performSave, saveAll, sourceMode]);
 
   const fileKey = tab?.id ?? "__none__";
   const initialValue = tab?.content ?? "";
@@ -844,6 +890,28 @@ export function App() {
       { id: "open_vault", label: "Open Vault…", shortcut: "⌘⇧O", run: handleOpenVault },
       { id: "save", label: "Save", shortcut: "⌘S", run: performSave },
       { id: "save_as", label: "Save As…", shortcut: "⌘⇧S", run: handleSaveAs },
+      { id: "save_all", label: "Save All", run: saveAll },
+      {
+        id: "insert_hr",
+        label: "Insert Horizontal Rule",
+        run: () => {
+          insertMarkdown("\n\n---\n\n");
+        },
+      },
+      {
+        id: "insert_table",
+        label: "Insert Table…",
+        run: () => {
+          const raw = window.prompt(tr("prompt.tableSize"), "3x3");
+          if (!raw) return;
+          const m = raw.trim().match(/^(\d+)\s*[x×]\s*(\d+)$/i);
+          if (!m) {
+            showToast(tr("toast.tableSizeBad"));
+            return;
+          }
+          insertMarkdown(`\n\n${buildTableMarkdown(Number(m[1]), Number(m[2]))}\n`);
+        },
+      },
       {
         id: "quick_open",
         label: "Quick Open",

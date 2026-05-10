@@ -16,6 +16,7 @@
 export type ShortcutId =
   | "save"
   | "saveAs"
+  | "saveAll"
   | "openFile"
   | "openVault"
   | "quickOpen"
@@ -32,6 +33,7 @@ export type ShortcutId =
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
   saveAs: "Mod+Shift+S",
+  saveAll: "Mod+Alt+S",
   openFile: "Mod+O", // also handled by native menu
   openVault: "Mod+Shift+O",
   quickOpen: "Mod+P",
@@ -49,6 +51,7 @@ export const defaults: Record<ShortcutId, string> = {
 export const labels: Record<ShortcutId, string> = {
   save: "Save",
   saveAs: "Save As",
+  saveAll: "Save All",
   openFile: "Open File",
   openVault: "Open Vault",
   quickOpen: "Quick Open",

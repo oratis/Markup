@@ -68,6 +68,10 @@ export const zh: Strings = {
   // toasts
   "toast.copied": "已复制 {0}",
   "toast.copyFailed": "复制失败",
+  "toast.savedAll": "已保存 {0} 个文件",
+  "toast.saveAllFailed": "已保存 {0}，{1} 个失败",
+  "toast.tableSizeBad": "格式：行 x 列（例如 3x4）",
+  "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "toast.wikilinkMiss": "Vault 里没有匹配的文件：{0}",
   "toast.openFailed": "打开 {0} 失败",
   "toast.largeFileSource": "大文件（{0}）— 已切换到源码模式",
