@@ -13,6 +13,7 @@ export const en = {
   "status.dirtyCount": "{0} unsaved",
   "status.readingTime": "~{0} min read",
   "status.readingTimeTitle": "Estimated at 200 words / minute",
+  "status.sizeTitle": "UTF-8 byte size",
   "status.mode.wysiwyg": "WYSIWYG",
   "status.mode.source": "Source",
   "status.modeToggleTitle": "Toggle source ↔ WYSIWYG (⌘/)",

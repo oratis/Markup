@@ -49,6 +49,22 @@ interface Stats {
   words: number;
   chars: number;
   lines: number;
+  bytes: number;
+}
+
+const ENCODER = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
+
+function byteSize(text: string): number {
+  if (!text) return 0;
+  if (ENCODER) return ENCODER.encode(text).length;
+  // jsdom historically lacked TextEncoder; fall back to a rough char count.
+  return text.length;
+}
+
+function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 const HEAVY_THRESHOLD = 100_000;
@@ -66,7 +82,7 @@ export function StatusBar() {
   const wordCountGoal = useAppStore((s) => s.wordCountGoal);
   const toggleSourceMode = useAppStore((s) => s.toggleSourceMode);
 
-  const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
+  const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0, bytes: 0 });
   const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
   const [caret, setCaret] = useState<{ line: number; col: number } | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<Heading[]>([]);
@@ -83,7 +99,7 @@ export function StatusBar() {
   // regex passes; ~5ms at 100k chars on M1, much worse on Intel).
   useEffect(() => {
     if (!tab) {
-      setStats({ words: 0, chars: 0, lines: 0 });
+      setStats({ words: 0, chars: 0, lines: 0, bytes: 0 });
       return;
     }
     const compute = () => {
@@ -91,6 +107,7 @@ export function StatusBar() {
         words: countWords(tab.content),
         chars: tab.content.length,
         lines: tab.content.split("\n").length,
+        bytes: byteSize(tab.content),
       });
     };
     if (tab.content.length < HEAVY_THRESHOLD) {
@@ -173,6 +190,11 @@ export function StatusBar() {
       </span>
       <span>{t("status.chars", stats.chars)}</span>
       <span>{t("status.lines", stats.lines)}</span>
+      {stats.bytes >= 1024 && (
+        <span className="opacity-60" title={t("status.sizeTitle")}>
+          {humanSize(stats.bytes)}
+        </span>
+      )}
       {stats.words > 0 && (
         <span className="opacity-60" title={t("status.readingTimeTitle")}>
           {t("status.readingTime", Math.max(1, Math.round(stats.words / 200)))}

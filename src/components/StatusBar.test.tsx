@@ -70,6 +70,18 @@ describe("StatusBar word count", () => {
     expect(screen.getByText(/\/Users\/test\/vault/)).toBeInTheDocument();
   });
 
+  it("shows UTF-8 byte size when content >= 1 KB", () => {
+    setActive("a".repeat(2048)); // ~2 KB
+    render(<StatusBar />);
+    expect(screen.getByText(/2\.0 KB/)).toBeInTheDocument();
+  });
+
+  it("hides the byte-size badge for small docs (<1 KB)", () => {
+    setActive("hi");
+    render(<StatusBar />);
+    expect(screen.queryByText(/KB|MB/)).toBeNull();
+  });
+
   it("shows reading-time estimate scaled at 200 wpm", () => {
     // 600 words → ~3 min read.
     const text = Array(600).fill("foo").join(" ");
