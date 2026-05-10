@@ -48,6 +48,7 @@ import {
   wrapMarkdown,
 } from "./lib/insert-md";
 import { buildParagraphLink } from "./lib/paragraph-link";
+import { getPinnedPaths, persistPinnedPath } from "./lib/pinned-paths";
 import { trimTrailingWhitespace } from "./lib/save-prep";
 import { getScroll, setScroll } from "./lib/scroll-memory";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
@@ -371,6 +372,37 @@ export function App() {
     });
     return dispose;
   }, [focusMode, typewriterMode]);
+
+  // Pinned-tab persistence. When a path-backed tab opens whose path is
+  // in the persisted set, mark it pinned. We also subscribe to tabs
+  // changes so toggling a pin (which only mutates the in-memory flag)
+  // gets mirrored back into the persisted set.
+  useEffect(() => {
+    const persisted = getPinnedPaths();
+    if (persisted.size === 0) return;
+    // Apply to current tabs once on mount.
+    useAppStore.setState((s) => ({
+      tabs: s.tabs.map((t) =>
+        !t.pinned && t.path && persisted.has(t.path) ? { ...t, pinned: true } : t,
+      ),
+    }));
+  }, []);
+
+  useEffect(() => {
+    // Mirror current pinned state back to the persisted set whenever
+    // the tabs change. Only path-backed tabs participate.
+    const known = getPinnedPaths();
+    const wantPinned = new Set(
+      tabs.filter((t) => t.pinned && t.path).map((t) => t.path as string),
+    );
+    // Persist diffs only.
+    for (const t of tabs) {
+      if (!t.path) continue;
+      const isPinned = wantPinned.has(t.path);
+      const wasPinned = known.has(t.path);
+      if (isPinned !== wasPinned) persistPinnedPath(t.path, isPinned);
+    }
+  }, [tabs]);
 
   // Per-tab WYSIWYG scroll memory: capture on scroll, restore on tab
   // switch. Source mode owns its own scroll element via SourceEditor.
