@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "../store";
 import { StatusBar } from "./StatusBar";
 
@@ -61,5 +61,43 @@ describe("StatusBar word count", () => {
     setActive("body", { vault: "/Users/test/vault" });
     render(<StatusBar />);
     expect(screen.getByText("/Users/test/vault")).toBeInTheDocument();
+  });
+});
+
+describe("StatusBar selection counter", () => {
+  it("renders nothing when selection is empty", () => {
+    setActive("hello world from markup");
+    render(<StatusBar />);
+    expect(screen.queryByText(/Selected/)).toBeNull();
+  });
+
+  it("shows word & char count for the active DOM selection", () => {
+    setActive("hello world from markup");
+    // Stub the selection — jsdom's `Selection.toString()` returns "" without
+    // a real range, so monkey-patch `window.getSelection`.
+    const orig = window.getSelection;
+    const fakeSel = {
+      toString: () => "hello world",
+      rangeCount: 1,
+    } as unknown as Selection;
+    window.getSelection = () => fakeSel;
+    // Mock requestAnimationFrame to be synchronous so the effect's read happens
+    // inside this `act` block.
+    const rafSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+    try {
+      render(<StatusBar />);
+      act(() => {
+        document.dispatchEvent(new Event("selectionchange"));
+      });
+      expect(screen.getByText(/Selected: 2 words, 11 chars/)).toBeInTheDocument();
+    } finally {
+      window.getSelection = orig;
+      rafSpy.mockRestore();
+    }
   });
 });

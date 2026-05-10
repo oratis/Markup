@@ -23,6 +23,7 @@ import { setActiveSourceView } from "../lib/active-source-view";
 import { installImageDrop } from "../lib/image-drop";
 import { installImagePaste } from "../lib/image-paste";
 import { log as perfLog } from "../lib/perf";
+import { installSmartPaste } from "../lib/smart-paste";
 import { useAppStore } from "../store";
 
 interface SourceEditorProps {
@@ -104,10 +105,23 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     };
     const detachPaste = installImagePaste(hostRef.current, imageOpts);
     const detachDrop = installImageDrop(hostRef.current, imageOpts);
+    const detachSmart = installSmartPaste(hostRef.current, {
+      getSelectionText: () => {
+        const v = viewRef.current;
+        if (!v) return "";
+        const { from, to } = v.state.selection.main;
+        return from === to ? "" : v.state.sliceDoc(from, to);
+      },
+      insertLink: (md) => {
+        insertAtSelection(md);
+        return true;
+      },
+    });
 
     return () => {
       detachPaste();
       detachDrop();
+      detachSmart();
       setActiveSourceView(null);
       view.destroy();
       viewRef.current = null;

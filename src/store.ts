@@ -49,6 +49,7 @@ interface AppState {
   autosaveMs: number; // 0 = autosave disabled
   imagePasteDir: string; // relative to vault root
   exportTheme: "github" | "plain" | "tufte";
+  spellcheck: boolean;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -58,6 +59,7 @@ interface AppState {
   reorderTab: (fromId: string, toId: string) => void;
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
+  closeAllTabs: () => void;
   updateActiveContent: (content: string) => void;
   setActiveStatus: (status: SaveStatus, errorMessage?: string | null) => void;
   setActiveMtime: (mtimeMs: number) => void;
@@ -90,6 +92,7 @@ export interface Settings {
   autosaveMs: number;
   imagePasteDir: string;
   exportTheme: "github" | "plain" | "tufte";
+  spellcheck: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -98,6 +101,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autosaveMs: 300,
   imagePasteDir: "assets",
   exportTheme: "github",
+  spellcheck: false,
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -177,6 +181,7 @@ export const useAppStore = create<AppState>((set) => ({
   autosaveMs: DEFAULT_SETTINGS.autosaveMs,
   imagePasteDir: DEFAULT_SETTINGS.imagePasteDir,
   exportTheme: DEFAULT_SETTINGS.exportTheme,
+  spellcheck: DEFAULT_SETTINGS.spellcheck,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -273,6 +278,19 @@ export const useAppStore = create<AppState>((set) => ({
       };
     }),
 
+  closeAllTabs: () =>
+    set((state) => {
+      const dirty = state.tabs.find((x) => x.status === "dirty" && x.path);
+      if (dirty) {
+        const ok = window.confirm(t("tab.confirmClose", dirty.name));
+        if (!ok) return state;
+      }
+      return {
+        tabs: [welcomeTab()],
+        activeTabId: `${SCRATCH_PREFIX}welcome`,
+      };
+    }),
+
   updateActiveContent: (content) =>
     set((state) => {
       const id = state.activeTabId;
@@ -338,12 +356,14 @@ export const useAppStore = create<AppState>((set) => ({
       const autosaveMs = clamp(patch.autosaveMs ?? state.autosaveMs, 0, 5000);
       const imagePasteDir = (patch.imagePasteDir ?? state.imagePasteDir).trim();
       const exportTheme = patch.exportTheme ?? state.exportTheme;
+      const spellcheck = patch.spellcheck ?? state.spellcheck;
       return {
         fontSize,
         proseMaxWidth,
         autosaveMs,
         imagePasteDir: imagePasteDir || "assets",
         exportTheme,
+        spellcheck,
       };
     }),
 

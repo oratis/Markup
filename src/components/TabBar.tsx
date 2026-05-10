@@ -16,6 +16,7 @@ export function TabBar() {
   const closeTab = useAppStore((s) => s.closeTab);
   const closeOtherTabs = useAppStore((s) => s.closeOtherTabs);
   const closeTabsToRight = useAppStore((s) => s.closeTabsToRight);
+  const closeAllTabs = useAppStore((s) => s.closeAllTabs);
   const reorderTab = useAppStore((s) => s.reorderTab);
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export function TabBar() {
               run: () => closeTabsToRight(ctx.id),
               disabled: tabs.findIndex((t) => t.id === ctx.id) === tabs.length - 1,
             },
+            { label: "Close All", run: () => closeAllTabs() },
           ]}
         />
       )}

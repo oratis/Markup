@@ -17,12 +17,14 @@ export function SettingsDialog({ onClose }: Props) {
   const setSettings = useAppStore((s) => s.setSettings);
 
   const exportTheme = useAppStore((s) => s.exportTheme);
+  const spellcheck = useAppStore((s) => s.spellcheck);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
     autosaveMs,
     imagePasteDir,
     exportTheme,
+    spellcheck,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -122,6 +124,19 @@ export function SettingsDialog({ onClose }: Props) {
               <option value="tufte">Tufte</option>
             </select>
           </Row>
+
+          <Row label={t("settings.spellcheck")} hint={t("settings.spellcheckHint")}>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={draft.spellcheck}
+                onChange={(e) => commit({ spellcheck: e.target.checked })}
+              />
+              <span className="opacity-70">
+                {draft.spellcheck ? t("settings.on") : t("settings.off")}
+              </span>
+            </label>
+          </Row>
         </div>
 
         <ShortcutsEditor />
@@ -135,6 +150,7 @@ export function SettingsDialog({ onClose }: Props) {
                 autosaveMs: 300,
                 imagePasteDir: "assets",
                 exportTheme: "github",
+                spellcheck: false,
               });
             }}
             className="opacity-70 hover:opacity-100 underline"

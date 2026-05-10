@@ -7,6 +7,7 @@ export const en = {
   "status.words": "{0} words",
   "status.chars": "{0} chars",
   "status.lines": "{0} lines",
+  "status.selection": "Selected: {0} words, {1} chars",
   "status.mode.wysiwyg": "WYSIWYG",
   "status.mode.source": "Source",
 
@@ -31,6 +32,10 @@ export const en = {
   "settings.shortcutsRecord": "Press keys…",
   "settings.shortcutsReset": "Reset all",
   "settings.exportTheme": "Export theme",
+  "settings.spellcheck": "Spell check",
+  "settings.spellcheckHint": "Browser-native",
+  "settings.on": "On",
+  "settings.off": "Off",
   "settings.restore": "Restore defaults",
   "settings.done": "Done",
 

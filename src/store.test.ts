@@ -155,6 +155,17 @@ describe("app store", () => {
     expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/a.md", "/b.md"]);
   });
 
+  it("closeAllTabs returns the store to a fresh welcome scratch", () => {
+    const { openLoadedFile, closeAllTabs } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    closeAllTabs();
+    const s = useAppStore.getState();
+    expect(s.tabs).toHaveLength(1);
+    expect(s.tabs[0].path).toBeNull();
+    expect(s.activeTabId).toBe(s.tabs[0].id);
+  });
+
   it("setActivePathAndName updates id/path/name/mtime + clears dirty", () => {
     const { newScratchTab, updateActiveContent, setActivePathAndName } =
       useAppStore.getState();

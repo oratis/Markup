@@ -9,6 +9,7 @@ export const zh: Strings = {
   "status.words": "{0} 字",
   "status.chars": "{0} 字符",
   "status.lines": "{0} 行",
+  "status.selection": "已选：{0} 字 / {1} 字符",
   "status.mode.wysiwyg": "所见即所得",
   "status.mode.source": "源码",
 
@@ -32,6 +33,10 @@ export const zh: Strings = {
   "settings.shortcutsRecord": "请按键…",
   "settings.shortcutsReset": "全部重置",
   "settings.exportTheme": "导出主题",
+  "settings.spellcheck": "拼写检查",
+  "settings.spellcheckHint": "浏览器原生",
+  "settings.on": "开启",
+  "settings.off": "关闭",
   "settings.restore": "恢复默认",
   "settings.done": "完成",
 

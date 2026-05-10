@@ -23,6 +23,7 @@ import { installImagePaste } from "./lib/image-paste";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
+import { installSmartPaste } from "./lib/smart-paste";
 import { resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
 import {
   listRecentFilesNative,
@@ -232,6 +233,7 @@ export function App() {
   // Settings → CSS variables + persist
   const exportTheme = useAppStore((s) => s.exportTheme);
   const imagePasteDir = useAppStore((s) => s.imagePasteDir);
+  const spellcheck = useAppStore((s) => s.spellcheck);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -245,12 +247,13 @@ export function App() {
           autosaveMs,
           imagePasteDir,
           exportTheme,
+          spellcheck,
         }),
       );
     } catch {
       /*ignore*/
     }
-  }, [fontSize, proseMaxWidth, autosaveMs, imagePasteDir, exportTheme]);
+  }, [fontSize, proseMaxWidth, autosaveMs, imagePasteDir, exportTheme, spellcheck]);
 
   // Push recent file when active tab changes to a real file. Mirror to
   // the Rust-side store so other windows + next launches see it without
@@ -415,6 +418,13 @@ export function App() {
       insert: insertAtSelection,
     };
     const detachPaste = installImagePaste(host, opts);
+    const detachSmart = installSmartPaste(host, {
+      getSelectionText: () => window.getSelection()?.toString() ?? "",
+      insertLink: (md) => {
+        insertAtSelection(md);
+        return true;
+      },
+    });
     const detachDrop = installImageDrop(host, {
       ...opts,
       onMarkdownDrop: async (file) => {
@@ -441,6 +451,7 @@ export function App() {
     });
     return () => {
       detachPaste();
+      detachSmart();
       detachDrop();
     };
   }, [tab?.id, sourceMode]);
@@ -736,6 +747,11 @@ export function App() {
     const base: Command[] = [
       { id: "new_file", label: "New File", shortcut: "⌘N", run: newScratchTab },
       {
+        id: "close_all_tabs",
+        label: "Close All Tabs",
+        run: () => useAppStore.getState().closeAllTabs(),
+      },
+      {
         id: "new_window",
         label: "New Window",
         shortcut: "⌘⇧N",
@@ -785,6 +801,7 @@ export function App() {
             autosaveMs: 300,
             imagePasteDir: "assets",
             exportTheme: "github",
+            spellcheck: false,
           });
           s.setTheme("auto");
           s.setRecentFiles([]);
@@ -879,6 +896,7 @@ export function App() {
         <section
           className="flex-1 min-w-0 overflow-auto"
           ref={editorScrollRef as React.RefObject<HTMLElement>}
+          spellCheck={spellcheck}
         >
           <MarkupEditor
             fileKey={fileKey}

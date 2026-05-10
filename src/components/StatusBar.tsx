@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
+import { getActiveSourceView } from "../lib/active-source-view";
 import { useT } from "../lib/i18n";
 import { getActiveTab, useAppStore } from "../store";
 
-function countWords(text: string): number {
+export function countWords(text: string): number {
   // CJK characters each count as a word; runs of non-whitespace as one word.
   const cjk = (text.match(/[㐀-鿿豈-﫿]/g) ?? []).length;
   const nonCjk = text.replace(/[㐀-鿿豈-﫿]/g, " ");
   const words = nonCjk.trim().length === 0 ? 0 : nonCjk.trim().split(/\s+/).length;
   return cjk + words;
+}
+
+function readSelection(sourceMode: boolean): string {
+  if (sourceMode) {
+    const v = getActiveSourceView();
+    if (!v) return "";
+    const { from, to } = v.state.selection.main;
+    return from === to ? "" : v.state.sliceDoc(from, to);
+  }
+  return window.getSelection()?.toString() ?? "";
 }
 
 interface Stats {
@@ -26,6 +37,7 @@ export function StatusBar() {
   const vaultRoot = useAppStore((s) => s.vaultRoot);
 
   const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
+  const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
 
   // Recompute synchronously for small docs, debounced for big ones to keep
   // input latency tight (countWords scans the full string + a couple of
@@ -50,6 +62,33 @@ export function StatusBar() {
     return () => window.clearTimeout(id);
   }, [tab?.content]);
 
+  // Selection counter: refresh on every DOM `selectionchange`. Milkdown
+  // (ProseMirror) and CodeMirror both surface their selection through the
+  // DOM Selection API, so a single global listener covers both modes. We
+  // run on the next animation frame so the read happens after the editor
+  // has applied the new selection.
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const text = readSelection(sourceMode);
+      if (!text) {
+        setSelStats(null);
+        return;
+      }
+      setSelStats({ words: countWords(text), chars: text.length });
+    };
+    const onChange = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(update);
+    };
+    document.addEventListener("selectionchange", onChange);
+    return () => {
+      document.removeEventListener("selectionchange", onChange);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, [sourceMode]);
+
   const status = tab?.status ?? "saved";
   const statusLabel =
     status === "saved"
@@ -67,6 +106,14 @@ export function StatusBar() {
       <span>{t("status.words", stats.words)}</span>
       <span>{t("status.chars", stats.chars)}</span>
       <span>{t("status.lines", stats.lines)}</span>
+      {selStats && (
+        <>
+          <span className="opacity-30">|</span>
+          <span aria-live="polite">
+            {t("status.selection", selStats.words, selStats.chars)}
+          </span>
+        </>
+      )}
       <span className="flex-1" />
       {vaultRoot && <span className="truncate max-w-[260px]">{vaultRoot}</span>}
       <span className="opacity-30">|</span>
