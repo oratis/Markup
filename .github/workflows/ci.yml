@@ -67,15 +67,15 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Cargo test (release)
+      # Unit + integration tests run in dev profile because the release
+      # profile sets panic=abort, which is incompatible with test harnesses
+      # that catch unwinds. Spike-0.3 bench is skipped in CI (run locally
+      # via `pnpm bench:spike03`); it needs release-mode timings to be
+      # meaningful and is too slow on macOS runners.
+      - name: Cargo test
         working-directory: src-tauri
-        run: cargo test --release
+        run: cargo test
 
-      - name: Cargo test (Spike 0.3 bench)
-        working-directory: src-tauri
-        run: cargo test --release --test spike_03 -- --nocapture --ignored bench_10k_files
-        # bench_incremental_update is skipped in CI — flaky on virtual FS
-
-      - name: Cargo build (verifies the binary links)
+      - name: Cargo build --release (verifies the binary links)
         working-directory: src-tauri
         run: cargo build --release
