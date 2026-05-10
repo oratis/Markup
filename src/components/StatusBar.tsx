@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getActiveSourceView } from "../lib/active-source-view";
+import { type Heading, headingBreadcrumb, parseHeadings } from "../lib/headings";
 import { useT } from "../lib/i18n";
 import { getActiveTab, useAppStore } from "../store";
 
@@ -29,6 +30,21 @@ function readCaret(): { line: number; col: number } | null {
   return { line: line.number, col: head - line.from + 1 };
 }
 
+/** Approximate the cursor's 0-based source line in WYSIWYG by finding the
+ * nearest enclosing block element and locating its text in the source. */
+function readWysiwygCursorLine(content: string): number {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return 0;
+  const block = (sel.getRangeAt(0).startContainer as Element).closest?.(
+    "p, h1, h2, h3, h4, h5, h6, li, blockquote, pre",
+  );
+  const blockText = block?.textContent ?? "";
+  if (!blockText) return 0;
+  const idx = content.indexOf(blockText);
+  if (idx < 0) return 0;
+  return content.slice(0, idx).split("\n").length - 1;
+}
+
 interface Stats {
   words: number;
   chars: number;
@@ -47,6 +63,14 @@ export function StatusBar() {
   const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
   const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
   const [caret, setCaret] = useState<{ line: number; col: number } | null>(null);
+  const [breadcrumb, setBreadcrumb] = useState<Heading[]>([]);
+
+  // Heading list is derived from current tab content. Memoised so the
+  // selection-tracking effect below doesn't reparse on every keystroke.
+  const headings = useMemo(() => {
+    if (!tab) return [];
+    return parseHeadings(tab.content);
+  }, [tab?.content]);
 
   // Recompute synchronously for small docs, debounced for big ones to keep
   // input latency tight (countWords scans the full string + a couple of
@@ -84,6 +108,19 @@ export function StatusBar() {
       const text = readSelection(sourceMode);
       setSelStats(text ? { words: countWords(text), chars: text.length } : null);
       setCaret(sourceMode ? readCaret() : null);
+      // Heading breadcrumb: cheap unless there are no headings.
+      if (headings.length === 0) {
+        setBreadcrumb([]);
+      } else {
+        let cursorLine = 0;
+        if (sourceMode) {
+          const v = getActiveSourceView();
+          if (v) cursorLine = v.state.doc.lineAt(v.state.selection.main.head).number - 1;
+        } else if (tab) {
+          cursorLine = readWysiwygCursorLine(tab.content);
+        }
+        setBreadcrumb(headingBreadcrumb(headings, cursorLine));
+      }
     };
     update();
     const onChange = () => {
@@ -95,7 +132,7 @@ export function StatusBar() {
       document.removeEventListener("selectionchange", onChange);
       if (raf) window.cancelAnimationFrame(raf);
     };
-  }, [sourceMode]);
+  }, [sourceMode, headings, tab?.content]);
 
   const status = tab?.status ?? "saved";
   const statusLabel =
@@ -125,6 +162,17 @@ export function StatusBar() {
           <span className="opacity-30">|</span>
           <span aria-live="polite">
             {t("status.selection", selStats.words, selStats.chars)}
+          </span>
+        </>
+      )}
+      {breadcrumb.length > 0 && (
+        <>
+          <span className="opacity-30">|</span>
+          <span
+            className="truncate max-w-[40ch]"
+            title={breadcrumb.map((h) => h.text).join(" › ")}
+          >
+            {breadcrumb.map((h) => h.text).join(" › ")}
           </span>
         </>
       )}

@@ -56,6 +56,21 @@ export function parseHeadings(md: string): Heading[] {
   return out;
 }
 
+/** Build the chain of ancestor headings for `cursorLine`. The result
+ * is shallowest-first (e.g. [H1, H2, H3] for a cursor inside an H3
+ * subsection of an H2 inside an H1). */
+export function headingBreadcrumb(headings: Heading[], cursorLine: number): Heading[] {
+  const stack: Heading[] = [];
+  for (const h of headings) {
+    if (h.line > cursorLine) break;
+    while (stack.length > 0 && stack[stack.length - 1].level >= h.level) {
+      stack.pop();
+    }
+    stack.push(h);
+  }
+  return stack;
+}
+
 /** Find the next heading whose 0-based line index is strictly greater
  * than `cursorLine`, or null when there is none. */
 export function nextHeadingFrom(headings: Heading[], cursorLine: number): Heading | null {

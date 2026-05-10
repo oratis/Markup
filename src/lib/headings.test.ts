@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { setActiveSourceView } from "./active-source-view";
 import {
   type Heading,
+  headingBreadcrumb,
   jumpToSourceLine,
   nextHeadingFrom,
   parseHeadings,
@@ -46,6 +47,38 @@ describe("parseHeadings", () => {
       { level: 1, text: "Title", line: 0 },
       { level: 2, text: "Subtitle", line: 3 },
     ]);
+  });
+});
+
+describe("headingBreadcrumb", () => {
+  const HEADS: Heading[] = [
+    { level: 1, text: "Top", line: 0 },
+    { level: 2, text: "Sec A", line: 5 },
+    { level: 3, text: "Sub A1", line: 10 },
+    { level: 3, text: "Sub A2", line: 20 },
+    { level: 2, text: "Sec B", line: 30 },
+  ];
+
+  it("returns the chain of ancestors of the cursor's section", () => {
+    expect(headingBreadcrumb(HEADS, 12).map((h) => h.text)).toEqual([
+      "Top",
+      "Sec A",
+      "Sub A1",
+    ]);
+    expect(headingBreadcrumb(HEADS, 21).map((h) => h.text)).toEqual([
+      "Top",
+      "Sec A",
+      "Sub A2",
+    ]);
+  });
+
+  it("pops sibling headings of equal or shallower level", () => {
+    expect(headingBreadcrumb(HEADS, 31).map((h) => h.text)).toEqual(["Top", "Sec B"]);
+  });
+
+  it("returns an empty list when the cursor is before any heading", () => {
+    expect(headingBreadcrumb(HEADS, 0).map((h) => h.text)).toEqual(["Top"]);
+    expect(headingBreadcrumb([], 0)).toEqual([]);
   });
 });
 

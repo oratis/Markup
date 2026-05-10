@@ -1,13 +1,47 @@
-# Status — Last updated 2026-05-10 (16 batches landed)
+# Status — Last updated 2026-05-11 (31 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 30+ commits across **16 feature batches**, all CI-green.
-`v0.1.1` released as a published GitHub Release (unsigned DMG). The app
-compiles, type-checks, lint-clean, **105 React tests + 17 Rust unit + 9
-integration**, double-Codecov coverage upload, and runs cleanly in dev.
+`main` branch has 50+ commits across **31 feature batches**, all CI-green.
+`v0.1.2` is the latest released DMG (unsigned). The app compiles,
+type-checks, lint-clean, **192 React tests + 17 Rust unit + 9 integration**,
+double-Codecov coverage upload, and runs cleanly in dev.
+
+## What landed in batches 17–31 (recent)
+
+### Editor commands (palette + shortcuts)
+- Smart paste (URL over selection → markdown link), insert HR, insert
+  table prompt, insert today's date, insert link prompt (⌘K)
+- Bold / Italic / Inline Code / Strikethrough wrap (⌘B / ⌘I / ⌘E / ⌘⇧X)
+- Move line up/down (⌥↑/↓), duplicate line (⇧⌥↓), toggle blockquote (⌘')
+- Promote/Demote heading (⌘⌥↑/↓), toggle bullet/numbered/task list
+  (⌘⇧8 / ⌘⇧7 / ⌘⇧9)
+- Sort lines asc/desc, UPPER / lower / Title case selection
+- Editor zoom in/out/reset (⌘= / ⌘- / ⌘0)
+- Next / Previous heading (⌘⇧J / ⌘⇧K)
+- CM6 bracket matching + auto-close pairs (no autocomplete dep)
+- Source-mode line wrap toggle (live Compartment reconfigure)
+
+### Tabs
+- Pin / Unpin tab (📌 glyph, hides close button, survives Close All
+  / Others / Right)
+- Next / Previous tab (⌘⌥] / ⌘⌥[), Reopen Last Closed Tab (⌘⇧T),
+  Close All Tabs, Copy Path
+
+### Files / vault / save
+- Save All (⌘⌥S), reload from disk, reveal in file tree, recent vaults
+  + open recent vault palette commands, recent files in palette,
+  trim trailing whitespace on save (opt-in setting), save on blur
+  (opt-in setting)
+
+### Layout / status
+- Resizable sidebar + outline panels (drag handles, persisted widths)
+- Status bar: live selection counter, source-mode caret position,
+  heading breadcrumb (current section path)
+- Outline filter input (case-insensitive substring)
+- Spell check toggle (browser-native), Settings dialog now has 11 rows
 
 What's still on you:
 - **Spike 0.2** quantitative numbers — instrumentation is wired; you open
