@@ -11,6 +11,7 @@ export const zh: Strings = {
   "status.lines": "{0} 行",
   "status.selection": "已选：{0} 字 / {1} 字符",
   "status.caret": "行 {0}，列 {1}",
+  "status.vaultFiles": "{0} 个文件",
   "status.mode.wysiwyg": "所见即所得",
   "status.mode.source": "源码",
 
@@ -99,6 +100,8 @@ export const zh: Strings = {
 
   // find bar
   "find.placeholder": "查找…",
+  "find.replacePlaceholder": "替换为…",
+  "find.replaceAll": "全部替换",
   "find.cmHint": "再按一次 ⌘F — CodeMirror 有自己的搜索面板。",
 
   // misc

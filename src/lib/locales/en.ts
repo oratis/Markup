@@ -9,6 +9,7 @@ export const en = {
   "status.lines": "{0} lines",
   "status.selection": "Selected: {0} words, {1} chars",
   "status.caret": "Ln {0}, Col {1}",
+  "status.vaultFiles": "{0} files",
   "status.mode.wysiwyg": "WYSIWYG",
   "status.mode.source": "Source",
 
@@ -99,6 +100,8 @@ export const en = {
 
   // find bar
   "find.placeholder": "Find…",
+  "find.replacePlaceholder": "Replace…",
+  "find.replaceAll": "Replace All",
   "find.cmHint": "Press ⌘F again — CodeMirror has its own search overlay.",
 
   // misc

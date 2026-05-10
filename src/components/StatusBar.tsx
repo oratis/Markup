@@ -59,6 +59,7 @@ export function StatusBar() {
   const tab = useAppStore(getActiveTab);
   const sourceMode = useAppStore((s) => s.sourceMode);
   const vaultRoot = useAppStore((s) => s.vaultRoot);
+  const vaultFileCount = useAppStore((s) => s.vaultFiles.length);
 
   const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
   const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
@@ -177,7 +178,16 @@ export function StatusBar() {
         </>
       )}
       <span className="flex-1" />
-      {vaultRoot && <span className="truncate max-w-[260px]">{vaultRoot}</span>}
+      {vaultRoot && (
+        <span className="truncate max-w-[260px]" title={vaultRoot}>
+          {vaultRoot}
+          {vaultFileCount > 0 && (
+            <span className="opacity-60 ml-1">
+              ({t("status.vaultFiles", vaultFileCount)})
+            </span>
+          )}
+        </span>
+      )}
       <span className="opacity-30">|</span>
       <span aria-live="polite">{statusLabel}</span>
     </div>
