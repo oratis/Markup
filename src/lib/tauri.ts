@@ -22,6 +22,35 @@ export async function writeFile(
   });
 }
 
+export async function renameFile(from: string, to: string): Promise<void> {
+  await invoke("rename_file", { from, to });
+}
+
+export async function trashFile(path: string): Promise<void> {
+  await invoke("trash_file", { path });
+}
+
+export async function writeImage(
+  vaultRoot: string,
+  dirRelative: string,
+  bytes: Uint8Array,
+  ext: string,
+): Promise<string> {
+  return await invoke<string>("write_image", {
+    vaultRoot,
+    dirRelative,
+    bytes: Array.from(bytes),
+    ext,
+  });
+}
+
+export async function renderHtml(
+  content: string,
+  title: string | null,
+): Promise<string> {
+  return await invoke<string>("render_html", { content, title });
+}
+
 export async function pickVault(): Promise<string | null> {
   return await invoke<string | null>("pick_vault");
 }

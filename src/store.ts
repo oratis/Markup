@@ -35,6 +35,10 @@ interface AppState {
   sourceMode: boolean;
   theme: Theme;
   sidebarOpen: boolean;
+  outlineOpen: boolean;
+  focusMode: boolean;
+  typewriterMode: boolean;
+  recentFiles: string[];
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -55,6 +59,13 @@ interface AppState {
   setSourceMode: (b: boolean) => void;
   setTheme: (t: Theme) => void;
   toggleSidebar: () => void;
+  toggleOutline: () => void;
+  toggleFocusMode: () => void;
+  toggleTypewriterMode: () => void;
+
+  // recent files
+  pushRecentFile: (path: string) => void;
+  setRecentFiles: (paths: string[]) => void;
 }
 
 const SCRATCH_PREFIX = "scratch:";
@@ -124,6 +135,10 @@ export const useAppStore = create<AppState>((set) => ({
   sourceMode: false,
   theme: "light",
   sidebarOpen: false,
+  outlineOpen: false,
+  focusMode: false,
+  typewriterMode: false,
+  recentFiles: [],
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -240,6 +255,20 @@ export const useAppStore = create<AppState>((set) => ({
   setSourceMode: (b) => set({ sourceMode: b }),
   setTheme: (t) => set({ theme: t }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  toggleOutline: () => set((s) => ({ outlineOpen: !s.outlineOpen })),
+  toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
+  toggleTypewriterMode: () =>
+    set((s) => ({ typewriterMode: !s.typewriterMode })),
+
+  pushRecentFile: (path) =>
+    set((state) => {
+      const next = [path, ...state.recentFiles.filter((p) => p !== path)].slice(
+        0,
+        20,
+      );
+      return { recentFiles: next };
+    }),
+  setRecentFiles: (paths) => set({ recentFiles: paths }),
 }));
 
 export function getActiveTab(state: AppState): Tab | null {

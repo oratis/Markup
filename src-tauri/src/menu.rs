@@ -29,6 +29,10 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
                 .build(app)?,
         )
         .item(
+            &MenuItemBuilder::with_id("open_recent", "Open Recent…")
+                .build(app)?,
+        )
+        .item(
             &MenuItemBuilder::with_id("open_vault", "Open Vault…")
                 .accelerator("CmdOrCtrl+Shift+O")
                 .build(app)?,
@@ -46,6 +50,15 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(
             &MenuItemBuilder::with_id("save_as", "Save As…")
                 .accelerator("CmdOrCtrl+Shift+S")
+                .build(app)?,
+        )
+        .separator()
+        .item(
+            &MenuItemBuilder::with_id("export_html", "Export as HTML…")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::with_id("export_pdf", "Export as PDF (Print)…")
                 .build(app)?,
         )
         .separator()

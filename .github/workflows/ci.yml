@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm tsc --noEmit
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run unit tests
+        run: pnpm test --run
+        if: hashFiles('vitest.config.ts') != ''
+
+  rust:
+    name: Rust (build + test)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install frontend deps (needed for tauri build/dev resolution)
+        run: pnpm install --frozen-lockfile
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Cargo test (release)
+        working-directory: src-tauri
+        run: cargo test --release
+
+      - name: Cargo test (Spike 0.3 bench)
+        working-directory: src-tauri
+        run: cargo test --release --test spike_03 -- --nocapture --ignored bench_10k_files
+        # bench_incremental_update is skipped in CI — flaky on virtual FS
+
+      - name: Cargo build (verifies the binary links)
+        working-directory: src-tauri
+        run: cargo build --release

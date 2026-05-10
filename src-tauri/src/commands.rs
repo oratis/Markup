@@ -70,6 +70,142 @@ async fn read_file_inner(path: &Path) -> AppResult<LoadedFile> {
     })
 }
 
+#[tauri::command]
+pub async fn rename_file(from: String, to: String) -> AppResult<()> {
+    let from_path = PathBuf::from(&from);
+    let to_path = PathBuf::from(&to);
+    if to_path.exists() {
+        return Err(AppError::Other(format!(
+            "destination already exists: {to}"
+        )));
+    }
+    if let Some(parent) = to_path.parent() {
+        if !parent.exists() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+    }
+    tokio::fs::rename(&from_path, &to_path).await?;
+    Ok(())
+}
+
+/// Move a file to the user's Trash. macOS-only — uses NSFileManager via
+/// `osascript` to keep dependencies trivial. Note: this requires the user
+/// to grant Automation access to System Events on first use.
+#[tauri::command]
+pub async fn trash_file(path: String) -> AppResult<()> {
+    let p = PathBuf::from(&path);
+    if !p.exists() {
+        return Err(AppError::Other(format!("not found: {path}")));
+    }
+    // Use AppleScript to move to Trash. POSIX path handles arbitrary chars.
+    let script = format!(
+        "tell application \"Finder\" to delete POSIX file \"{}\"",
+        path.replace('\\', "\\\\").replace('"', "\\\"")
+    );
+    let status = tokio::process::Command::new("osascript")
+        .arg("-e")
+        .arg(&script)
+        .status()
+        .await?;
+    if !status.success() {
+        return Err(AppError::Other(format!(
+            "osascript trash failed (status: {status})"
+        )));
+    }
+    Ok(())
+}
+
+/// Write an image (typically clipboard paste) to the vault and return the
+/// relative path used to reference it from markdown.
+///
+/// `dir_relative` is appended to the vault root (eg. "assets" or
+/// "images/{date}"). `bytes` is the raw image data; `ext` is the image
+/// extension without the dot (eg. "png").
+#[tauri::command]
+pub async fn write_image(
+    vault_root: String,
+    dir_relative: String,
+    bytes: Vec<u8>,
+    ext: String,
+) -> AppResult<String> {
+    let root = PathBuf::from(&vault_root);
+    if !root.is_dir() {
+        return Err(AppError::Other(format!("vault root not a dir: {vault_root}")));
+    }
+    let safe_ext = ext.trim_start_matches('.');
+    let safe_ext = if safe_ext.is_empty() { "png" } else { safe_ext };
+    let dir = root.join(dir_relative.trim_start_matches('/'));
+    tokio::fs::create_dir_all(&dir).await?;
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let file_name = format!("paste-{now_ms}.{safe_ext}");
+    let abs = dir.join(&file_name);
+    tokio::fs::write(&abs, bytes).await?;
+    let rel = abs
+        .strip_prefix(&root)
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|_| abs.clone());
+    Ok(rel.to_string_lossy().into_owned())
+}
+
+/// Render markdown to standalone HTML (used by the export commands).
+#[tauri::command]
+pub async fn render_html(content: String, title: Option<String>) -> AppResult<String> {
+    let mut opts = comrak::Options::default();
+    opts.extension.table = true;
+    opts.extension.strikethrough = true;
+    opts.extension.tasklist = true;
+    opts.extension.autolink = true;
+    opts.extension.footnotes = true;
+    opts.render.unsafe_ = true; // allow inline HTML
+
+    let body = comrak::markdown_to_html(&content, &opts);
+    let title = title.unwrap_or_else(|| "Markup export".to_string());
+
+    let html = format!(
+        r#"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{}</title>
+<style>
+  body {{
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
+    max-width: 720px;
+    margin: 2.5rem auto;
+    line-height: 1.7;
+    color: #1f2328;
+    padding: 0 1.25rem;
+  }}
+  h1, h2, h3, h4, h5, h6 {{ line-height: 1.25; }}
+  pre {{ background: #f6f8fa; padding: 1rem; border-radius: 6px; overflow: auto; }}
+  code {{ font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; }}
+  blockquote {{ border-left: 3px solid #d0d7de; padding-left: 1rem; color: #57606a; }}
+  table {{ border-collapse: collapse; }}
+  th, td {{ border: 1px solid #d0d7de; padding: 6px 12px; }}
+  hr {{ border: none; border-top: 1px solid #d0d7de; margin: 2rem 0; }}
+  img {{ max-width: 100%; }}
+</style>
+</head>
+<body>
+{}
+</body>
+</html>
+"#,
+        html_escape(&title),
+        body
+    );
+    Ok(html)
+}
+
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
 /// Append a perf observation to ~/Library/Logs/markup/perf.log.
 /// Used by Spike 0.2 instrumentation. Failures are ignored.
 #[tauri::command]

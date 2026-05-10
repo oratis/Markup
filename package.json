@@ -11,6 +11,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build --target x86_64-apple-darwin",
+    "test": "vitest",
     "test:rust": "cd src-tauri && cargo test",
     "bench:spike03": "cd src-tauri && cargo test --release --test spike_03 -- --nocapture --ignored"
   },
@@ -52,15 +53,20 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^25.6.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
+    "@vitest/ui": "^2.1.9",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vitest": "^2.1.9"
   },
   "engines": {
     "node": ">=18"

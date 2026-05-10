@@ -90,3 +90,37 @@ body {
 .statusbar {
   font-variant-numeric: tabular-nums;
 }
+
+/* Focus mode: dim non-active blocks. Pure CSS via [data-active] attribute set
+   by lib/focus-typewriter.ts on selectionchange. */
+.focus-mode .milkdown .editor > *,
+.focus-mode .cm-content > * {
+  transition: opacity 200ms ease-out, filter 200ms ease-out;
+}
+.focus-mode .milkdown .editor > *:not([data-active]),
+.focus-mode .cm-content > *:not([data-active]) {
+  opacity: 0.35;
+}
+.focus-mode .milkdown .editor > [data-active],
+.focus-mode .cm-content > [data-active] {
+  opacity: 1;
+}
+
+/* Typewriter mode: vertical centering is done by JS (focus-typewriter.ts);
+   we just want to allow space above/below for centering at start/end. */
+.typewriter-mode main {
+  scroll-padding-top: 50vh;
+  scroll-padding-bottom: 50vh;
+}
+.typewriter-mode .milkdown .editor::before,
+.typewriter-mode .cm-content::before {
+  content: "";
+  display: block;
+  height: 40vh;
+}
+.typewriter-mode .milkdown .editor::after,
+.typewriter-mode .cm-content::after {
+  content: "";
+  display: block;
+  height: 40vh;
+}

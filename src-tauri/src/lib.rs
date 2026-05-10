@@ -8,7 +8,10 @@ pub mod scanner;
 pub mod vault;
 pub mod watcher;
 
-use commands::{log_perf, open_file, read_file, write_file};
+use commands::{
+    log_perf, open_file, read_file, rename_file, render_html, trash_file, write_file,
+    write_image,
+};
 use commands_vault::{
     close_vault, current_vault, list_vault_files, open_vault, pick_vault, search_vault,
 };
@@ -44,6 +47,10 @@ pub fn run() {
             open_file,
             read_file,
             write_file,
+            rename_file,
+            trash_file,
+            write_image,
+            render_html,
             log_perf,
             pick_vault,
             open_vault,
