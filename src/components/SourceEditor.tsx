@@ -1,6 +1,12 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
-import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import {
+  codeFolding,
+  defaultHighlightStyle,
+  foldGutter,
+  foldKeymap,
+  syntaxHighlighting,
+} from "@codemirror/language";
 import { search, searchKeymap } from "@codemirror/search";
 import { EditorState } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -13,6 +19,7 @@ import {
   lineNumbers,
 } from "@codemirror/view";
 import { useEffect, useRef } from "react";
+import { setActiveSourceView } from "../lib/active-source-view";
 import { installImageDrop } from "../lib/image-drop";
 import { installImagePaste } from "../lib/image-paste";
 import { log as perfLog } from "../lib/perf";
@@ -49,6 +56,9 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
           highlightActiveLine(),
           markdown(),
           syntaxHighlighting(defaultHighlightStyle),
+          // Fold by heading / fenced code block via lang-markdown's tree
+          codeFolding(),
+          foldGutter(),
         ];
 
     const state = EditorState.create({
@@ -58,7 +68,7 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
         history(),
         drawSelection(),
         search({ top: true }),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...foldKeymap]),
         EditorView.lineWrapping,
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
@@ -70,6 +80,7 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     });
     const view = new EditorView({ state, parent: hostRef.current });
     viewRef.current = view;
+    setActiveSourceView(view);
     perfLog(
       `source-load[${value.length}b]${isHuge ? " huge" : ""}`,
       performance.now() - t0,
@@ -97,6 +108,7 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     return () => {
       detachPaste();
       detachDrop();
+      setActiveSourceView(null);
       view.destroy();
       viewRef.current = null;
     };

@@ -101,6 +101,16 @@ export async function openNewWindow(): Promise<void> {
   await invoke("new_window");
 }
 
+export async function listRecentFilesNative(): Promise<string[]> {
+  return await invoke<string[]>("list_recent_files");
+}
+export async function pushRecentFileNative(path: string): Promise<void> {
+  await invoke("push_recent_file", { path });
+}
+export async function clearRecentFilesNative(): Promise<void> {
+  await invoke("clear_recent_files");
+}
+
 export async function listenVaultChanged(cb: () => void): Promise<UnlistenFn> {
   return await listen<void>("vault-changed", () => cb());
 }

@@ -3,6 +3,7 @@ mod commands_locale;
 mod commands_vault;
 mod commands_window;
 mod menu;
+mod recent;
 
 pub mod error;
 pub mod i18n;
@@ -20,6 +21,7 @@ use commands_window::new_window;
 use commands_vault::{
     close_vault, current_vault, list_vault_files, open_vault, pick_vault, search_vault,
 };
+use recent::{clear_recent_files, list_recent_files, push_recent_file};
 use tauri::Emitter;
 use vault::VaultState;
 
@@ -60,6 +62,9 @@ pub fn run() {
             log_perf,
             set_locale,
             new_window,
+            list_recent_files,
+            push_recent_file,
+            clear_recent_files,
             pick_vault,
             open_vault,
             close_vault,

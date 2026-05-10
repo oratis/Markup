@@ -24,6 +24,7 @@ import { buildParagraphLink } from "./lib/paragraph-link";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
 import {
+  listRecentFilesNative,
   listVaultFiles,
   listenMenu,
   listenVaultChanged,
@@ -32,6 +33,7 @@ import {
   openVault,
   pickSavePath,
   pickVault,
+  pushRecentFileNative,
   readFile,
   writeFile,
 } from "./lib/tauri";
@@ -133,6 +135,12 @@ export function App() {
           /*ignore*/
         }
       }
+      // Disk-backed list takes precedence (cross-window source of truth).
+      listRecentFilesNative()
+        .then((arr) => {
+          if (Array.isArray(arr) && arr.length > 0) setRecentFiles(arr);
+        })
+        .catch(() => {});
       const settingsRaw = localStorage.getItem(SETTINGS_KEY);
       if (settingsRaw) {
         try {
@@ -243,9 +251,14 @@ export function App() {
     }
   }, [fontSize, proseMaxWidth, autosaveMs, imagePasteDir, exportTheme]);
 
-  // Push recent file when active tab changes to a real file
+  // Push recent file when active tab changes to a real file. Mirror to
+  // the Rust-side store so other windows + next launches see it without
+  // waiting for localStorage hydration.
   useEffect(() => {
-    if (tab?.path) pushRecentFile(tab.path);
+    if (tab?.path) {
+      pushRecentFile(tab.path);
+      pushRecentFileNative(tab.path).catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab?.path]);
 

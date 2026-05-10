@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getActiveSourceView } from "../lib/active-source-view";
 import { useT } from "../lib/i18n";
 import { parseHeadingsAsync } from "../lib/outline-client";
 import { getActiveTab, useAppStore } from "../store";
@@ -112,7 +113,7 @@ export function Outline() {
         {headings.map((h, i) => (
           <button
             key={`${h.line}-${i}`}
-            onClick={() => scrollToHeading(h.text, h.level)}
+            onClick={() => scrollToHeading(h.text, h.level, h.line)}
             title={h.text}
             className="w-full text-left text-[12px] py-0.5 hover:bg-black/5 dark:hover:bg-white/10 truncate block"
             style={{
@@ -129,15 +130,38 @@ export function Outline() {
 }
 
 /**
- * Scroll the rendered editor to the heading whose text matches.
+ * Scroll the rendered editor to the heading whose text + level match.
  *
- * We don't have direct access to ProseMirror nodes from outside the editor,
- * so we just look up by text content in the live DOM. Good enough for a
- * unique-text outline; ambiguous on duplicate headings (jumps to the first).
+ * Strategy:
+ *  - WYSIWYG: Milkdown renders real `<h1>` … `<h6>`; query by tag + text.
+ *  - Source mode: CM6 only renders flat `.cm-line` spans, so we need its
+ *    own dispatch + scrollIntoView API. We use the `line` index parsed
+ *    earlier to compute a doc position and dispatch a selection there.
  */
-function scrollToHeading(text: string, level: number) {
+function scrollToHeading(text: string, level: number, line: number) {
+  // Source-mode path
+  const view = getActiveSourceView();
+  if (view) {
+    const lineIdx = Math.max(1, line + 1); // CM6 lines are 1-based
+    const doc = view.state.doc;
+    if (lineIdx <= doc.lines) {
+      const lineObj = doc.line(lineIdx);
+      view.dispatch({
+        selection: { anchor: lineObj.from, head: lineObj.from },
+        effects: view.scrollSnapshot(),
+      });
+      view.dispatch({
+        effects: [],
+        scrollIntoView: true,
+        selection: { anchor: lineObj.from, head: lineObj.from },
+      } as Parameters<typeof view.dispatch>[0]);
+      view.focus();
+      return;
+    }
+  }
+  // WYSIWYG / fallback path
   const tag = `H${level}`;
-  const candidates = document.querySelectorAll(`.milkdown ${tag}, .cm-content ${tag}`);
+  const candidates = document.querySelectorAll(`.milkdown ${tag}`);
   for (const node of Array.from(candidates)) {
     if ((node.textContent ?? "").trim() === text) {
       (node as HTMLElement).scrollIntoView({
