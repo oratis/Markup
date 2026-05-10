@@ -23,11 +23,9 @@ describe("formatTable", () => {
     const view = mountView(md, 0);
     expect(formatTable()).toBe(true);
     expect(view.state.doc.toString()).toBe(
-      [
-        "| a           | b   |",
-        "| ----------- | --- |",
-        "| longer cell | x   |",
-      ].join("\n"),
+      ["| a           | b   |", "| ----------- | --- |", "| longer cell | x   |"].join(
+        "\n",
+      ),
     );
   });
 
