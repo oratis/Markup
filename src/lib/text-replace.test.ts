@@ -33,4 +33,10 @@ describe("replaceAll", () => {
     expect(r.text).toBe("a [1) b [2)");
     expect(r.count).toBe(2);
   });
+
+  it("respects caseSensitive: only matches identical case when true", () => {
+    const r = replaceAll("Foo foo FOO", "foo", "X", { caseSensitive: true });
+    expect(r.text).toBe("Foo X FOO");
+    expect(r.count).toBe(1);
+  });
 });

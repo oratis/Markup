@@ -66,6 +66,7 @@ import {
   pushRecentFileNative,
   readFile,
   renameFile,
+  renderHtml,
   writeFile,
 } from "./lib/tauri";
 import { checkForUpdates } from "./lib/updater";
@@ -1601,6 +1602,24 @@ export function App() {
         label: "Selection: Title Case",
         run: () => {
           transformSelection(toTitleCase);
+        },
+      },
+      {
+        id: "copy_html",
+        label: "Copy as HTML",
+        run: async () => {
+          if (!tab) {
+            showToast(tr("toast.copyFailed"));
+            return;
+          }
+          try {
+            const html = await renderHtml(tab.content, tab.name, exportTheme);
+            await navigator.clipboard.writeText(html);
+            showToast(tr("toast.copiedHtml"));
+          } catch (e) {
+            console.error("copy_html failed", e);
+            showToast(tr("toast.copyFailed"));
+          }
         },
       },
       {

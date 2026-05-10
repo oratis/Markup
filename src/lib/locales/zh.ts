@@ -79,6 +79,7 @@ export const zh: Strings = {
   "toast.copied": "已复制 {0}",
   "toast.copyFailed": "复制失败",
   "toast.copiedPlainText": "已作为纯文本复制",
+  "toast.copiedHtml": "已作为 HTML 复制",
   "toast.savedAll": "已保存 {0} 个文件",
   "toast.saveAllFailed": "已保存 {0}，{1} 个失败",
   "toast.tableSizeBad": "格式：行 x 列（例如 3x4）",
@@ -115,6 +116,8 @@ export const zh: Strings = {
   "find.placeholder": "查找…",
   "find.replacePlaceholder": "替换为…",
   "find.replaceAll": "全部替换",
+  "find.caseSensitive": "区分大小写",
+  "find.regex": "使用正则",
   "find.cmHint": "再按一次 ⌘F — CodeMirror 有自己的搜索面板。",
 
   // misc

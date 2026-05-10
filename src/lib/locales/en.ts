@@ -78,6 +78,7 @@ export const en = {
   "toast.copied": "Copied {0}",
   "toast.copyFailed": "Copy failed",
   "toast.copiedPlainText": "Copied as plain text",
+  "toast.copiedHtml": "Copied as HTML",
   "toast.savedAll": "Saved {0} files",
   "toast.saveAllFailed": "Saved {0}, {1} failed",
   "toast.tableSizeBad": "Format: rows x cols (e.g. 3x4)",
@@ -115,6 +116,8 @@ export const en = {
   "find.placeholder": "Find…",
   "find.replacePlaceholder": "Replace…",
   "find.replaceAll": "Replace All",
+  "find.caseSensitive": "Match case",
+  "find.regex": "Use regex",
   "find.cmHint": "Press ⌘F again — CodeMirror has its own search overlay.",
 
   // misc

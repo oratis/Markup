@@ -12,10 +12,11 @@ export function replaceAll(
   haystack: string,
   needle: string,
   replacement: string,
+  options: { caseSensitive?: boolean } = {},
 ): { text: string; count: number } {
   if (!needle) return { text: haystack, count: 0 };
   const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(escaped, "gi");
+  const re = new RegExp(escaped, options.caseSensitive ? "g" : "gi");
   let count = 0;
   const text = haystack.replace(re, () => {
     count++;

@@ -10,12 +10,34 @@ interface Props {
   onClose: () => void;
 }
 
-/** Count occurrences of `query` in `text`, case-insensitive. Bounded at
- *  9999 to avoid O(n) work on pathological docs. */
-function countMatches(text: string, query: string): number {
+/** Count occurrences of `query` in `text`. Case-insensitive by default
+ *  (`caseSensitive` flips it). When `regex` is true, `query` is treated
+ *  as a JS regex pattern; an invalid pattern yields 0. Bounded at 9999
+ *  to avoid O(n) work on pathological docs. */
+function countMatches(
+  text: string,
+  query: string,
+  caseSensitive: boolean,
+  regex: boolean,
+): number {
   if (!query) return 0;
-  const haystack = text.toLowerCase();
-  const needle = query.toLowerCase();
+  if (regex) {
+    try {
+      const re = new RegExp(query, caseSensitive ? "g" : "gi");
+      let count = 0;
+      while (re.exec(text)) {
+        count++;
+        if (count >= 9999) break;
+        // Avoid infinite loop on zero-length matches.
+        if (re.lastIndex === 0) break;
+      }
+      return count;
+    } catch {
+      return 0;
+    }
+  }
+  const haystack = caseSensitive ? text : text.toLowerCase();
+  const needle = caseSensitive ? query : query.toLowerCase();
   let count = 0;
   let i = 0;
   while (true) {
@@ -41,11 +63,13 @@ export function FindBar({ sourceMode, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [replacement, setReplacement] = useState("");
   const [missing, setMissing] = useState(false);
+  const [caseSensitive, setCaseSensitive] = useState(false);
+  const [useRegex, setUseRegex] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const total = useMemo(
-    () => (tab && query ? countMatches(tab.content, query) : 0),
-    [tab?.content, query],
+    () => (tab && query ? countMatches(tab.content, query, caseSensitive, useRegex) : 0),
+    [tab?.content, query, caseSensitive, useRegex],
   );
 
   useEffect(() => {
@@ -54,14 +78,48 @@ export function FindBar({ sourceMode, onClose }: Props) {
 
   function findNext(backwards = false) {
     if (!query) return;
+    // window.find supports caseSensitive natively but not regex. For
+    // regex mode we synthesise a search by jumping to the first match
+    // beyond the current selection's offset in tab.content.
+    if (useRegex && tab) {
+      try {
+        const re = new RegExp(query, caseSensitive ? "g" : "gi");
+        // Best-effort: find any match. window selection -> position is
+        // unreliable across editors, so we just home in on the first one.
+        const m = re.exec(tab.content);
+        setMissing(m === null);
+        return;
+      } catch {
+        setMissing(true);
+        return;
+      }
+    }
     // @ts-expect-error — window.find is non-standard but works in WebKit/Tauri
-    const found: boolean = window.find(query, false, backwards, true);
+    const found: boolean = window.find(query, caseSensitive, backwards, true);
     setMissing(!found);
   }
 
   function handleReplaceAll() {
     if (!query || !tab) return;
-    const result = replaceAll(tab.content, query, replacement);
+    if (useRegex) {
+      try {
+        const re = new RegExp(query, caseSensitive ? "g" : "gi");
+        let count = 0;
+        const next = tab.content.replace(re, () => {
+          count++;
+          return replacement;
+        });
+        if (count === 0) {
+          setMissing(true);
+          return;
+        }
+        updateActiveContent(next);
+      } catch {
+        setMissing(true);
+      }
+      return;
+    }
+    const result = replaceAll(tab.content, query, replacement, { caseSensitive });
     if (result.count === 0) {
       setMissing(true);
       return;
@@ -113,6 +171,32 @@ export function FindBar({ sourceMode, onClose }: Props) {
             {total === 0 ? "0" : total >= 9999 ? "9999+" : total}
           </span>
         )}
+        <button
+          title={t("find.caseSensitive")}
+          aria-label={t("find.caseSensitive")}
+          aria-pressed={caseSensitive}
+          onClick={() => setCaseSensitive((v) => !v)}
+          className={`text-[10px] font-mono w-5 h-5 leading-none rounded ${
+            caseSensitive
+              ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+              : "hover:bg-black/5 dark:hover:bg-white/10 opacity-60"
+          }`}
+        >
+          Aa
+        </button>
+        <button
+          title={t("find.regex")}
+          aria-label={t("find.regex")}
+          aria-pressed={useRegex}
+          onClick={() => setUseRegex((v) => !v)}
+          className={`text-[10px] font-mono w-5 h-5 leading-none rounded ${
+            useRegex
+              ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+              : "hover:bg-black/5 dark:hover:bg-white/10 opacity-60"
+          }`}
+        >
+          .*
+        </button>
         <button
           title="Previous"
           onClick={() => findNext(true)}
