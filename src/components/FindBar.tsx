@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../lib/i18n";
-import { replaceAll } from "../lib/text-replace";
+import { replaceAll, replaceOnce } from "../lib/text-replace";
 import { getActiveTab, useAppStore } from "../store";
 
 interface Props {
@@ -97,6 +97,34 @@ export function FindBar({ sourceMode, onClose }: Props) {
     // @ts-expect-error — window.find is non-standard but works in WebKit/Tauri
     const found: boolean = window.find(query, caseSensitive, backwards, true);
     setMissing(!found);
+  }
+
+  function handleReplaceOnce() {
+    if (!query || !tab) return;
+    if (useRegex) {
+      try {
+        const re = new RegExp(query, caseSensitive ? "" : "i");
+        const m = re.exec(tab.content);
+        if (!m) {
+          setMissing(true);
+          return;
+        }
+        const next =
+          tab.content.slice(0, m.index) +
+          replacement +
+          tab.content.slice(m.index + m[0].length);
+        updateActiveContent(next);
+      } catch {
+        setMissing(true);
+      }
+      return;
+    }
+    const r = replaceOnce(tab.content, query, replacement, { caseSensitive });
+    if (r.index < 0) {
+      setMissing(true);
+      return;
+    }
+    updateActiveContent(r.text);
   }
 
   function handleReplaceAll() {
@@ -235,6 +263,14 @@ export function FindBar({ sourceMode, onClose }: Props) {
           placeholder={t("find.replacePlaceholder")}
           className="w-[220px] px-2 py-0.5 text-[12px] bg-transparent outline-none"
         />
+        <button
+          title={t("find.replace")}
+          onClick={handleReplaceOnce}
+          disabled={!query}
+          className="text-[10px] px-2 h-5 leading-none rounded hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-40"
+        >
+          {t("find.replace")}
+        </button>
         <button
           title={t("find.replaceAll")}
           onClick={handleReplaceAll}

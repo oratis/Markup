@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { replaceAll } from "./text-replace";
+import { replaceAll, replaceOnce } from "./text-replace";
 
 describe("replaceAll", () => {
   it("replaces every occurrence and returns the count", () => {
@@ -38,5 +38,31 @@ describe("replaceAll", () => {
     const r = replaceAll("Foo foo FOO", "foo", "X", { caseSensitive: true });
     expect(r.text).toBe("Foo X FOO");
     expect(r.count).toBe(1);
+  });
+});
+
+describe("replaceOnce", () => {
+  it("replaces only the first occurrence and reports its index", () => {
+    const r = replaceOnce("foo bar foo baz", "foo", "X");
+    expect(r.text).toBe("X bar foo baz");
+    expect(r.index).toBe(0);
+  });
+
+  it("respects fromIndex when seeking", () => {
+    const r = replaceOnce("foo bar foo baz", "foo", "X", { fromIndex: 5 });
+    expect(r.text).toBe("foo bar X baz");
+    expect(r.index).toBe(8);
+  });
+
+  it("returns index -1 when nothing matches", () => {
+    const r = replaceOnce("hello", "world", "X");
+    expect(r.text).toBe("hello");
+    expect(r.index).toBe(-1);
+  });
+
+  it("respects caseSensitive flag", () => {
+    const r = replaceOnce("Foo foo FOO", "foo", "X", { caseSensitive: true });
+    expect(r.text).toBe("Foo X FOO");
+    expect(r.index).toBe(4);
   });
 });

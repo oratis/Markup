@@ -24,3 +24,24 @@ export function replaceAll(
   });
   return { text, count };
 }
+
+/** Replace only the first occurrence of `needle` (case-insensitive by
+ * default) starting at or after `fromIndex`. Returns the new text plus
+ * the index at which the replacement was made (or -1 when nothing
+ * matched). */
+export function replaceOnce(
+  haystack: string,
+  needle: string,
+  replacement: string,
+  options: { caseSensitive?: boolean; fromIndex?: number } = {},
+): { text: string; index: number } {
+  if (!needle) return { text: haystack, index: -1 };
+  const cs = options.caseSensitive ?? false;
+  const from = Math.max(0, options.fromIndex ?? 0);
+  const probe = cs ? haystack : haystack.toLowerCase();
+  const target = cs ? needle : needle.toLowerCase();
+  const idx = probe.indexOf(target, from);
+  if (idx < 0) return { text: haystack, index: -1 };
+  const text = haystack.slice(0, idx) + replacement + haystack.slice(idx + needle.length);
+  return { text, index: idx };
+}

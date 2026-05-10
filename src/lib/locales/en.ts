@@ -138,6 +138,7 @@ export const en = {
   // find bar
   "find.placeholder": "Find…",
   "find.replacePlaceholder": "Replace…",
+  "find.replace": "Replace",
   "find.replaceAll": "Replace All",
   "find.caseSensitive": "Match case",
   "find.regex": "Use regex",

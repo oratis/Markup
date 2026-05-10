@@ -138,6 +138,7 @@ export const zh: Strings = {
   // find bar
   "find.placeholder": "查找…",
   "find.replacePlaceholder": "替换为…",
+  "find.replace": "替换",
   "find.replaceAll": "全部替换",
   "find.caseSensitive": "区分大小写",
   "find.regex": "使用正则",
