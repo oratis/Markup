@@ -26,6 +26,7 @@ import {
   toggleBlockquote,
   toggleList,
 } from "./lib/cm-line-ops";
+import { formatTable, toggleTaskCheckboxOnLine } from "./lib/cm-table-format";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import {
@@ -1535,6 +1536,20 @@ export function App() {
         shortcut: "⌘⇧9",
         run: () => {
           toggleList("task");
+        },
+      },
+      {
+        id: "toggle_task_checkbox",
+        label: "Toggle Task Checkbox on Line",
+        run: () => {
+          toggleTaskCheckboxOnLine();
+        },
+      },
+      {
+        id: "format_table",
+        label: "Format Table (Source)",
+        run: () => {
+          formatTable();
         },
       },
       {
