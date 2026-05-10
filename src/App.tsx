@@ -51,6 +51,7 @@ import { buildParagraphLink } from "./lib/paragraph-link";
 import { getPinnedPaths, persistPinnedPath } from "./lib/pinned-paths";
 import { trimTrailingWhitespace } from "./lib/save-prep";
 import { getScroll, setScroll } from "./lib/scroll-memory";
+import { readSession, writeSession } from "./lib/session";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { installSmartPaste } from "./lib/smart-paste";
@@ -210,6 +211,19 @@ export function App() {
     // Auto-updater check (silent on failure; requires updater.active=true
     // + pubkey configured to actually upgrade — see lib/updater.ts).
     checkForUpdates();
+    // Restore previously-open tabs. Runs async — failures are silent
+    // (file may have been deleted / moved since the last session).
+    const sess = readSession();
+    if (sess.open.length > 0) {
+      Promise.all(sess.open.map((p) => readFile(p).catch(() => null))).then((all) => {
+        for (const loaded of all) {
+          if (loaded) openLoadedFile(loaded);
+        }
+        if (sess.active) {
+          useAppStore.getState().setActiveTab(sess.active);
+        }
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -403,6 +417,14 @@ export function App() {
       if (isPinned !== wasPinned) persistPinnedPath(t.path, isPinned);
     }
   }, [tabs]);
+
+  // Persist the open-tab session — list of path-backed tabs + the
+  // currently active path. Restored on next launch.
+  useEffect(() => {
+    const open = tabs.map((t) => t.path).filter((p): p is string => Boolean(p));
+    const active = tab?.path ?? null;
+    writeSession({ open, active });
+  }, [tabs, tab?.path]);
 
   // Per-tab WYSIWYG scroll memory: capture on scroll, restore on tab
   // switch. Source mode owns its own scroll element via SourceEditor.
