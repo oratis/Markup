@@ -66,6 +66,16 @@ function parseHeadings(md: string): Heading[] {
   return out;
 }
 
+/** Walk the heading list to find the entry that owns `cursorLine`. */
+function activeHeadingIndex(headings: Heading[], cursorLine: number): number {
+  let idx = -1;
+  for (let i = 0; i < headings.length; i++) {
+    if (headings[i].line <= cursorLine) idx = i;
+    else break;
+  }
+  return idx;
+}
+
 export function Outline() {
   const t = useT();
   const tab = useAppStore(getActiveTab);
@@ -99,6 +109,41 @@ export function Outline() {
   const headings =
     tab && tab.content.length > WORKER_THRESHOLD ? workerHeadings : inlineHeadings;
 
+  // Track the active heading via cursor position. selectionchange fires
+  // whenever the user clicks / arrows / types in either editor.
+  const sourceMode = useAppStore((s) => s.sourceMode);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  useEffect(() => {
+    if (!tab || headings.length === 0) {
+      setActiveIdx(-1);
+      return;
+    }
+    const recompute = () => {
+      let line = 0;
+      if (sourceMode) {
+        const view = getActiveSourceView();
+        if (view) {
+          const head = view.state.selection.main.head;
+          line = view.state.doc.lineAt(head).number - 1;
+        }
+      } else {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const block = (sel.getRangeAt(0).startContainer as Element).closest?.(
+            "p, h1, h2, h3, h4, h5, h6, li, blockquote, pre",
+          );
+          const blockText = block?.textContent ?? "";
+          const idx = blockText ? tab.content.indexOf(blockText) : -1;
+          if (idx >= 0) line = tab.content.slice(0, idx).split("\n").length - 1;
+        }
+      }
+      setActiveIdx(activeHeadingIndex(headings, line));
+    };
+    recompute();
+    document.addEventListener("selectionchange", recompute);
+    return () => document.removeEventListener("selectionchange", recompute);
+  }, [tab?.content, headings, sourceMode]);
+
   if (!tab) return null;
   if (headings.length === 0) {
     return <div className="text-xs opacity-50 px-3 py-3">{t("outline.empty")}</div>;
@@ -110,20 +155,27 @@ export function Outline() {
         {t("outline.title")}
       </div>
       <nav className="flex-1 min-h-0 overflow-auto no-scrollbar pb-2">
-        {headings.map((h, i) => (
-          <button
-            key={`${h.line}-${i}`}
-            onClick={() => scrollToHeading(h.text, h.level, h.line)}
-            title={h.text}
-            className="w-full text-left text-[12px] py-0.5 hover:bg-black/5 dark:hover:bg-white/10 truncate block"
-            style={{
-              paddingLeft: `${0.75 + (h.level - 1) * 0.85}rem`,
-              paddingRight: "0.5rem",
-            }}
-          >
-            <span className="truncate">{h.text}</span>
-          </button>
-        ))}
+        {headings.map((h, i) => {
+          const isActive = i === activeIdx;
+          return (
+            <button
+              key={`${h.line}-${i}`}
+              onClick={() => scrollToHeading(h.text, h.level, h.line)}
+              title={h.text}
+              className={`w-full text-left text-[12px] py-0.5 truncate block ${
+                isActive
+                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium"
+                  : "hover:bg-black/5 dark:hover:bg-white/10"
+              }`}
+              style={{
+                paddingLeft: `${0.75 + (h.level - 1) * 0.85}rem`,
+                paddingRight: "0.5rem",
+              }}
+            >
+              <span className="truncate">{h.text}</span>
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

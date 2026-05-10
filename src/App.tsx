@@ -301,18 +301,30 @@ export function App() {
       const node = range.startContainer;
       if (node.nodeType !== Node.TEXT_NODE) return;
       const offset = range.startOffset;
-      if (offset < 2) return;
       const text = node.textContent ?? "";
+
+      // Picker only opens in "completion" mode; close it again if the
+      // user backspaced through the `[[`.
+      if (
+        showWikilinkPicker &&
+        wikilinkPickerMode === "completion" &&
+        (offset < 2 || text.slice(offset - 2, offset) !== "[[")
+      ) {
+        setShowWikilinkPicker(false);
+        setWikilinkPickerMode("full");
+        return;
+      }
+
+      if (offset < 2) return;
       if (text.slice(offset - 2, offset) === "[[") {
-        // Avoid re-triggering when picker is already open
-        if (showWikilinkPicker) return;
+        if (showWikilinkPicker) return; // don't double-open
         setWikilinkPickerMode("completion");
         setShowWikilinkPicker(true);
       }
     };
     host.addEventListener("input", onInput);
     return () => host.removeEventListener("input", onInput);
-  }, [sourceMode, showWikilinkPicker]);
+  }, [sourceMode, showWikilinkPicker, wikilinkPickerMode]);
 
   // Wikilink click handler — works in both Milkdown WYSIWYG and CM6 source mode.
   // Detects a click landing inside `[[name]]` text and opens the matching

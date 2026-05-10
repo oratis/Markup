@@ -46,6 +46,12 @@ jobs:
       - name: Build (Tauri bundle, x86_64-apple-darwin)
         # Tauri's bundle_dmg.sh hangs on osascript Finder Automation in CI;
         # build .app + binary, then make a plain DMG with hdiutil.
+        env:
+          # Optional updater signing keys — present only when secrets are set.
+          # Without these, `tauri build` skips emitting the updater .sig file
+          # but the .app + DMG still build fine.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           pnpm tauri build --target x86_64-apple-darwin --bundles app || true
           BUNDLE_DIR=src-tauri/target/x86_64-apple-darwin/release/bundle
@@ -59,6 +65,41 @@ jobs:
             "$BUNDLE_DIR/dmg/Markup_${GITHUB_REF_NAME#v}_x64.dmg"
           ls -lh "$BUNDLE_DIR/dmg" "$BUNDLE_DIR/macos"
 
+      - name: Generate latest.json (only when updater is signed)
+        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          BUNDLE_DIR=src-tauri/target/x86_64-apple-darwin/release/bundle
+          DMG="$(ls "$BUNDLE_DIR/dmg/"Markup_*.dmg | head -1)"
+          if [ -z "$DMG" ]; then echo "no DMG"; exit 0; fi
+          # Look for a .sig produced by `tauri build` next to the app or DMG;
+          # tauri 2 places it at <bundle>/Markup_<ver>_*.app.tar.gz.sig when
+          # available. If no signature exists, skip.
+          SIG=$(find "$BUNDLE_DIR" -name '*.sig' | head -1 || true)
+          if [ -z "$SIG" ]; then
+            echo "no .sig produced — updater config likely active=false"; exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          DMG_NAME="$(basename "$DMG")"
+          DMG_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${DMG_NAME}"
+          SIGNATURE="$(cat "$SIG")"
+          cat > "$BUNDLE_DIR/dmg/latest.json" <<EOF
+          {
+            "version": "$VERSION",
+            "notes": "See release notes",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-x86_64": {
+                "signature": "$SIGNATURE",
+                "url": "$DMG_URL"
+              }
+            }
+          }
+          EOF
+          echo "Generated latest.json"
+          cat "$BUNDLE_DIR/dmg/latest.json"
+
       - name: Compute checksums
         run: |
           BUNDLE_DIR=src-tauri/target/x86_64-apple-darwin/release/bundle
@@ -71,7 +112,10 @@ jobs:
           name: ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
-          fail_on_unmatched_files: true
+          # latest.json only appears when updater is signed; tolerate its
+          # absence so unsigned releases still publish.
+          fail_on_unmatched_files: false
           files: |
             src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
             src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/SHA256SUMS
+            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/latest.json
