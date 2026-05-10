@@ -25,6 +25,7 @@ import { autoClosePairs } from "../lib/cm-auto-close";
 import { installImageDrop } from "../lib/image-drop";
 import { installImagePaste } from "../lib/image-paste";
 import { log as perfLog } from "../lib/perf";
+import { getScroll, setScroll } from "../lib/scroll-memory";
 import { installSmartPaste } from "../lib/smart-paste";
 import { useAppStore } from "../store";
 
@@ -106,6 +107,15 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
       performance.now() - t0,
     );
 
+    // Per-tab scroll memory — restore after first paint, persist on
+    // subsequent scrolls. Keyed by fileKey so each tab tracks separately.
+    const scrollDom = view.scrollDOM;
+    window.requestAnimationFrame(() => {
+      scrollDom.scrollTop = getScroll(fileKey);
+    });
+    const onScroll = () => setScroll(fileKey, scrollDom.scrollTop);
+    scrollDom.addEventListener("scroll", onScroll, { passive: true });
+
     // Image paste / drop → write to vault, dispatch CM6 transaction
     // inserting the markdown reference at the current selection.
     const insertAtSelection = (md: string) => {
@@ -141,6 +151,7 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
       detachPaste();
       detachDrop();
       detachSmart();
+      scrollDom.removeEventListener("scroll", onScroll);
       setActiveSourceView(null);
       view.destroy();
       viewRef.current = null;

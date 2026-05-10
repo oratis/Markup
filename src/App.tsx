@@ -48,6 +48,7 @@ import {
 } from "./lib/insert-md";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { trimTrailingWhitespace } from "./lib/save-prep";
+import { getScroll, setScroll } from "./lib/scroll-memory";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { installSmartPaste } from "./lib/smart-paste";
@@ -362,6 +363,25 @@ export function App() {
     });
     return dispose;
   }, [focusMode, typewriterMode]);
+
+  // Per-tab WYSIWYG scroll memory: capture on scroll, restore on tab
+  // switch. Source mode owns its own scroll element via SourceEditor.
+  useEffect(() => {
+    const host = editorScrollRef.current;
+    if (!host || !tab || sourceMode) return;
+    // Restore after first paint so layout is established. rAF is fine —
+    // Milkdown mounts synchronously by the time we get here.
+    const id = tab.id;
+    const raf = window.requestAnimationFrame(() => {
+      host.scrollTop = getScroll(id);
+    });
+    const onScroll = () => setScroll(id, host.scrollTop);
+    host.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.cancelAnimationFrame(raf);
+      host.removeEventListener("scroll", onScroll);
+    };
+  }, [tab?.id, sourceMode]);
 
   // Auto-trigger the wikilink picker when the user types `[[`. Only fires in
   // WYSIWYG (Milkdown / contenteditable) — source mode users can use the

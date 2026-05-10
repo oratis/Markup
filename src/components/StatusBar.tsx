@@ -64,6 +64,7 @@ export function StatusBar() {
     (s) => s.tabs.filter((tx) => tx.path && tx.status === "dirty").length,
   );
   const wordCountGoal = useAppStore((s) => s.wordCountGoal);
+  const toggleSourceMode = useAppStore((s) => s.toggleSourceMode);
 
   const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
   const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
@@ -151,7 +152,14 @@ export function StatusBar() {
 
   return (
     <div className="statusbar flex items-center gap-3 h-6 px-3 text-[11px] opacity-70 border-t border-black/5 dark:border-white/10 select-none">
-      <span>{sourceMode ? t("status.mode.source") : t("status.mode.wysiwyg")}</span>
+      <button
+        type="button"
+        onClick={toggleSourceMode}
+        title={t("status.modeToggleTitle")}
+        className="hover:opacity-100 opacity-90 cursor-pointer"
+      >
+        {sourceMode ? t("status.mode.source") : t("status.mode.wysiwyg")}
+      </button>
       <span className="opacity-30">|</span>
       <span>
         {t("status.words", stats.words)}

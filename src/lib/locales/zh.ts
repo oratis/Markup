@@ -17,6 +17,7 @@ export const zh: Strings = {
   "status.readingTimeTitle": "按 200 字 / 分钟估算",
   "status.mode.wysiwyg": "所见即所得",
   "status.mode.source": "源码",
+  "status.modeToggleTitle": "切换源码 / 所见即所得（⌘/）",
 
   // tabs / file tree
   "tabs.untitled": "未命名",

@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "../store";
 import { StatusBar } from "./StatusBar";
@@ -55,6 +55,13 @@ describe("StatusBar word count", () => {
     setActive("body");
     render(<StatusBar />);
     expect(screen.getByText("WYSIWYG")).toBeInTheDocument();
+  });
+
+  it("clicking the mode pill toggles store.sourceMode", () => {
+    setActive("body");
+    render(<StatusBar />);
+    fireEvent.click(screen.getByText("WYSIWYG"));
+    expect(useAppStore.getState().sourceMode).toBe(true);
   });
 
   it("renders the vault root path when one is open", () => {

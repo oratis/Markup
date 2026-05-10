@@ -15,6 +15,7 @@ export const en = {
   "status.readingTimeTitle": "Estimated at 200 words / minute",
   "status.mode.wysiwyg": "WYSIWYG",
   "status.mode.source": "Source",
+  "status.modeToggleTitle": "Toggle source ↔ WYSIWYG (⌘/)",
 
   // tabs / file tree
   "tabs.untitled": "Untitled",
