@@ -16,6 +16,7 @@ import { TabBar } from "./components/TabBar";
 import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { WikilinkPicker } from "./components/WikilinkPicker";
+import { getActiveSourceView } from "./lib/active-source-view";
 import {
   cycleHeadingLevel,
   duplicateLine,
@@ -650,6 +651,29 @@ export function App() {
     }
   }, [openLoadedFile]);
 
+  const promptInsertLink = useCallback(() => {
+    const url = window.prompt(tr("prompt.linkUrl"), "https://");
+    if (!url) return;
+    const cleanUrl = url.trim();
+    if (!cleanUrl) return;
+    // If there's a selection, use it as the link text; otherwise prompt
+    // for a label so we never insert an empty `[]()` link.
+    const selText =
+      window.getSelection()?.toString() ||
+      getActiveSourceView()?.state.sliceDoc(
+        getActiveSourceView()?.state.selection.main.from ?? 0,
+        getActiveSourceView()?.state.selection.main.to ?? 0,
+      ) ||
+      "";
+    if (selText) {
+      // Replace the selection with [selText](url)
+      transformSelection(() => `[${selText}](${cleanUrl})`);
+      return;
+    }
+    const text = window.prompt(tr("prompt.linkText"), cleanUrl) ?? cleanUrl;
+    insertMarkdown(`[${text}](${cleanUrl})`);
+  }, [tr]);
+
   const reloadFromDisk = useCallback(async () => {
     const state = useAppStore.getState();
     const cur = state.activeTabId
@@ -1038,6 +1062,28 @@ export function App() {
           return;
         }
       }
+      if (matchesShortcut(e, "zoomIn")) {
+        e.preventDefault();
+        const s = useAppStore.getState();
+        s.setSettings({ fontSize: s.fontSize + 1 });
+        return;
+      }
+      if (matchesShortcut(e, "zoomOut")) {
+        e.preventDefault();
+        const s = useAppStore.getState();
+        s.setSettings({ fontSize: s.fontSize - 1 });
+        return;
+      }
+      if (matchesShortcut(e, "zoomReset")) {
+        e.preventDefault();
+        useAppStore.getState().setSettings({ fontSize: 16 });
+        return;
+      }
+      if (matchesShortcut(e, "insertLink")) {
+        e.preventDefault();
+        promptInsertLink();
+        return;
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1292,6 +1338,38 @@ export function App() {
         run: () => {
           transformSelection(toTitleCase);
         },
+      },
+      {
+        id: "zoom_in",
+        label: "Zoom In",
+        shortcut: "⌘=",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ fontSize: s.fontSize + 1 });
+        },
+      },
+      {
+        id: "zoom_out",
+        label: "Zoom Out",
+        shortcut: "⌘-",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ fontSize: s.fontSize - 1 });
+        },
+      },
+      {
+        id: "zoom_reset",
+        label: "Reset Zoom",
+        shortcut: "⌘0",
+        run: () => {
+          useAppStore.getState().setSettings({ fontSize: 16 });
+        },
+      },
+      {
+        id: "insert_link",
+        label: "Insert Link…",
+        shortcut: "⌘K",
+        run: promptInsertLink,
       },
       {
         id: "insert_table",

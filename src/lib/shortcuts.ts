@@ -41,7 +41,11 @@ export type ShortcutId =
   | "headingDown"
   | "listBullet"
   | "listOrdered"
-  | "listTask";
+  | "listTask"
+  | "zoomIn"
+  | "zoomOut"
+  | "zoomReset"
+  | "insertLink";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -72,6 +76,10 @@ export const defaults: Record<ShortcutId, string> = {
   listBullet: "Mod+Shift+8",
   listOrdered: "Mod+Shift+7",
   listTask: "Mod+Shift+9",
+  zoomIn: "Mod+=",
+  zoomOut: "Mod+-",
+  zoomReset: "Mod+0",
+  insertLink: "Mod+K",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -103,6 +111,10 @@ export const labels: Record<ShortcutId, string> = {
   listBullet: "Toggle Bullet List",
   listOrdered: "Toggle Numbered List",
   listTask: "Toggle Task List",
+  zoomIn: "Zoom In",
+  zoomOut: "Zoom Out",
+  zoomReset: "Reset Zoom",
+  insertLink: "Insert Link",
 };
 
 const STORAGE_KEY = "markup.shortcuts";

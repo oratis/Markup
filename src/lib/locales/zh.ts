@@ -79,6 +79,8 @@ export const zh: Strings = {
   "toast.tableSizeBad": "格式：行 x 列（例如 3x4）",
   "toast.reloaded": "已从磁盘重新加载",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
+  "prompt.linkUrl": "链接 URL：",
+  "prompt.linkText": "链接文本：",
   "reload.confirmDirty": "「{0}」有未保存的修改，重新加载会丢失。继续吗？",
   "toast.wikilinkMiss": "Vault 里没有匹配的文件：{0}",
   "toast.openFailed": "打开 {0} 失败",

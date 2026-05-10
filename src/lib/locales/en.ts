@@ -78,6 +78,8 @@ export const en = {
   "toast.tableSizeBad": "Format: rows x cols (e.g. 3x4)",
   "toast.reloaded": "Reloaded from disk",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
+  "prompt.linkUrl": "Link URL:",
+  "prompt.linkText": "Link text:",
   "reload.confirmDirty":
     '"{0}" has unsaved changes that will be lost on reload. Continue?',
   "toast.wikilinkMiss": 'No vault file matches "{0}"',
