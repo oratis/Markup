@@ -285,6 +285,7 @@ export function App() {
   const saveOnBlur = useAppStore((s) => s.saveOnBlur);
   const trimOnSave = useAppStore((s) => s.trimOnSave);
   const showLineNumbers = useAppStore((s) => s.showLineNumbers);
+  const wordCountGoal = useAppStore((s) => s.wordCountGoal);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -305,6 +306,7 @@ export function App() {
           saveOnBlur,
           trimOnSave,
           showLineNumbers,
+          wordCountGoal,
         }),
       );
     } catch {
@@ -323,6 +325,7 @@ export function App() {
     saveOnBlur,
     trimOnSave,
     showLineNumbers,
+    wordCountGoal,
   ]);
 
   // Push recent file when active tab changes to a real file. Mirror to
@@ -1391,6 +1394,7 @@ export function App() {
               saveOnBlur: s.saveOnBlur,
               trimOnSave: s.trimOnSave,
               showLineNumbers: s.showLineNumbers,
+              wordCountGoal: s.wordCountGoal,
             },
             null,
             2,
@@ -1399,6 +1403,21 @@ export function App() {
             .writeText(payload)
             .then(() => showToast(tr("toast.settingsCopied")))
             .catch(() => showToast(tr("toast.copyFailed")));
+        },
+      },
+      {
+        id: "set_word_count_goal",
+        label: "Set Word Count Goal…",
+        run: () => {
+          const cur = useAppStore.getState().wordCountGoal;
+          const raw = window.prompt(tr("prompt.wordGoal"), String(cur || 500));
+          if (raw === null) return;
+          const n = Number(raw);
+          if (!Number.isFinite(n) || n < 0) {
+            showToast(tr("toast.wordGoalBad"));
+            return;
+          }
+          useAppStore.getState().setSettings({ wordCountGoal: Math.floor(n) });
         },
       },
       {
@@ -1760,6 +1779,7 @@ export function App() {
             saveOnBlur: false,
             trimOnSave: false,
             showLineNumbers: true,
+            wordCountGoal: 0,
           });
           s.setTheme("auto");
           s.setRecentFiles([]);

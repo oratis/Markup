@@ -71,6 +71,8 @@ interface AppState {
   trimOnSave: boolean;
   /** Show CM6 line numbers in source mode. */
   showLineNumbers: boolean;
+  /** Word-count goal for the active doc; status bar shows progress. 0 = off. */
+  wordCountGoal: number;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -138,6 +140,7 @@ export interface Settings {
   saveOnBlur: boolean;
   trimOnSave: boolean;
   showLineNumbers: boolean;
+  wordCountGoal: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -153,6 +156,7 @@ export const DEFAULT_SETTINGS: Settings = {
   saveOnBlur: false,
   trimOnSave: false,
   showLineNumbers: true,
+  wordCountGoal: 0,
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -253,6 +257,7 @@ export const useAppStore = create<AppState>((set) => ({
   saveOnBlur: DEFAULT_SETTINGS.saveOnBlur,
   trimOnSave: DEFAULT_SETTINGS.trimOnSave,
   showLineNumbers: DEFAULT_SETTINGS.showLineNumbers,
+  wordCountGoal: DEFAULT_SETTINGS.wordCountGoal,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -542,6 +547,7 @@ export const useAppStore = create<AppState>((set) => ({
       const saveOnBlur = patch.saveOnBlur ?? state.saveOnBlur;
       const trimOnSave = patch.trimOnSave ?? state.trimOnSave;
       const showLineNumbers = patch.showLineNumbers ?? state.showLineNumbers;
+      const wordCountGoal = clamp(patch.wordCountGoal ?? state.wordCountGoal, 0, 100_000);
       return {
         fontSize,
         proseMaxWidth,
@@ -555,6 +561,7 @@ export const useAppStore = create<AppState>((set) => ({
         saveOnBlur,
         trimOnSave,
         showLineNumbers,
+        wordCountGoal,
       };
     }),
 

@@ -63,6 +63,26 @@ describe("StatusBar word count", () => {
     expect(screen.getByText(/\/Users\/test\/vault/)).toBeInTheDocument();
   });
 
+  it("shows reading-time estimate scaled at 200 wpm", () => {
+    // 600 words → ~3 min read.
+    const text = Array(600).fill("foo").join(" ");
+    setActive(text);
+    render(<StatusBar />);
+    expect(screen.getByText(/~3 min read/)).toBeInTheDocument();
+  });
+
+  it("shows word-count goal progress when goal > 0", () => {
+    setActive("hello world from markup"); // 4 words
+    useAppStore.setState({ wordCountGoal: 10 });
+    const { container } = render(<StatusBar />);
+    // Text is split across <span>4 words</span> and <span> / 10 (40%)</span>;
+    // collapse the whole status bar's textContent and substring-check.
+    expect(container.textContent?.replace(/\s+/g, " ")).toMatch(
+      /4 words \/ 10 \(40%\)/,
+    );
+    useAppStore.setState({ wordCountGoal: 0 });
+  });
+
   it("shows the unsaved-tab count badge when at least one path-backed tab is dirty", () => {
     useAppStore.setState({
       sourceMode: false,

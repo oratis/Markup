@@ -63,6 +63,7 @@ export function StatusBar() {
   const dirtyCount = useAppStore(
     (s) => s.tabs.filter((tx) => tx.path && tx.status === "dirty").length,
   );
+  const wordCountGoal = useAppStore((s) => s.wordCountGoal);
 
   const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
   const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
@@ -152,9 +153,23 @@ export function StatusBar() {
     <div className="statusbar flex items-center gap-3 h-6 px-3 text-[11px] opacity-70 border-t border-black/5 dark:border-white/10 select-none">
       <span>{sourceMode ? t("status.mode.source") : t("status.mode.wysiwyg")}</span>
       <span className="opacity-30">|</span>
-      <span>{t("status.words", stats.words)}</span>
+      <span>
+        {t("status.words", stats.words)}
+        {wordCountGoal > 0 && (
+          <span className="opacity-60 ml-0.5">
+            {" / "}
+            {wordCountGoal} (
+            {Math.min(100, Math.round((stats.words / wordCountGoal) * 100))}%)
+          </span>
+        )}
+      </span>
       <span>{t("status.chars", stats.chars)}</span>
       <span>{t("status.lines", stats.lines)}</span>
+      {stats.words > 0 && (
+        <span className="opacity-60" title={t("status.readingTimeTitle")}>
+          {t("status.readingTime", Math.max(1, Math.round(stats.words / 200)))}
+        </span>
+      )}
       {caret && (
         <>
           <span className="opacity-30">|</span>

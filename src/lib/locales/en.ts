@@ -11,6 +11,8 @@ export const en = {
   "status.caret": "Ln {0}, Col {1}",
   "status.vaultFiles": "{0} files",
   "status.dirtyCount": "{0} unsaved",
+  "status.readingTime": "~{0} min read",
+  "status.readingTimeTitle": "Estimated at 200 words / minute",
   "status.mode.wysiwyg": "WYSIWYG",
   "status.mode.source": "Source",
 
@@ -91,6 +93,7 @@ export const en = {
   "toast.settingsImportBad": "Invalid settings JSON",
   "toast.newFileNoVault": "Open a vault first",
   "toast.newFileFailed": "Create file failed: {0}",
+  "toast.wordGoalBad": "Goal must be a non-negative integer",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",
@@ -98,6 +101,7 @@ export const en = {
   "prompt.importSettings": "Paste settings JSON:",
   "prompt.newFileName": "New file name (under vault root):",
   "prompt.codeBlockLang": "Language (blank for none):",
+  "prompt.wordGoal": "Word-count goal (0 = off):",
   "reload.confirmDirty":
     '"{0}" has unsaved changes that will be lost on reload. Continue?',
   "toast.wikilinkMiss": 'No vault file matches "{0}"',

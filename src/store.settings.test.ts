@@ -80,4 +80,13 @@ describe("settings", () => {
     useAppStore.getState().setSettings({ showLineNumbers: true });
     expect(useAppStore.getState().showLineNumbers).toBe(true);
   });
+
+  it("clamps wordCountGoal to [0, 100000]", () => {
+    useAppStore.getState().setSettings({ wordCountGoal: -50 });
+    expect(useAppStore.getState().wordCountGoal).toBe(0);
+    useAppStore.getState().setSettings({ wordCountGoal: 9_999_999 });
+    expect(useAppStore.getState().wordCountGoal).toBe(100_000);
+    useAppStore.getState().setSettings({ wordCountGoal: 500 });
+    expect(useAppStore.getState().wordCountGoal).toBe(500);
+  });
 });
