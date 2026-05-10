@@ -77,9 +77,7 @@ describe("StatusBar word count", () => {
     const { container } = render(<StatusBar />);
     // Text is split across <span>4 words</span> and <span> / 10 (40%)</span>;
     // collapse the whole status bar's textContent and substring-check.
-    expect(container.textContent?.replace(/\s+/g, " ")).toMatch(
-      /4 words \/ 10 \(40%\)/,
-    );
+    expect(container.textContent?.replace(/\s+/g, " ")).toMatch(/4 words \/ 10 \(40%\)/);
     useAppStore.setState({ wordCountGoal: 0 });
   });
 
