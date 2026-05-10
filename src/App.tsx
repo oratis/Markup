@@ -1700,6 +1700,20 @@ export function App() {
         },
       },
       {
+        id: "wrap_inline_math",
+        label: "Wrap Selection as Inline Math ($…$)",
+        run: () => {
+          wrapMarkdown("$", "$");
+        },
+      },
+      {
+        id: "insert_math_block",
+        label: "Insert Math Block ($$…$$)",
+        run: () => {
+          insertMarkdown("\n\n$$\n\n$$\n\n");
+        },
+      },
+      {
         id: "format_bold",
         label: "Bold",
         shortcut: "⌘B",
