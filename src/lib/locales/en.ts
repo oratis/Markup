@@ -86,6 +86,8 @@ export const en = {
   // toasts
   "toast.copied": "Copied {0}",
   "toast.copyFailed": "Copy failed",
+  "toast.clipboardReadFailed": "Couldn't read clipboard",
+  "toast.clipboardNotUrl": "Clipboard doesn't contain a URL",
   "toast.copiedPlainText": "Copied as plain text",
   "toast.copiedHtml": "Copied as HTML",
   "toast.savedAll": "Saved {0} files",

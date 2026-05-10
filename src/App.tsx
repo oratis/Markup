@@ -2033,6 +2033,30 @@ export function App() {
         run: promptInsertLink,
       },
       {
+        id: "paste_as_link",
+        label: "Paste Clipboard as Markdown Link",
+        run: async () => {
+          let raw = "";
+          try {
+            raw = (await navigator.clipboard.readText()).trim();
+          } catch {
+            showToast(tr("toast.clipboardReadFailed"));
+            return;
+          }
+          if (!raw || !/^(https?:\/\/|mailto:|markup:\/\/)\S+$/i.test(raw)) {
+            showToast(tr("toast.clipboardNotUrl"));
+            return;
+          }
+          const selText = window.getSelection()?.toString();
+          if (selText) {
+            transformSelection(() => `[${selText}](${raw})`);
+          } else {
+            const text = window.prompt(tr("prompt.linkText"), raw) ?? raw;
+            insertMarkdown(`[${text}](${raw})`);
+          }
+        },
+      },
+      {
         id: "next_heading",
         label: "Next Heading",
         shortcut: "⌘⇧J",

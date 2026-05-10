@@ -87,6 +87,8 @@ export const zh: Strings = {
   // toasts
   "toast.copied": "已复制 {0}",
   "toast.copyFailed": "复制失败",
+  "toast.clipboardReadFailed": "无法读取剪贴板",
+  "toast.clipboardNotUrl": "剪贴板内容不是 URL",
   "toast.copiedPlainText": "已作为纯文本复制",
   "toast.copiedHtml": "已作为 HTML 复制",
   "toast.savedAll": "已保存 {0} 个文件",
