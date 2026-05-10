@@ -39,6 +39,7 @@ import {
 import { formatTable, toggleTaskCheckboxOnLine } from "./lib/cm-table-format";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
+import { wikilinkAtCursor } from "./lib/follow-wikilink";
 import {
   jumpToSourceLine,
   nextHeadingFrom,
@@ -460,6 +461,30 @@ export function App() {
       host.removeEventListener("scroll", onScroll);
     };
   }, [tab?.id, sourceMode]);
+
+  // Cmd+click on a `[[wikilink]]` in source mode — SourceEditor dispatches
+  // a window event with the click position; resolve + open the file.
+  useEffect(() => {
+    const onFollow = async (e: Event) => {
+      const detail = (e as CustomEvent<{ pos: number }>).detail;
+      const name = wikilinkAtCursor(detail?.pos);
+      if (!name) return;
+      const target = findVaultFile(useAppStore.getState().vaultFiles, name);
+      if (!target) {
+        showToast(tr("toast.wikilinkMiss", name));
+        return;
+      }
+      try {
+        const loaded = await readFile(target.path);
+        openLoadedFile(loaded);
+      } catch (err) {
+        console.error("follow_wikilink_at_pos failed", err);
+        showToast(tr("toast.openFailed", target.path));
+      }
+    };
+    window.addEventListener("markup:follow-wikilink-at-pos", onFollow);
+    return () => window.removeEventListener("markup:follow-wikilink-at-pos", onFollow);
+  }, [openLoadedFile, tr]);
 
   // Source-mode `[[` trigger: SourceEditor's CM6 input handler dispatches
   // markup:wikilink-trigger; we open the picker in completion mode here.
@@ -2173,34 +2198,18 @@ export function App() {
         id: "follow_wikilink_at_cursor",
         label: "Follow Wikilink at Cursor",
         run: async () => {
-          // Source mode only — scan the current line for a [[…]] that
-          // covers the cursor and open the matching vault file.
-          const view = getActiveSourceView();
-          if (!view) {
+          if (!getActiveSourceView()) {
             showToast(tr("toast.followNeedsSource"));
             return;
           }
-          const head = view.state.selection.main.head;
-          const line = view.state.doc.lineAt(head);
-          const text = line.text;
-          const offsetInLine = head - line.from;
-          const re = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
-          let m: RegExpExecArray | null;
-          let found: string | null = null;
-          while ((m = re.exec(text))) {
-            if (m.index <= offsetInLine && offsetInLine <= m.index + m[0].length) {
-              found = m[1];
-              break;
-            }
-          }
-          if (!found) {
+          const name = wikilinkAtCursor();
+          if (!name) {
             showToast(tr("toast.noWikilinkAtCursor"));
             return;
           }
-          const vault = useAppStore.getState().vaultFiles;
-          const target = findVaultFile(vault, found);
+          const target = findVaultFile(useAppStore.getState().vaultFiles, name);
           if (!target) {
-            showToast(tr("toast.wikilinkMiss", found));
+            showToast(tr("toast.wikilinkMiss", name));
             return;
           }
           try {

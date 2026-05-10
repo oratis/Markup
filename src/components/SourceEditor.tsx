@@ -145,6 +145,18 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     };
     const detachPaste = installImagePaste(hostRef.current, imageOpts);
     const detachDrop = installImageDrop(hostRef.current, imageOpts);
+    // Cmd+click on a `[[wikilink]]` dispatches a window event the App
+    // listens for and follows. Click handled at the scrollDOM level so
+    // CM6's own selection logic still runs for normal clicks.
+    const onClick = (e: MouseEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+      if (pos == null) return;
+      window.dispatchEvent(
+        new CustomEvent("markup:follow-wikilink-at-pos", { detail: { pos } }),
+      );
+    };
+    view.scrollDOM.addEventListener("click", onClick);
     const detachSmart = installSmartPaste(hostRef.current, {
       getSelectionText: () => {
         const v = viewRef.current;
@@ -163,6 +175,7 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
       detachDrop();
       detachSmart();
       scrollDom.removeEventListener("scroll", onScroll);
+      view.scrollDOM.removeEventListener("click", onClick);
       setActiveSourceView(null);
       view.destroy();
       viewRef.current = null;
