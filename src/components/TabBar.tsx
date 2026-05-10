@@ -3,15 +3,24 @@ import { useAppStore } from "../store";
 
 const DRAG_MIME = "application/x-markup-tab";
 
+interface CtxState {
+  id: string;
+  x: number;
+  y: number;
+}
+
 export function TabBar() {
   const tabs = useAppStore((s) => s.tabs);
   const activeTabId = useAppStore((s) => s.activeTabId);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const closeTab = useAppStore((s) => s.closeTab);
+  const closeOtherTabs = useAppStore((s) => s.closeOtherTabs);
+  const closeTabsToRight = useAppStore((s) => s.closeTabsToRight);
   const reorderTab = useAppStore((s) => s.reorderTab);
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [ctx, setCtx] = useState<CtxState | null>(null);
 
   if (tabs.length <= 1) return null;
 
@@ -53,6 +62,10 @@ export function TabBar() {
               setDraggingId(null);
               setOverId(null);
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setCtx({ id: tab.id, x: e.clientX, y: e.clientY });
+            }}
             className={`group titlebar-no-drag relative flex items-center gap-2 pl-3 pr-1 py-1.5 text-[12px] cursor-pointer border-r border-black/5 dark:border-white/10 select-none ${
               isActive
                 ? "bg-canvas-light dark:bg-canvas-dark text-ink-light dark:text-ink-dark"
@@ -80,6 +93,76 @@ export function TabBar() {
           </div>
         );
       })}
+      {ctx && (
+        <ContextMenu
+          x={ctx.x}
+          y={ctx.y}
+          onClose={() => setCtx(null)}
+          items={[
+            { label: "Close", run: () => closeTab(ctx.id) },
+            { label: "Close Others", run: () => closeOtherTabs(ctx.id) },
+            {
+              label: "Close to the Right",
+              run: () => closeTabsToRight(ctx.id),
+              disabled: tabs.findIndex((t) => t.id === ctx.id) === tabs.length - 1,
+            },
+          ]}
+        />
+      )}
+    </div>
+  );
+}
+
+interface MenuItem {
+  label: string;
+  run: () => void;
+  disabled?: boolean;
+}
+
+function ContextMenu({
+  x,
+  y,
+  items,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  items: MenuItem[];
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50"
+      onClick={onClose}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div
+        style={{ left: x, top: y }}
+        className="absolute min-w-[160px] py-1 rounded-md shadow-2xl bg-canvas-light dark:bg-canvas-dark border border-black/10 dark:border-white/15"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {items.map((it) => (
+          <button
+            key={it.label}
+            disabled={it.disabled}
+            onClick={() => {
+              if (it.disabled) return;
+              onClose();
+              it.run();
+            }}
+            className={`w-full text-left px-3 py-1 text-[12px] ${
+              it.disabled
+                ? "opacity-40 cursor-not-allowed"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
+            }`}
+          >
+            {it.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

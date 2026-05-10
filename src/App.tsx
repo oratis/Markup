@@ -414,7 +414,30 @@ export function App() {
       insert: insertAtSelection,
     };
     const detachPaste = installImagePaste(host, opts);
-    const detachDrop = installImageDrop(host, opts);
+    const detachDrop = installImageDrop(host, {
+      ...opts,
+      onMarkdownDrop: async (file) => {
+        // Tauri 2 exposes `path` on the dropped File via the FileSystemFileHandle
+        // polyfill; fall back to reading content directly when path is empty.
+        // biome-ignore lint/suspicious/noExplicitAny: Tauri-specific extension
+        const tauriPath: string | undefined = (file as any).path;
+        try {
+          if (tauriPath) {
+            const loaded = await readFile(tauriPath);
+            openLoadedFile(loaded);
+          } else {
+            const content = await file.text();
+            openLoadedFile({
+              path: file.name,
+              content,
+              mtime_ms: Date.now(),
+            });
+          }
+        } catch (err) {
+          console.error("drop-open failed", err);
+        }
+      },
+    });
     return () => {
       detachPaste();
       detachDrop();

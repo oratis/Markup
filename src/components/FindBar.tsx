@@ -1,11 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../lib/i18n";
+import { getActiveTab, useAppStore } from "../store";
 
 interface Props {
   /** When true, this is rendered in source mode — CM6 has its own search
    * panel; this bar is suppressed because CM6 binds ⌘F natively. */
   sourceMode: boolean;
   onClose: () => void;
+}
+
+/** Count occurrences of `query` in `text`, case-insensitive. Bounded at
+ *  9999 to avoid O(n) work on pathological docs. */
+function countMatches(text: string, query: string): number {
+  if (!query) return 0;
+  const haystack = text.toLowerCase();
+  const needle = query.toLowerCase();
+  let count = 0;
+  let i = 0;
+  while (true) {
+    const idx = haystack.indexOf(needle, i);
+    if (idx < 0) break;
+    count++;
+    if (count >= 9999) break;
+    i = idx + needle.length;
+  }
+  return count;
 }
 
 /**
@@ -16,9 +35,15 @@ interface Props {
  */
 export function FindBar({ sourceMode, onClose }: Props) {
   const t = useT();
+  const tab = useAppStore(getActiveTab);
   const [query, setQuery] = useState("");
   const [missing, setMissing] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const total = useMemo(
+    () => (tab && query ? countMatches(tab.content, query) : 0),
+    [tab?.content, query],
+  );
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -65,6 +90,15 @@ export function FindBar({ sourceMode, onClose }: Props) {
           missing ? "text-red-500" : ""
         }`}
       />
+      {query && (
+        <span
+          className={`text-[10px] tabular-nums opacity-70 px-1 ${
+            total === 0 ? "text-red-500" : ""
+          }`}
+        >
+          {total === 0 ? "0" : total >= 9999 ? "9999+" : total}
+        </span>
+      )}
       <button
         title="Previous"
         onClick={() => findNext(true)}

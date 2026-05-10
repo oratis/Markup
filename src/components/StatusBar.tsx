@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "../lib/i18n";
 import { getActiveTab, useAppStore } from "../store";
 
@@ -10,19 +10,44 @@ function countWords(text: string): number {
   return cjk + words;
 }
 
+interface Stats {
+  words: number;
+  chars: number;
+  lines: number;
+}
+
+const HEAVY_THRESHOLD = 100_000;
+const DEBOUNCE_MS = 250;
+
 export function StatusBar() {
   const t = useT();
   const tab = useAppStore(getActiveTab);
   const sourceMode = useAppStore((s) => s.sourceMode);
   const vaultRoot = useAppStore((s) => s.vaultRoot);
 
-  const stats = useMemo(() => {
-    if (!tab) return { words: 0, chars: 0, lines: 0 };
-    return {
-      words: countWords(tab.content),
-      chars: tab.content.length,
-      lines: tab.content.split("\n").length,
+  const [stats, setStats] = useState<Stats>({ words: 0, chars: 0, lines: 0 });
+
+  // Recompute synchronously for small docs, debounced for big ones to keep
+  // input latency tight (countWords scans the full string + a couple of
+  // regex passes; ~5ms at 100k chars on M1, much worse on Intel).
+  useEffect(() => {
+    if (!tab) {
+      setStats({ words: 0, chars: 0, lines: 0 });
+      return;
+    }
+    const compute = () => {
+      setStats({
+        words: countWords(tab.content),
+        chars: tab.content.length,
+        lines: tab.content.split("\n").length,
+      });
     };
+    if (tab.content.length < HEAVY_THRESHOLD) {
+      compute();
+      return;
+    }
+    const id = window.setTimeout(compute, DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
   }, [tab?.content]);
 
   const status = tab?.status ?? "saved";

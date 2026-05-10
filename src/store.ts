@@ -56,6 +56,8 @@ interface AppState {
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   reorderTab: (fromId: string, toId: string) => void;
+  closeOtherTabs: (id: string) => void;
+  closeTabsToRight: (id: string) => void;
   updateActiveContent: (content: string) => void;
   setActiveStatus: (status: SaveStatus, errorMessage?: string | null) => void;
   setActiveMtime: (mtimeMs: number) => void;
@@ -247,6 +249,28 @@ export const useAppStore = create<AppState>((set) => ({
       const [moved] = tabs.splice(fromIdx, 1);
       tabs.splice(toIdx, 0, moved);
       return { tabs };
+    }),
+
+  closeOtherTabs: (id) =>
+    set((state) => {
+      const keep = state.tabs.find((t) => t.id === id);
+      if (!keep) return state;
+      // Skip dirty-confirm: power-user gesture; surface a toast in the
+      // future if any closed tab was unsaved. For now, parity with browser
+      // behaviour where "close others" is unconditional.
+      return { tabs: [keep], activeTabId: keep.id };
+    }),
+
+  closeTabsToRight: (id) =>
+    set((state) => {
+      const idx = state.tabs.findIndex((t) => t.id === id);
+      if (idx < 0) return state;
+      const tabs = state.tabs.slice(0, idx + 1);
+      const activeStillVisible = tabs.some((t) => t.id === state.activeTabId);
+      return {
+        tabs,
+        activeTabId: activeStillVisible ? state.activeTabId : id,
+      };
     }),
 
   updateActiveContent: (content) =>

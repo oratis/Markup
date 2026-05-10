@@ -103,4 +103,69 @@ describe("app store", () => {
     closeTab("/b.md");
     expect(useAppStore.getState().tabs.find((t) => t.id === "/b.md")).toBeUndefined();
   });
+
+  it("reorderTab moves a tab to the target index", () => {
+    const { openLoadedFile, reorderTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    reorderTab("/a.md", "/c.md");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual([
+      "/b.md",
+      "/c.md",
+      "/a.md",
+    ]);
+  });
+
+  it("reorderTab is a no-op when fromId == toId", () => {
+    const { openLoadedFile, reorderTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    const before = useAppStore.getState().tabs.map((t) => t.id);
+    reorderTab("/a.md", "/a.md");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(before);
+  });
+
+  it("closeOtherTabs leaves only the kept tab and makes it active", () => {
+    const { openLoadedFile, closeOtherTabs } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    closeOtherTabs("/b.md");
+    const s = useAppStore.getState();
+    expect(s.tabs.map((t) => t.id)).toEqual(["/b.md"]);
+    expect(s.activeTabId).toBe("/b.md");
+  });
+
+  it("closeTabsToRight removes tabs after the given id", () => {
+    const { openLoadedFile, closeTabsToRight, setActiveTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    setActiveTab("/a.md");
+    closeTabsToRight("/a.md");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/a.md"]);
+  });
+
+  it("closeTabsToRight on the last tab is a no-op", () => {
+    const { openLoadedFile, closeTabsToRight } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    closeTabsToRight("/b.md");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/a.md", "/b.md"]);
+  });
+
+  it("setActivePathAndName updates id/path/name/mtime + clears dirty", () => {
+    const { newScratchTab, updateActiveContent, setActivePathAndName } =
+      useAppStore.getState();
+    newScratchTab();
+    updateActiveContent("hello");
+    setActivePathAndName("/saved.md", "saved.md", 12345);
+    const t = useAppStore.getState().tabs.find((x) => x.id === "/saved.md");
+    expect(t).toBeDefined();
+    expect(t?.path).toBe("/saved.md");
+    expect(t?.name).toBe("saved.md");
+    expect(t?.mtimeMs).toBe(12345);
+    expect(t?.status).toBe("saved");
+  });
 });

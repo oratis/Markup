@@ -5,6 +5,14 @@ interface InsertOpts {
   imageDir?: string;
   /** Insert markdown text at cursor / drop point. Receives the relative path. */
   insert: (markdown: string) => void;
+  /**
+   * Optional handler for dropped *markdown* files (.md, .markdown, .mdx, .mkd).
+   * If provided and the dropped file is recognised, it's invoked with an
+   * absolute path; image processing is skipped. The path comes from
+   * Tauri's File.path attribute (Tauri 2 attaches it to the FileSystemFileHandle
+   * polyfill via the file's name when present).
+   */
+  onMarkdownDrop?: (file: File) => void;
 }
 
 /**
@@ -25,7 +33,24 @@ export function installImageDrop(target: HTMLElement, opts: InsertOpts): () => v
 
   const onDrop = async (e: DragEvent) => {
     const dt = e.dataTransfer;
-    if (!hasImageFile(dt)) return;
+    if (!dt || !dt.types.includes("Files")) return;
+
+    const files = Array.from(dt.files);
+
+    // Markdown files take precedence over image fallthrough — opening a
+    // dropped .md is more useful than embedding it as an image link.
+    if (opts.onMarkdownDrop) {
+      const md = files.find((f) => /\.(md|markdown|mdx|mkd)$/i.test(f.name));
+      if (md) {
+        e.preventDefault();
+        e.stopPropagation();
+        opts.onMarkdownDrop(md);
+        return;
+      }
+    }
+
+    const images = files.filter((f) => f.type.startsWith("image/"));
+    if (images.length === 0) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -35,9 +60,8 @@ export function installImageDrop(target: HTMLElement, opts: InsertOpts): () => v
       return;
     }
 
-    const files = Array.from(dt!.files).filter((f) => f.type.startsWith("image/"));
     const dir = opts.imageDir?.trim() || "assets";
-    for (const file of files) {
+    for (const file of images) {
       const ext = file.type.split("/")[1] || "png";
       const buf = new Uint8Array(await file.arrayBuffer());
       try {
