@@ -132,6 +132,7 @@ export function App() {
 
   const [showQuickOpen, setShowQuickOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [searchInitialQuery, setSearchInitialQuery] = useState("");
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showRecentOpen, setShowRecentOpen] = useState(false);
   const [showFindBar, setShowFindBar] = useState(false);
@@ -1948,7 +1949,30 @@ export function App() {
         id: "find_in_vault",
         label: "Find in Vault",
         shortcut: "⌘⇧F",
-        run: () => setShowSearch(true),
+        run: () => {
+          setSearchInitialQuery("");
+          setShowSearch(true);
+        },
+      },
+      {
+        id: "find_in_vault_selection",
+        label: "Find Selection in Vault",
+        run: () => {
+          const sel =
+            window.getSelection()?.toString() ||
+            (() => {
+              const v = getActiveSourceView();
+              if (!v) return "";
+              const { from, to } = v.state.selection.main;
+              return from === to ? "" : v.state.sliceDoc(from, to);
+            })();
+          if (!sel.trim()) {
+            setSearchInitialQuery("");
+          } else {
+            setSearchInitialQuery(sel.trim().slice(0, 200));
+          }
+          setShowSearch(true);
+        },
       },
       {
         id: "toggle_source_mode",
@@ -2100,7 +2124,15 @@ export function App() {
         <FindBar sourceMode={sourceMode} onClose={() => setShowFindBar(false)} />
       )}
       {showQuickOpen && <QuickOpen onClose={() => setShowQuickOpen(false)} />}
-      {showSearch && <SearchPanel onClose={() => setShowSearch(false)} />}
+      {showSearch && (
+        <SearchPanel
+          initialQuery={searchInitialQuery}
+          onClose={() => {
+            setShowSearch(false);
+            setSearchInitialQuery("");
+          }}
+        />
+      )}
       {showCommandPalette && (
         <CommandPalette
           commands={commands}

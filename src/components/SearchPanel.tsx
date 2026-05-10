@@ -6,11 +6,13 @@ import { useAppStore } from "../store";
 
 interface SearchPanelProps {
   onClose: () => void;
+  /** Optional pre-filled query — runs the search immediately on mount. */
+  initialQuery?: string;
 }
 
-export function SearchPanel({ onClose }: SearchPanelProps) {
+export function SearchPanel({ onClose, initialQuery = "" }: SearchPanelProps) {
   const t = useT();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
