@@ -22,6 +22,7 @@ export function SettingsDialog({ onClose }: Props) {
   const sidebarWidth = useAppStore((s) => s.sidebarWidth);
   const outlineWidth = useAppStore((s) => s.outlineWidth);
   const saveOnBlur = useAppStore((s) => s.saveOnBlur);
+  const trimOnSave = useAppStore((s) => s.trimOnSave);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
@@ -33,6 +34,7 @@ export function SettingsDialog({ onClose }: Props) {
     sidebarWidth,
     outlineWidth,
     saveOnBlur,
+    trimOnSave,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -171,6 +173,19 @@ export function SettingsDialog({ onClose }: Props) {
               </span>
             </label>
           </Row>
+
+          <Row label={t("settings.trimOnSave")} hint={t("settings.trimOnSaveHint")}>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={draft.trimOnSave}
+                onChange={(e) => commit({ trimOnSave: e.target.checked })}
+              />
+              <span className="opacity-70">
+                {draft.trimOnSave ? t("settings.on") : t("settings.off")}
+              </span>
+            </label>
+          </Row>
         </div>
 
         <ShortcutsEditor />
@@ -189,6 +204,7 @@ export function SettingsDialog({ onClose }: Props) {
                 sidebarWidth: 260,
                 outlineWidth: 220,
                 saveOnBlur: false,
+                trimOnSave: false,
               });
             }}
             className="opacity-70 hover:opacity-100 underline"

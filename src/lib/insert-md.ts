@@ -62,6 +62,45 @@ export function wrapMarkdown(open: string, close: string): boolean {
   return true;
 }
 
+/**
+ * Replace the current selection by `fn(selectionText)` in whichever
+ * editor is active. Returns false when no selection is present (or no
+ * editor is mounted). Useful for case-conversion etc.
+ */
+export function transformSelection(fn: (s: string) => string): boolean {
+  const view = getActiveSourceView();
+  if (view) {
+    const { from, to } = view.state.selection.main;
+    if (from === to) return false;
+    const inner = view.state.sliceDoc(from, to);
+    const next = fn(inner);
+    view.dispatch({
+      changes: { from, to, insert: next },
+      selection: { anchor: from, head: from + next.length },
+      userEvent: "input.transform",
+    });
+    return true;
+  }
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return false;
+  const text = sel.toString();
+  if (!text) return false;
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  range.insertNode(document.createTextNode(fn(text)));
+  sel.collapseToEnd();
+  return true;
+}
+
+/** Title-case helper: capitalise the first character of each word
+ * (Unicode-aware whitespace boundary), preserving everything else. */
+export function toTitleCase(s: string): string {
+  return s.replace(
+    /\p{L}[\p{L}\p{N}'’]*/gu,
+    (w) => w[0].toLocaleUpperCase() + w.slice(1).toLocaleLowerCase(),
+  );
+}
+
 /** Build a minimal `rows × cols` GFM table skeleton (header + separator + body). */
 export function buildTableMarkdown(rows: number, cols: number): string {
   const r = Math.max(1, Math.min(50, Math.floor(rows)));

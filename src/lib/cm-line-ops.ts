@@ -162,6 +162,28 @@ export function toggleList(kind: ListKind): boolean {
   return true;
 }
 
+/** Sort the selected lines case-insensitively. `direction` flips asc/desc.
+ * No-op when fewer than two lines are selected. */
+export function sortLines(direction: "asc" | "desc"): boolean {
+  const view = getActiveSourceView();
+  if (!view) return false;
+  const block = selectedLines(view.state);
+  if (block.endLine - block.startLine < 1) return false;
+  const lines: string[] = [];
+  for (let i = block.startLine; i <= block.endLine; i++) {
+    lines.push(view.state.doc.line(i).text);
+  }
+  const sorted = [...lines].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" }),
+  );
+  if (direction === "desc") sorted.reverse();
+  view.dispatch({
+    changes: { from: block.from, to: block.to, insert: sorted.join("\n") },
+    userEvent: "input.sort",
+  });
+  return true;
+}
+
 /** Add or remove a leading `> ` on each selected line. If every line in
  * the selection is already a blockquote, strip the prefix; otherwise add
  * it everywhere. */

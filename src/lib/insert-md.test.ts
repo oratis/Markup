@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { setActiveSourceView } from "./active-source-view";
-import { buildTableMarkdown, insertMarkdown, wrapMarkdown } from "./insert-md";
+import {
+  buildTableMarkdown,
+  insertMarkdown,
+  toTitleCase,
+  transformSelection,
+  wrapMarkdown,
+} from "./insert-md";
 
 afterEach(() => setActiveSourceView(null));
 
@@ -61,6 +67,43 @@ describe("wrapMarkdown (WYSIWYG path)", () => {
     expect(wrapMarkdown("`", "`")).toBe(true);
     expect(host.textContent).toBe("abc``");
     document.body.removeChild(host);
+  });
+});
+
+describe("toTitleCase", () => {
+  it("capitalises the first letter of each word", () => {
+    expect(toTitleCase("hello world")).toBe("Hello World");
+  });
+
+  it("preserves apostrophes inside words", () => {
+    expect(toTitleCase("can't stop")).toBe("Can't Stop");
+  });
+
+  it("lowercases the rest of an ALL-CAPS word", () => {
+    expect(toTitleCase("ENGLISH and 中文")).toBe("English And 中文");
+  });
+});
+
+describe("transformSelection (WYSIWYG path)", () => {
+  it("rewrites the current selection through the supplied function", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    host.contentEditable = "true";
+    host.textContent = "the quick fox";
+    const range = document.createRange();
+    range.setStart(host.firstChild!, 4);
+    range.setEnd(host.firstChild!, 9); // "quick"
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    expect(transformSelection((s) => s.toUpperCase())).toBe(true);
+    expect(host.textContent).toBe("the QUICK fox");
+    document.body.removeChild(host);
+  });
+
+  it("returns false when the selection is empty", () => {
+    window.getSelection()?.removeAllRanges();
+    expect(transformSelection((s) => s.toUpperCase())).toBe(false);
   });
 });
 

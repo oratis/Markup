@@ -66,4 +66,11 @@ describe("settings", () => {
     useAppStore.getState().setSettings({ saveOnBlur: false });
     expect(useAppStore.getState().saveOnBlur).toBe(false);
   });
+
+  it("toggles trimOnSave boolean", () => {
+    useAppStore.getState().setSettings({ trimOnSave: true });
+    expect(useAppStore.getState().trimOnSave).toBe(true);
+    useAppStore.getState().setSettings({ trimOnSave: false });
+    expect(useAppStore.getState().trimOnSave).toBe(false);
+  });
 });

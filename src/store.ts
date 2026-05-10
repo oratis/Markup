@@ -65,6 +65,8 @@ interface AppState {
   outlineWidth: number;
   /** Trigger Save All silently when the window loses focus. */
   saveOnBlur: boolean;
+  /** Strip trailing whitespace from each line when saving. */
+  trimOnSave: boolean;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -123,6 +125,7 @@ export interface Settings {
   sidebarWidth: number;
   outlineWidth: number;
   saveOnBlur: boolean;
+  trimOnSave: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -136,6 +139,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sidebarWidth: 260,
   outlineWidth: 220,
   saveOnBlur: false,
+  trimOnSave: false,
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -233,6 +237,7 @@ export const useAppStore = create<AppState>((set) => ({
   sidebarWidth: DEFAULT_SETTINGS.sidebarWidth,
   outlineWidth: DEFAULT_SETTINGS.outlineWidth,
   saveOnBlur: DEFAULT_SETTINGS.saveOnBlur,
+  trimOnSave: DEFAULT_SETTINGS.trimOnSave,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -500,6 +505,7 @@ export const useAppStore = create<AppState>((set) => ({
       const sidebarWidth = clamp(patch.sidebarWidth ?? state.sidebarWidth, 160, 600);
       const outlineWidth = clamp(patch.outlineWidth ?? state.outlineWidth, 160, 600);
       const saveOnBlur = patch.saveOnBlur ?? state.saveOnBlur;
+      const trimOnSave = patch.trimOnSave ?? state.trimOnSave;
       return {
         fontSize,
         proseMaxWidth,
@@ -511,6 +517,7 @@ export const useAppStore = create<AppState>((set) => ({
         sidebarWidth,
         outlineWidth,
         saveOnBlur,
+        trimOnSave,
       };
     }),
 

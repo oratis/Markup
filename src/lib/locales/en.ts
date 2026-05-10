@@ -39,6 +39,8 @@ export const en = {
   "settings.lineWrapHint": "Source mode",
   "settings.saveOnBlur": "Save on blur",
   "settings.saveOnBlurHint": "Window unfocus",
+  "settings.trimOnSave": "Trim trailing whitespace",
+  "settings.trimOnSaveHint": "On save",
   "settings.on": "On",
   "settings.off": "Off",
   "settings.restore": "Restore defaults",

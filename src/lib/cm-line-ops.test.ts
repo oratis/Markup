@@ -7,6 +7,7 @@ import {
   duplicateLine,
   moveLineDown,
   moveLineUp,
+  sortLines,
   toggleBlockquote,
   toggleList,
 } from "./cm-line-ops";
@@ -144,5 +145,25 @@ describe("toggleList", () => {
     const view = mountView("- [x] done\n- [ ] todo", 0, 21);
     toggleList("task");
     expect(view.state.doc.toString()).toBe("done\ntodo");
+  });
+});
+
+describe("sortLines", () => {
+  it("sorts the selected lines ascending case-insensitively", () => {
+    const view = mountView("Banana\napple\ncherry", 0, 19);
+    sortLines("asc");
+    expect(view.state.doc.toString()).toBe("apple\nBanana\ncherry");
+  });
+
+  it("descending reverses the asc result", () => {
+    const view = mountView("apple\nBanana\ncherry", 0, 19);
+    sortLines("desc");
+    expect(view.state.doc.toString()).toBe("cherry\nBanana\napple");
+  });
+
+  it("is a no-op when only one line is in the selection", () => {
+    const view = mountView("only", 0);
+    expect(sortLines("asc")).toBe(false);
+    expect(view.state.doc.toString()).toBe("only");
   });
 });

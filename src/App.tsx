@@ -21,6 +21,7 @@ import {
   duplicateLine,
   moveLineDown,
   moveLineUp,
+  sortLines,
   toggleBlockquote,
   toggleList,
 } from "./lib/cm-line-ops";
@@ -29,8 +30,15 @@ import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { useT } from "./lib/i18n";
 import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
-import { buildTableMarkdown, insertMarkdown, wrapMarkdown } from "./lib/insert-md";
+import {
+  buildTableMarkdown,
+  insertMarkdown,
+  toTitleCase,
+  transformSelection,
+  wrapMarkdown,
+} from "./lib/insert-md";
 import { buildParagraphLink } from "./lib/paragraph-link";
+import { trimTrailingWhitespace } from "./lib/save-prep";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { installSmartPaste } from "./lib/smart-paste";
@@ -248,6 +256,7 @@ export function App() {
   const sidebarWidth = useAppStore((s) => s.sidebarWidth);
   const outlineWidth = useAppStore((s) => s.outlineWidth);
   const saveOnBlur = useAppStore((s) => s.saveOnBlur);
+  const trimOnSave = useAppStore((s) => s.trimOnSave);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -266,6 +275,7 @@ export function App() {
           sidebarWidth,
           outlineWidth,
           saveOnBlur,
+          trimOnSave,
         }),
       );
     } catch {
@@ -282,6 +292,7 @@ export function App() {
     sidebarWidth,
     outlineWidth,
     saveOnBlur,
+    trimOnSave,
   ]);
 
   // Push recent file when active tab changes to a real file. Mirror to
@@ -493,7 +504,15 @@ export function App() {
     if (!t || !t.path) return;
     setActiveStatus("saving");
     try {
-      const newMtime = await writeFile(t.path, t.content, t.mtimeMs);
+      const content = state.trimOnSave ? trimTrailingWhitespace(t.content) : t.content;
+      const newMtime = await writeFile(t.path, content, t.mtimeMs);
+      if (state.trimOnSave && content !== t.content) {
+        // Push the trimmed content back into the store so the editor reflects
+        // the on-disk version; SourceEditor's reconcile effect picks it up.
+        useAppStore.setState((s) => ({
+          tabs: s.tabs.map((tx) => (tx.id === t.id ? { ...tx, content } : tx)),
+        }));
+      }
       setActiveMtime(newMtime);
       setActiveStatus("saved");
       // Remember mtime so vault-changed events from our own save don't trigger reload prompt
@@ -505,12 +524,15 @@ export function App() {
   }, [setActiveStatus, setActiveMtime]);
 
   const saveAllSilent = useCallback(async () => {
-    const dirty = useAppStore
-      .getState()
-      .tabs.filter((tx) => tx.path && tx.status === "dirty");
+    const state = useAppStore.getState();
+    const dirty = state.tabs.filter((tx) => tx.path && tx.status === "dirty");
     if (dirty.length === 0) return;
+    const trim = state.trimOnSave;
+    const payloads = dirty.map((tx) =>
+      trim ? trimTrailingWhitespace(tx.content) : tx.content,
+    );
     const results = await Promise.allSettled(
-      dirty.map((tx) => writeFile(String(tx.path), tx.content, tx.mtimeMs)),
+      dirty.map((tx, i) => writeFile(String(tx.path), payloads[i], tx.mtimeMs)),
     );
     useAppStore.setState((s) => ({
       tabs: s.tabs.map((tx) => {
@@ -520,6 +542,7 @@ export function App() {
         if (r.status === "fulfilled") {
           return {
             ...tx,
+            content: trim ? payloads[i] : tx.content,
             status: "saved",
             mtimeMs: r.value,
             errorMessage: null,
@@ -545,12 +568,15 @@ export function App() {
   }, [saveOnBlur, saveAllSilent]);
 
   const saveAll = useCallback(async () => {
-    const dirty = useAppStore
-      .getState()
-      .tabs.filter((tx) => tx.path && tx.status === "dirty");
+    const state = useAppStore.getState();
+    const dirty = state.tabs.filter((tx) => tx.path && tx.status === "dirty");
     if (dirty.length === 0) return;
+    const trim = state.trimOnSave;
+    const payloads = dirty.map((tx) =>
+      trim ? trimTrailingWhitespace(tx.content) : tx.content,
+    );
     const results = await Promise.allSettled(
-      dirty.map((tx) => writeFile(String(tx.path), tx.content, tx.mtimeMs)),
+      dirty.map((tx, i) => writeFile(String(tx.path), payloads[i], tx.mtimeMs)),
     );
     let savedCount = 0;
     let failedCount = 0;
@@ -563,6 +589,7 @@ export function App() {
           savedCount += 1;
           return {
             ...tx,
+            content: trim ? payloads[i] : tx.content,
             status: "saved",
             mtimeMs: r.value,
             errorMessage: null,
@@ -1202,6 +1229,41 @@ export function App() {
         },
       },
       {
+        id: "sort_lines_asc",
+        label: "Sort Lines Ascending",
+        run: () => {
+          sortLines("asc");
+        },
+      },
+      {
+        id: "sort_lines_desc",
+        label: "Sort Lines Descending",
+        run: () => {
+          sortLines("desc");
+        },
+      },
+      {
+        id: "case_upper",
+        label: "Selection: UPPERCASE",
+        run: () => {
+          transformSelection((s) => s.toLocaleUpperCase());
+        },
+      },
+      {
+        id: "case_lower",
+        label: "Selection: lowercase",
+        run: () => {
+          transformSelection((s) => s.toLocaleLowerCase());
+        },
+      },
+      {
+        id: "case_title",
+        label: "Selection: Title Case",
+        run: () => {
+          transformSelection(toTitleCase);
+        },
+      },
+      {
         id: "insert_table",
         label: "Insert Table…",
         run: () => {
@@ -1260,6 +1322,7 @@ export function App() {
             sidebarWidth: 260,
             outlineWidth: 220,
             saveOnBlur: false,
+            trimOnSave: false,
           });
           s.setTheme("auto");
           s.setRecentFiles([]);
