@@ -130,6 +130,62 @@ export function moveSectionUp(): boolean {
 }
 
 /**
+ * Move the section whose heading is at `sourceLine` to the slot
+ * immediately before or after the section whose heading is at
+ * `targetLine`. Source-mode only; expects 0-based line indices into
+ * the active doc's source. No-op when the source / target heading
+ * can't be resolved, when source equals target, or when no source
+ * view is mounted.
+ *
+ * This is the primitive that the Outline drag-to-reorder UI dispatches
+ * — it lets the user reposition any heading section anywhere in the doc
+ * without scaling through up/down moves.
+ */
+export function moveSectionToLine(
+  sourceLine: number,
+  targetLine: number,
+  position: "before" | "after",
+): boolean {
+  const view = getActiveSourceView();
+  if (!view) return false;
+  if (sourceLine === targetLine) return false;
+  const lines = view.state.doc.toString().split("\n");
+  const source = findSection(lines, sourceLine);
+  const target = findSection(lines, targetLine);
+  if (!source || !target) return false;
+  if (source.headingLine !== sourceLine || target.headingLine !== targetLine) {
+    return false;
+  }
+  // Range of source block in lines:
+  const srcLines = lines.slice(source.headingLine, source.endLine + 1);
+  // Remove the source block from `lines` first.
+  const withoutSrc = [
+    ...lines.slice(0, source.headingLine),
+    ...lines.slice(source.endLine + 1),
+  ];
+  // After removal, the target heading line may have shifted up by srcLines.length
+  // if it was originally below the source. Recompute target position in withoutSrc.
+  let newTargetHeading = target.headingLine;
+  let newTargetEnd = target.endLine;
+  if (target.headingLine > source.endLine) {
+    newTargetHeading -= srcLines.length;
+    newTargetEnd -= srcLines.length;
+  }
+  // Compute insertion index: line index in `withoutSrc`.
+  const insertAt = position === "before" ? newTargetHeading : newTargetEnd + 1;
+  const next = [
+    ...withoutSrc.slice(0, insertAt),
+    ...srcLines,
+    ...withoutSrc.slice(insertAt),
+  ].join("\n");
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: next },
+    userEvent: "move.section",
+  });
+  return true;
+}
+
+/**
  * Move the section enclosing the cursor to the top of its parent's
  * scope — repeatedly moves it past previous siblings until none remain.
  * No-op when there are no previous siblings.

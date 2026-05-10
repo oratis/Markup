@@ -5,6 +5,7 @@ import { setActiveSourceView } from "./active-source-view";
 import {
   moveSectionDown,
   moveSectionToBottom,
+  moveSectionToLine,
   moveSectionToTop,
   moveSectionUp,
 } from "./cm-section";
@@ -111,5 +112,36 @@ describe("moveSectionToTop / moveSectionToBottom", () => {
     const idx = SAMPLE.indexOf("c1");
     mountView(SAMPLE, idx);
     expect(moveSectionToBottom()).toBe(false);
+  });
+});
+
+describe("moveSectionToLine", () => {
+  // Heading lines (0-based) in SAMPLE:
+  //  ## A = 3, ## B = 7, ### B.1 = 10, ## C = 13
+  it("moves the source section to the slot before the target", () => {
+    const view = mountView(SAMPLE, 0);
+    // Move ## C (line 13) to before ## A (line 3).
+    expect(moveSectionToLine(13, 3, "before")).toBe(true);
+    const out = view.state.doc.toString();
+    expect(out.indexOf("## C")).toBeLessThan(out.indexOf("## A"));
+  });
+
+  it("moves the source section to the slot after the target", () => {
+    const view = mountView(SAMPLE, 0);
+    // Move ## A (line 3) to after ## B (line 7).
+    expect(moveSectionToLine(3, 7, "after")).toBe(true);
+    const out = view.state.doc.toString();
+    expect(out.indexOf("## B")).toBeLessThan(out.indexOf("## A"));
+  });
+
+  it("returns false when source === target", () => {
+    mountView(SAMPLE, 0);
+    expect(moveSectionToLine(3, 3, "before")).toBe(false);
+  });
+
+  it("returns false when source / target line is not a heading line", () => {
+    mountView(SAMPLE, 0);
+    // Line 4 is "a1", not a heading.
+    expect(moveSectionToLine(4, 3, "before")).toBe(false);
   });
 });

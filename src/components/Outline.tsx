@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { getActiveSourceView } from "../lib/active-source-view";
+import { moveSectionToLine } from "../lib/cm-section";
 import { type Heading, parseHeadings } from "../lib/headings";
 import { useT } from "../lib/i18n";
 import { parseHeadingsAsync } from "../lib/outline-client";
 import { buildParagraphLink } from "../lib/paragraph-link";
 import { getActiveTab, useAppStore } from "../store";
 import { showToast } from "./Toast";
+
+const DRAG_MIME = "application/x-markup-heading";
 
 /** Above this size we delegate parsing to the worker. Below it the inline
  *  scanner is faster than the postMessage round-trip. */
@@ -57,6 +60,10 @@ export function Outline() {
   const [filter, setFilter] = useState("");
   const [maxLevel, setMaxLevel] = useState(6);
   const [ctx, setCtx] = useState<{ heading: Heading; x: number; y: number } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    line: number;
+    position: "before" | "after";
+  } | null>(null);
   const headings = useMemo(() => {
     const q = filter.trim().toLowerCase();
     return allHeadings.filter((h) => {
@@ -149,9 +156,14 @@ export function Outline() {
         )}
         {headings.map((h, i) => {
           const isActive = i === activeIdx;
+          const isDropBefore =
+            dropTarget?.line === h.line && dropTarget?.position === "before";
+          const isDropAfter =
+            dropTarget?.line === h.line && dropTarget?.position === "after";
           return (
             <button
               key={`${h.line}-${i}`}
+              draggable
               ref={
                 isActive
                   ? (el) => {
@@ -166,11 +178,43 @@ export function Outline() {
                 e.preventDefault();
                 setCtx({ heading: h, x: e.clientX, y: e.clientY });
               }}
+              onDragStart={(e) => {
+                e.dataTransfer.setData(DRAG_MIME, String(h.line));
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => {
+                if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const position =
+                  e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+                setDropTarget({ line: h.line, position });
+              }}
+              onDragLeave={() => {
+                if (dropTarget?.line === h.line) setDropTarget(null);
+              }}
+              onDrop={(e) => {
+                const raw = e.dataTransfer.getData(DRAG_MIME);
+                setDropTarget(null);
+                if (!raw) return;
+                const sourceLine = Number(raw);
+                if (!Number.isInteger(sourceLine) || sourceLine === h.line) return;
+                e.preventDefault();
+                moveSectionToLine(sourceLine, h.line, dropTarget?.position ?? "after");
+              }}
+              onDragEnd={() => setDropTarget(null)}
               title={h.text}
-              className={`w-full text-left text-[12px] py-0.5 truncate block ${
+              className={`w-full text-left text-[12px] py-0.5 truncate block relative ${
                 isActive
                   ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium"
                   : "hover:bg-black/5 dark:hover:bg-white/10"
+              } ${
+                isDropBefore
+                  ? "border-t-2 border-blue-500"
+                  : isDropAfter
+                    ? "border-b-2 border-blue-500"
+                    : ""
               }`}
               style={{
                 paddingLeft: `${0.75 + (h.level - 1) * 0.85}rem`,
