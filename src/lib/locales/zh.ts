@@ -98,6 +98,7 @@ export const zh: Strings = {
   "prompt.rename": "新文件名：",
   "prompt.importSettings": "粘贴设置 JSON：",
   "prompt.newFileName": "新文件名（位于 Vault 根目录）：",
+  "prompt.codeBlockLang": "语言（留空表示无）：",
   "reload.confirmDirty": "「{0}」有未保存的修改，重新加载会丢失。继续吗？",
   "toast.wikilinkMiss": "Vault 里没有匹配的文件：{0}",
   "toast.openFailed": "打开 {0} 失败",
@@ -111,6 +112,9 @@ export const zh: Strings = {
   "outline.empty": "没有标题。",
   "outline.filter": "过滤标题…",
   "outline.noFilterMatch": "无匹配标题。",
+  "outline.levelTitle": "限制层级 ≤ H{0}",
+  "outline.levelCap": "≤ H{0}",
+  "outline.levelAll": "全部层级",
 
   // find bar
   "find.placeholder": "查找…",

@@ -97,6 +97,7 @@ export const en = {
   "prompt.rename": "New file name:",
   "prompt.importSettings": "Paste settings JSON:",
   "prompt.newFileName": "New file name (under vault root):",
+  "prompt.codeBlockLang": "Language (blank for none):",
   "reload.confirmDirty":
     '"{0}" has unsaved changes that will be lost on reload. Continue?',
   "toast.wikilinkMiss": 'No vault file matches "{0}"',
@@ -111,6 +112,9 @@ export const en = {
   "outline.empty": "No headings.",
   "outline.filter": "Filter headings…",
   "outline.noFilterMatch": "No matching headings.",
+  "outline.levelTitle": "Cap depth at H{0}",
+  "outline.levelCap": "≤ H{0}",
+  "outline.levelAll": "all levels",
 
   // find bar
   "find.placeholder": "Find…",

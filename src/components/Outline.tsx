@@ -53,11 +53,15 @@ export function Outline() {
     tab && tab.content.length > WORKER_THRESHOLD ? workerHeadings : inlineHeadings;
 
   const [filter, setFilter] = useState("");
+  const [maxLevel, setMaxLevel] = useState(6);
   const headings = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return allHeadings;
-    return allHeadings.filter((h) => h.text.toLowerCase().includes(q));
-  }, [allHeadings, filter]);
+    return allHeadings.filter((h) => {
+      if (h.level > maxLevel) return false;
+      if (q && !h.text.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [allHeadings, filter, maxLevel]);
 
   // Track the active heading via cursor position. selectionchange fires
   // whenever the user clicks / arrows / types in either editor.
@@ -104,7 +108,7 @@ export function Outline() {
       <div className="px-3 py-2 text-[11px] uppercase tracking-wider opacity-50">
         {t("outline.title")}
       </div>
-      <div className="px-3 pb-2">
+      <div className="px-3 pb-2 flex flex-col gap-1">
         <input
           type="text"
           value={filter}
@@ -112,6 +116,27 @@ export function Outline() {
           placeholder={t("outline.filter")}
           className="w-full text-[12px] px-2 py-1 rounded border border-black/10 dark:border-white/15 bg-transparent outline-none focus:border-blue-500"
         />
+        <div className="flex items-center gap-0.5">
+          {([1, 2, 3, 4, 5, 6] as const).map((lvl) => (
+            <button
+              type="button"
+              key={lvl}
+              title={t("outline.levelTitle", lvl)}
+              aria-pressed={maxLevel === lvl}
+              onClick={() => setMaxLevel(lvl === maxLevel ? 6 : lvl)}
+              className={`text-[10px] font-mono w-6 h-5 leading-none rounded ${
+                maxLevel === lvl
+                  ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                  : "hover:bg-black/5 dark:hover:bg-white/10 opacity-60"
+              }`}
+            >
+              H{lvl}
+            </button>
+          ))}
+          <span className="opacity-30 ml-1 text-[10px]">
+            {maxLevel < 6 ? t("outline.levelCap", maxLevel) : t("outline.levelAll")}
+          </span>
+        </div>
       </div>
       <nav className="flex-1 min-h-0 overflow-auto no-scrollbar pb-2">
         {headings.length === 0 && (

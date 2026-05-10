@@ -63,6 +63,20 @@ describe("Outline (rendered)", () => {
     expect(screen.getByText(/no matching headings/i)).toBeInTheDocument();
   });
 
+  it("level chips cap the rendered depth and toggle off on a second click", () => {
+    render(<Outline />);
+    // Cap to H1: chip text is "H1".
+    const h1Chip = screen.getByRole("button", { name: "H1" });
+    fireEvent.click(h1Chip);
+    expect(screen.getByText("Top")).toBeInTheDocument();
+    expect(screen.queryByText("Section A")).toBeNull();
+    expect(screen.queryByText("Sub A1")).toBeNull();
+    // Click the same chip again → back to all levels
+    fireEvent.click(h1Chip);
+    expect(screen.getByText("Section A")).toBeInTheDocument();
+    expect(screen.getByText("Sub A1")).toBeInTheDocument();
+  });
+
   it('shows "No headings." when active tab has no headings', () => {
     useAppStore.setState({
       tabs: [

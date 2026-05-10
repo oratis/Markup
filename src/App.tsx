@@ -1460,6 +1460,14 @@ export function App() {
         },
       },
       {
+        id: "wrap_code_block",
+        label: "Wrap Selection as Code Block…",
+        run: () => {
+          const lang = window.prompt(tr("prompt.codeBlockLang"), "ts")?.trim() ?? "";
+          wrapMarkdown(`\n\n\`\`\`${lang}\n`, "\n```\n\n");
+        },
+      },
+      {
         id: "insert_today",
         label: "Insert Today's Date",
         run: () => {
