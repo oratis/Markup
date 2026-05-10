@@ -24,7 +24,9 @@ export type ShortcutId =
   | "commandPalette"
   | "toggleSourceMode"
   | "toggleSidebar"
-  | "settings";
+  | "settings"
+  | "nextTab"
+  | "prevTab";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -38,6 +40,8 @@ export const defaults: Record<ShortcutId, string> = {
   toggleSourceMode: "Mod+/",
   toggleSidebar: "Mod+B",
   settings: "Mod+,",
+  nextTab: "Mod+Alt+]",
+  prevTab: "Mod+Alt+[",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -52,6 +56,8 @@ export const labels: Record<ShortcutId, string> = {
   toggleSourceMode: "Toggle Source Mode",
   toggleSidebar: "Toggle Sidebar",
   settings: "Settings",
+  nextTab: "Next Tab",
+  prevTab: "Previous Tab",
 };
 
 const STORAGE_KEY = "markup.shortcuts";

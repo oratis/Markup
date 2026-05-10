@@ -1,6 +1,7 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import {
+  bracketMatching,
   codeFolding,
   defaultHighlightStyle,
   foldGutter,
@@ -20,6 +21,7 @@ import {
 } from "@codemirror/view";
 import { useEffect, useRef } from "react";
 import { setActiveSourceView } from "../lib/active-source-view";
+import { autoClosePairs } from "../lib/cm-auto-close";
 import { installImageDrop } from "../lib/image-drop";
 import { installImagePaste } from "../lib/image-paste";
 import { log as perfLog } from "../lib/perf";
@@ -60,6 +62,9 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
           // Fold by heading / fenced code block via lang-markdown's tree
           codeFolding(),
           foldGutter(),
+          // Highlight matching `()`, `[]`, `{}` pairs around the cursor.
+          bracketMatching(),
+          autoClosePairs(),
         ];
 
     const state = EditorState.create({

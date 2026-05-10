@@ -732,6 +732,16 @@ export function App() {
         toggleSidebar();
         return;
       }
+      if (matchesShortcut(e, "nextTab")) {
+        e.preventDefault();
+        useAppStore.getState().activateNextTab();
+        return;
+      }
+      if (matchesShortcut(e, "prevTab")) {
+        e.preventDefault();
+        useAppStore.getState().activatePrevTab();
+        return;
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -750,6 +760,41 @@ export function App() {
         id: "close_all_tabs",
         label: "Close All Tabs",
         run: () => useAppStore.getState().closeAllTabs(),
+      },
+      {
+        id: "next_tab",
+        label: "Next Tab",
+        shortcut: "⌘⌥]",
+        run: () => useAppStore.getState().activateNextTab(),
+      },
+      {
+        id: "prev_tab",
+        label: "Previous Tab",
+        shortcut: "⌘⌥[",
+        run: () => useAppStore.getState().activatePrevTab(),
+      },
+      {
+        id: "toggle_pin_tab",
+        label: "Pin / Unpin Active Tab",
+        run: () => {
+          const id = useAppStore.getState().activeTabId;
+          if (id) useAppStore.getState().toggleTabPinned(id);
+        },
+      },
+      {
+        id: "copy_file_path",
+        label: "Copy File Path",
+        run: () => {
+          const t2 = getActiveTab(useAppStore.getState());
+          if (!t2?.path) {
+            showToast(tr("toast.copyFailed"));
+            return;
+          }
+          navigator.clipboard
+            .writeText(t2.path)
+            .then(() => showToast(tr("toast.copied", t2.path ?? "")))
+            .catch(() => showToast(tr("toast.copyFailed")));
+        },
       },
       {
         id: "new_window",

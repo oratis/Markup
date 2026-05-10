@@ -49,6 +49,18 @@ describe("TabBar", () => {
     expect(useAppStore.getState().activeTabId).toBe("/b.md");
   });
 
+  it("hides the close button on pinned tabs and shows a pin glyph", () => {
+    useAppStore.setState({
+      tabs: [{ ...makeTab("/a.md", "a.md"), pinned: true }, makeTab("/b.md", "b.md")],
+      activeTabId: "/a.md",
+    });
+    render(<TabBar />);
+    // Only the unpinned tab has a Close button
+    expect(screen.getAllByLabelText("Close tab")).toHaveLength(1);
+    // Pinned glyph is in the DOM
+    expect(screen.getByLabelText("Pinned")).toBeInTheDocument();
+  });
+
   it("dragging tab A onto tab B reorders A after B's index", () => {
     useAppStore.setState({
       tabs: [

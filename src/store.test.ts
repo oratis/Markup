@@ -166,6 +166,62 @@ describe("app store", () => {
     expect(s.activeTabId).toBe(s.tabs[0].id);
   });
 
+  it("toggleTabPinned moves a tab into the pinned group at the front", () => {
+    const { openLoadedFile, toggleTabPinned } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    toggleTabPinned("/c.md");
+    const ids = useAppStore.getState().tabs.map((t) => t.id);
+    expect(ids).toEqual(["/c.md", "/a.md", "/b.md"]);
+  });
+
+  it("closeAllTabs preserves pinned tabs", () => {
+    const { openLoadedFile, toggleTabPinned, closeAllTabs } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    toggleTabPinned("/a.md");
+    closeAllTabs();
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/a.md"]);
+  });
+
+  it("closeOtherTabs preserves pinned + the kept tab", () => {
+    const { openLoadedFile, toggleTabPinned, closeOtherTabs } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    toggleTabPinned("/a.md");
+    closeOtherTabs("/c.md");
+    expect(
+      useAppStore
+        .getState()
+        .tabs.map((t) => t.id)
+        .sort(),
+    ).toEqual(["/a.md", "/c.md"]);
+  });
+
+  it("activateNextTab cycles forward and wraps", () => {
+    const { openLoadedFile, activateNextTab, setActiveTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    setActiveTab("/a.md");
+    activateNextTab();
+    expect(useAppStore.getState().activeTabId).toBe("/b.md");
+    activateNextTab();
+    activateNextTab();
+    expect(useAppStore.getState().activeTabId).toBe("/a.md");
+  });
+
+  it("activatePrevTab cycles backward and wraps", () => {
+    const { openLoadedFile, activatePrevTab, setActiveTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    setActiveTab("/a.md");
+    activatePrevTab();
+    expect(useAppStore.getState().activeTabId).toBe("/b.md");
+  });
+
   it("setActivePathAndName updates id/path/name/mtime + clears dirty", () => {
     const { newScratchTab, updateActiveContent, setActivePathAndName } =
       useAppStore.getState();

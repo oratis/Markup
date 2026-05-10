@@ -17,6 +17,7 @@ export function TabBar() {
   const closeOtherTabs = useAppStore((s) => s.closeOtherTabs);
   const closeTabsToRight = useAppStore((s) => s.closeTabsToRight);
   const closeAllTabs = useAppStore((s) => s.closeAllTabs);
+  const toggleTabPinned = useAppStore((s) => s.toggleTabPinned);
   const reorderTab = useAppStore((s) => s.reorderTab);
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -76,18 +77,25 @@ export function TabBar() {
             }`}
             onClick={() => setActiveTab(tab.id)}
           >
+            {tab.pinned && (
+              <span aria-label="Pinned" title="Pinned" className="text-[10px] opacity-70">
+                📌
+              </span>
+            )}
             <span className="max-w-[180px] truncate">{tab.name}</span>
             <span className="text-[10px] opacity-70 w-2">{indicator}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                closeTab(tab.id);
-              }}
-              className="ml-1 w-4 h-4 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/15 opacity-0 group-hover:opacity-100"
-              aria-label="Close tab"
-            >
-              ×
-            </button>
+            {!tab.pinned && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeTab(tab.id);
+                }}
+                className="ml-1 w-4 h-4 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/15 opacity-0 group-hover:opacity-100"
+                aria-label="Close tab"
+              >
+                ×
+              </button>
+            )}
             {isActive && (
               <span className="absolute left-0 right-0 bottom-0 h-[2px] bg-blue-500" />
             )}
@@ -100,6 +108,18 @@ export function TabBar() {
           y={ctx.y}
           onClose={() => setCtx(null)}
           items={[
+            {
+              label: tabs.find((t) => t.id === ctx.id)?.pinned ? "Unpin" : "Pin",
+              run: () => toggleTabPinned(ctx.id),
+            },
+            {
+              label: "Copy Path",
+              run: () => {
+                const path = tabs.find((t) => t.id === ctx.id)?.path;
+                if (path) navigator.clipboard.writeText(path).catch(() => {});
+              },
+              disabled: !tabs.find((t) => t.id === ctx.id)?.path,
+            },
             { label: "Close", run: () => closeTab(ctx.id) },
             { label: "Close Others", run: () => closeOtherTabs(ctx.id) },
             {

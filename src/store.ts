@@ -20,6 +20,9 @@ export interface Tab {
   mtimeMs: number | null;
   status: SaveStatus;
   errorMessage: string | null;
+  /** Pinned tabs render before unpinned ones, survive Close All / Close
+   * Others / Close to the Right unless explicitly unpinned. */
+  pinned?: boolean;
 }
 
 export interface VaultFile {
@@ -60,6 +63,9 @@ interface AppState {
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
   closeAllTabs: () => void;
+  toggleTabPinned: (id: string) => void;
+  activateNextTab: () => void;
+  activatePrevTab: () => void;
   updateActiveContent: (content: string) => void;
   setActiveStatus: (status: SaveStatus, errorMessage?: string | null) => void;
   setActiveMtime: (mtimeMs: number) => void;
@@ -251,6 +257,11 @@ export const useAppStore = create<AppState>((set) => ({
       const fromIdx = tabs.findIndex((t) => t.id === fromId);
       const toIdx = tabs.findIndex((t) => t.id === toId);
       if (fromIdx < 0 || toIdx < 0) return state;
+      // Don't allow drag-reorder to mix pinned and unpinned groups —
+      // pinned must stay first. Otherwise the reorder is silently dropped.
+      if (Boolean(tabs[fromIdx].pinned) !== Boolean(tabs[toIdx].pinned)) {
+        return state;
+      }
       const [moved] = tabs.splice(fromIdx, 1);
       tabs.splice(toIdx, 0, moved);
       return { tabs };
@@ -260,17 +271,20 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => {
       const keep = state.tabs.find((t) => t.id === id);
       if (!keep) return state;
-      // Skip dirty-confirm: power-user gesture; surface a toast in the
-      // future if any closed tab was unsaved. For now, parity with browser
-      // behaviour where "close others" is unconditional.
-      return { tabs: [keep], activeTabId: keep.id };
+      // Pinned tabs survive "close others" — they're explicitly anchored.
+      const tabs = state.tabs.filter((t) => t.id === id || t.pinned);
+      return { tabs, activeTabId: keep.id };
     }),
 
   closeTabsToRight: (id) =>
     set((state) => {
       const idx = state.tabs.findIndex((t) => t.id === id);
       if (idx < 0) return state;
-      const tabs = state.tabs.slice(0, idx + 1);
+      const head = state.tabs.slice(0, idx + 1);
+      // Keep pinned tabs that lived to the right of `id` so the user
+      // doesn't lose their anchored ones via this gesture.
+      const pinnedRight = state.tabs.slice(idx + 1).filter((t) => t.pinned);
+      const tabs = [...head, ...pinnedRight];
       const activeStillVisible = tabs.some((t) => t.id === state.activeTabId);
       return {
         tabs,
@@ -280,15 +294,55 @@ export const useAppStore = create<AppState>((set) => ({
 
   closeAllTabs: () =>
     set((state) => {
-      const dirty = state.tabs.find((x) => x.status === "dirty" && x.path);
+      const dirty = state.tabs.find((x) => x.status === "dirty" && x.path && !x.pinned);
       if (dirty) {
         const ok = window.confirm(t("tab.confirmClose", dirty.name));
         if (!ok) return state;
       }
+      const pinned = state.tabs.filter((t) => t.pinned);
+      if (pinned.length === 0) {
+        return {
+          tabs: [welcomeTab()],
+          activeTabId: `${SCRATCH_PREFIX}welcome`,
+        };
+      }
+      const stillActive = pinned.some((t) => t.id === state.activeTabId);
       return {
-        tabs: [welcomeTab()],
-        activeTabId: `${SCRATCH_PREFIX}welcome`,
+        tabs: pinned,
+        activeTabId: stillActive ? state.activeTabId : pinned[0].id,
       };
+    }),
+
+  toggleTabPinned: (id) =>
+    set((state) => {
+      const idx = state.tabs.findIndex((t) => t.id === id);
+      if (idx < 0) return state;
+      const target = state.tabs[idx];
+      const next: Tab = { ...target, pinned: !target.pinned };
+      // Re-sort so pinned tabs lead while preserving relative order.
+      const others = state.tabs.filter((t) => t.id !== id);
+      const tabs = next.pinned
+        ? [...others.filter((t) => t.pinned), next, ...others.filter((t) => !t.pinned)]
+        : [...others.filter((t) => t.pinned), ...others.filter((t) => !t.pinned), next];
+      return { tabs };
+    }),
+
+  activateNextTab: () =>
+    set((state) => {
+      if (state.tabs.length < 2 || !state.activeTabId) return state;
+      const i = state.tabs.findIndex((t) => t.id === state.activeTabId);
+      if (i < 0) return state;
+      const next = state.tabs[(i + 1) % state.tabs.length];
+      return { activeTabId: next.id };
+    }),
+
+  activatePrevTab: () =>
+    set((state) => {
+      if (state.tabs.length < 2 || !state.activeTabId) return state;
+      const i = state.tabs.findIndex((t) => t.id === state.activeTabId);
+      if (i < 0) return state;
+      const prev = state.tabs[(i - 1 + state.tabs.length) % state.tabs.length];
+      return { activeTabId: prev.id };
     }),
 
   updateActiveContent: (content) =>
