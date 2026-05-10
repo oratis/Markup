@@ -39,6 +39,8 @@ export const zh: Strings = {
   "palette.empty": "无匹配命令。",
   "quickOpen.placeholder": "在 Vault 中打开文件…",
   "quickOpen.empty": "无匹配。",
+  "wikilinkPicker.placeholder": "插入 Wikilink…",
+  "cmd.insertWikilink": "插入 Wikilink…",
   "search.placeholder": "搜索 Vault…",
   "search.empty": "无结果。",
   "search.busy": "搜索中…",
@@ -54,6 +56,10 @@ export const zh: Strings = {
   "toast.copyFailed": "复制失败",
   "toast.wikilinkMiss": "Vault 里没有匹配的文件：{0}",
   "toast.openFailed": "打开 {0} 失败",
+  "toast.largeFileSource": "大文件（{0}）— 已切换到源码模式",
+  "toast.updateAvailable": "新版本 {0} 可用",
+  "toast.updateInstalling": "安装更新中…",
+  "toast.updateRestart": "更新就绪 — 重启以应用",
 
   // outline
   "outline.title": "大纲",
@@ -65,4 +71,20 @@ export const zh: Strings = {
 
   // misc
   "tab.confirmClose": "「{0}」有未保存的修改，关闭后会丢失。确认关闭吗？",
+
+  // onboarding
+  "onboard.title": "欢迎使用 Markup",
+  "onboard.subtitle": "面向 macOS 的高性能 Markdown 编辑器。",
+  "onboard.shortcuts": "几个常用快捷键",
+  "onboard.openVault": "打开 Vault",
+  "onboard.openFile": "打开文件",
+  "onboard.skip": "跳过",
+  "onboard.kb.openFile": "打开文件",
+  "onboard.kb.openVault": "打开 Vault",
+  "onboard.kb.toggleMode": "切换源码 / WYSIWYG",
+  "onboard.kb.quickOpen": "快速打开文件",
+  "onboard.kb.searchVault": "搜索 Vault",
+  "onboard.kb.commandPalette": "命令面板",
+  "onboard.kb.find": "在文件中查找",
+  "onboard.kb.settings": "设置",
 };

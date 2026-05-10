@@ -54,5 +54,14 @@
       }
     ]
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "active": false,
+      "endpoints": [
+        "https://github.com/oratis/Markup/releases/latest/download/latest.json"
+      ],
+      "dialog": false,
+      "pubkey": ""
+    }
+  }
 }

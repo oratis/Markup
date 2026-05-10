@@ -89,6 +89,10 @@ export async function listenMenu(cb: (id: string) => void): Promise<UnlistenFn> 
   return await listen<string>("menu-event", (e) => cb(e.payload));
 }
 
+export async function setNativeLocale(locale: "auto" | "en" | "zh"): Promise<void> {
+  await invoke("set_locale", { locale });
+}
+
 export async function listenVaultChanged(cb: () => void): Promise<UnlistenFn> {
   return await listen<void>("vault-changed", () => cb());
 }

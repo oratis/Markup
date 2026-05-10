@@ -1,4 +1,5 @@
 mod commands;
+mod commands_locale;
 mod commands_vault;
 mod menu;
 
@@ -13,6 +14,7 @@ use commands::{
     log_perf, open_file, read_file, rename_file, render_html, trash_file, write_file,
     write_image,
 };
+use commands_locale::set_locale;
 use commands_vault::{
     close_vault, current_vault, list_vault_files, open_vault, pick_vault, search_vault,
 };
@@ -31,6 +33,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(VaultState::new())
         .setup(|app| {
             let menu = menu::build(app.handle())?;
@@ -53,6 +56,7 @@ pub fn run() {
             write_image,
             render_html,
             log_perf,
+            set_locale,
             pick_vault,
             open_vault,
             close_vault,

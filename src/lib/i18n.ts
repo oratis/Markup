@@ -44,6 +44,9 @@ export function setLocale(v: Locale) {
   current = v;
   persist(v);
   for (const l of listeners) l();
+  // Sync the native macOS menu (best-effort; lib/tauri.ts is loaded async
+  // to avoid a circular import at module-eval time).
+  void import("./tauri").then((m) => m.setNativeLocale(v).catch(() => {}));
 }
 
 export function getLocale(): Locale {

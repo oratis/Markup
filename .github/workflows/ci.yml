@@ -72,20 +72,33 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
 
       - name: Cache cargo registry + target
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
 
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
       # Unit + integration tests run in dev profile because the release
       # profile sets panic=abort, which is incompatible with test harnesses
       # that catch unwinds. Spike-0.3 bench is skipped in CI (run locally
       # via `pnpm bench:spike03`); it needs release-mode timings to be
       # meaningful and is too slow on macOS runners.
-      - name: Cargo test
+      - name: Cargo test with coverage
         working-directory: src-tauri
-        run: cargo test
+        run: cargo llvm-cov --lcov --output-path lcov.info
+
+      - name: Upload Rust coverage to Codecov
+        if: hashFiles('src-tauri/lcov.info') != ''
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./src-tauri/lcov.info
+          flags: rust
+          fail_ci_if_error: false
 
       - name: Cargo build --release (verifies the binary links)
         working-directory: src-tauri

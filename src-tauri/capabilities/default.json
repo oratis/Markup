@@ -17,6 +17,7 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-message",
-    "fs:default"
+    "fs:default",
+    "updater:default"
   ]
 }

@@ -37,6 +37,8 @@ export const en = {
   "palette.empty": "No commands.",
   "quickOpen.placeholder": "Open file in vault…",
   "quickOpen.empty": "No matches.",
+  "wikilinkPicker.placeholder": "Insert wikilink to file…",
+  "cmd.insertWikilink": "Insert Wikilink…",
   "search.placeholder": "Search vault…",
   "search.empty": "No matches.",
   "search.busy": "Searching…",
@@ -52,6 +54,10 @@ export const en = {
   "toast.copyFailed": "Copy failed",
   "toast.wikilinkMiss": 'No vault file matches "{0}"',
   "toast.openFailed": "Failed to open {0}",
+  "toast.largeFileSource": "Large file ({0}) — switched to source mode",
+  "toast.updateAvailable": "Update {0} available",
+  "toast.updateInstalling": "Installing update…",
+  "toast.updateRestart": "Update ready — restart to apply",
 
   // outline
   "outline.title": "Outline",
@@ -63,6 +69,22 @@ export const en = {
 
   // misc
   "tab.confirmClose": '"{0}" has unsaved changes that will be lost. Close anyway?',
+
+  // onboarding
+  "onboard.title": "Welcome to Markup",
+  "onboard.subtitle": "A high-performance Markdown editor for macOS.",
+  "onboard.shortcuts": "A few shortcuts to know",
+  "onboard.openVault": "Open a Vault",
+  "onboard.openFile": "Open a File",
+  "onboard.skip": "Skip",
+  "onboard.kb.openFile": "Open file",
+  "onboard.kb.openVault": "Open vault",
+  "onboard.kb.toggleMode": "Toggle source / WYSIWYG",
+  "onboard.kb.quickOpen": "Quick open file",
+  "onboard.kb.searchVault": "Search vault",
+  "onboard.kb.commandPalette": "Command palette",
+  "onboard.kb.find": "Find in file",
+  "onboard.kb.settings": "Settings",
 };
 
 export type Strings = typeof en;

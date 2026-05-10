@@ -4,6 +4,7 @@ import { type Command, CommandPalette } from "./components/CommandPalette";
 import { MarkupEditor } from "./components/Editor";
 import { FileTree } from "./components/FileTree";
 import { FindBar } from "./components/FindBar";
+import { Onboarding } from "./components/Onboarding";
 import { Outline } from "./components/Outline";
 import { QuickOpen } from "./components/QuickOpen";
 import { ReloadPrompt } from "./components/ReloadPrompt";
@@ -13,6 +14,7 @@ import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
 import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
+import { WikilinkPicker } from "./components/WikilinkPicker";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { useT } from "./lib/i18n";
@@ -30,6 +32,7 @@ import {
   readFile,
   writeFile,
 } from "./lib/tauri";
+import { checkForUpdates } from "./lib/updater";
 import { findVaultFile, wikilinkAtClick } from "./lib/wikilink";
 import { type Theme, getActiveTab, useAppStore } from "./store";
 
@@ -90,6 +93,8 @@ export function App() {
   const [showFindBar, setShowFindBar] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showWikilinkPicker, setShowWikilinkPicker] = useState(false);
 
   const fontSize = useAppStore((s) => s.fontSize);
   const proseMaxWidth = useAppStore((s) => s.proseMaxWidth);
@@ -130,11 +135,27 @@ export function App() {
           /*ignore*/
         }
       }
+      // First-launch onboarding
+      if (!localStorage.getItem("markup.onboarded")) {
+        setShowOnboarding(true);
+      }
     } catch {
       /*ignore*/
     }
+    // Auto-updater check (silent on failure; requires updater.active=true
+    // + pubkey configured to actually upgrade — see lib/updater.ts).
+    checkForUpdates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function dismissOnboarding() {
+    try {
+      localStorage.setItem("markup.onboarded", "true");
+    } catch {
+      /*ignore*/
+    }
+    setShowOnboarding(false);
+  }
 
   // Persist + apply theme/source mode/sidebar
   useEffect(() => {
@@ -210,6 +231,21 @@ export function App() {
     if (tab?.path) pushRecentFile(tab.path);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab?.path]);
+
+  // Big-file safety net: > 5 MB → switch to source mode (CodeMirror handles
+  // huge documents via virtualisation; Milkdown is fine with big text but
+  // its initial parse + render can stall the main thread).
+  useEffect(() => {
+    if (!tab) return;
+    const size = tab.content.length;
+    const LIMIT = 5 * 1024 * 1024;
+    if (size > LIMIT && !sourceMode) {
+      setSourceMode(true);
+      const mb = (size / (1024 * 1024)).toFixed(1);
+      showToast(tr("toast.largeFileSource", `${mb} MB`));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab?.id]);
 
   // Focus + Typewriter installer
   useEffect(() => {
@@ -600,6 +636,11 @@ export function App() {
         run: copyParagraphLink,
       },
       {
+        id: "insert_wikilink",
+        label: tr("cmd.insertWikilink"),
+        run: () => setShowWikilinkPicker(true),
+      },
+      {
         id: "find_in_vault",
         label: "Find in Vault",
         shortcut: "⌘⇧F",
@@ -711,6 +752,37 @@ export function App() {
       )}
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
+      {showOnboarding && (
+        <Onboarding
+          onSkip={dismissOnboarding}
+          onOpenFile={() => {
+            dismissOnboarding();
+            handleOpenFile();
+          }}
+          onOpenVault={() => {
+            dismissOnboarding();
+            handleOpenVault();
+          }}
+        />
+      )}
+      {showWikilinkPicker && (
+        <WikilinkPicker
+          onClose={() => setShowWikilinkPicker(false)}
+          onInsert={(text) => {
+            // Insert at the current selection in whichever editor has focus.
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const range = sel.getRangeAt(0);
+              range.deleteContents();
+              range.insertNode(document.createTextNode(text));
+              sel.collapseToEnd();
+            } else {
+              navigator.clipboard.writeText(text).catch(() => {});
+              showToast(tr("toast.copied", text));
+            }
+          }}
+        />
+      )}
       <ToastHost />
     </div>
   );

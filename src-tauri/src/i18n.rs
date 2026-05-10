@@ -8,10 +8,21 @@
 //! To localise more strings later, add a key to MENU and the matching ZH
 //! arm in `t`. Anything missing falls back to the English literal.
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Locale {
     En,
     Zh,
+}
+
+impl Locale {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "zh" => Self::Zh,
+            "en" => Self::En,
+            "auto" => detect(),
+            _ => detect(),
+        }
+    }
 }
 
 pub fn detect() -> Locale {
