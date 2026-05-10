@@ -3,7 +3,9 @@ import { getActiveSourceView } from "../lib/active-source-view";
 import { type Heading, parseHeadings } from "../lib/headings";
 import { useT } from "../lib/i18n";
 import { parseHeadingsAsync } from "../lib/outline-client";
+import { buildParagraphLink } from "../lib/paragraph-link";
 import { getActiveTab, useAppStore } from "../store";
+import { showToast } from "./Toast";
 
 /** Above this size we delegate parsing to the worker. Below it the inline
  *  scanner is faster than the postMessage round-trip. */
@@ -54,6 +56,7 @@ export function Outline() {
 
   const [filter, setFilter] = useState("");
   const [maxLevel, setMaxLevel] = useState(6);
+  const [ctx, setCtx] = useState<{ heading: Heading; x: number; y: number } | null>(null);
   const headings = useMemo(() => {
     const q = filter.trim().toLowerCase();
     return allHeadings.filter((h) => {
@@ -150,6 +153,10 @@ export function Outline() {
             <button
               key={`${h.line}-${i}`}
               onClick={() => scrollToHeading(h.text, h.level, h.line)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setCtx({ heading: h, x: e.clientX, y: e.clientY });
+              }}
               title={h.text}
               className={`w-full text-left text-[12px] py-0.5 truncate block ${
                 isActive
@@ -166,6 +173,88 @@ export function Outline() {
           );
         })}
       </nav>
+      {ctx && (
+        <OutlineCtxMenu
+          x={ctx.x}
+          y={ctx.y}
+          onClose={() => setCtx(null)}
+          items={[
+            {
+              label: t("outline.ctx.copyLink"),
+              run: () => {
+                if (!tab) return;
+                const link = buildParagraphLink(tab.path, tab.content, ctx.heading.line);
+                navigator.clipboard
+                  .writeText(link)
+                  .then(() => showToast(t("toast.copied", link)))
+                  .catch(() => showToast(t("toast.copyFailed")));
+              },
+            },
+            {
+              label: t("outline.ctx.copyText"),
+              run: () => {
+                navigator.clipboard
+                  .writeText(ctx.heading.text)
+                  .then(() => showToast(t("toast.copied", ctx.heading.text)))
+                  .catch(() => showToast(t("toast.copyFailed")));
+              },
+            },
+            {
+              label: t("outline.ctx.scrollTo"),
+              run: () =>
+                scrollToHeading(ctx.heading.text, ctx.heading.level, ctx.heading.line),
+            },
+          ]}
+        />
+      )}
+    </div>
+  );
+}
+
+interface OutlineCtxMenuItem {
+  label: string;
+  run: () => void;
+}
+
+function OutlineCtxMenu({
+  x,
+  y,
+  items,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  items: OutlineCtxMenuItem[];
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50"
+      onClick={onClose}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div
+        style={{ left: x, top: y }}
+        className="absolute min-w-[180px] py-1 rounded-md shadow-2xl bg-canvas-light dark:bg-canvas-dark border border-black/10 dark:border-white/15"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {items.map((it) => (
+          <button
+            type="button"
+            key={it.label}
+            onClick={() => {
+              onClose();
+              it.run();
+            }}
+            className="w-full text-left px-3 py-1 text-[12px] hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            {it.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -63,6 +63,13 @@ describe("Outline (rendered)", () => {
     expect(screen.getByText(/no matching headings/i)).toBeInTheDocument();
   });
 
+  it("right-clicking a heading row opens a context menu", () => {
+    render(<Outline />);
+    fireEvent.contextMenu(screen.getByText("Section A"));
+    expect(screen.getByText(/copy wikilink to heading/i)).toBeInTheDocument();
+    expect(screen.getByText(/copy heading text/i)).toBeInTheDocument();
+  });
+
   it("level chips cap the rendered depth and toggle off on a second click", () => {
     render(<Outline />);
     // Cap to H1: chip text is "H1".

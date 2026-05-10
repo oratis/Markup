@@ -119,6 +119,9 @@ export const en = {
   "outline.levelTitle": "Cap depth at H{0}",
   "outline.levelCap": "≤ H{0}",
   "outline.levelAll": "all levels",
+  "outline.ctx.copyLink": "Copy Wikilink to Heading",
+  "outline.ctx.copyText": "Copy Heading Text",
+  "outline.ctx.scrollTo": "Scroll to Heading",
 
   // find bar
   "find.placeholder": "Find…",

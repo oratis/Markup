@@ -119,6 +119,9 @@ export const zh: Strings = {
   "outline.levelTitle": "限制层级 ≤ H{0}",
   "outline.levelCap": "≤ H{0}",
   "outline.levelAll": "全部层级",
+  "outline.ctx.copyLink": "复制到标题的 Wikilink",
+  "outline.ctx.copyText": "复制标题文本",
+  "outline.ctx.scrollTo": "滚动到标题",
 
   // find bar
   "find.placeholder": "查找…",
