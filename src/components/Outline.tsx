@@ -152,6 +152,15 @@ export function Outline() {
           return (
             <button
               key={`${h.line}-${i}`}
+              ref={
+                isActive
+                  ? (el) => {
+                      // jsdom doesn't implement scrollIntoView; guard so tests
+                      // don't throw.
+                      el?.scrollIntoView?.({ block: "nearest" });
+                    }
+                  : undefined
+              }
               onClick={() => scrollToHeading(h.text, h.level, h.line)}
               onContextMenu={(e) => {
                 e.preventDefault();
