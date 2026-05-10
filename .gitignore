@@ -40,3 +40,6 @@ coverage/
 __pycache__/
 *.pyc
 test-fixtures/
+
+# claude-code session state (per-machine, not for sharing)
+.claude/
