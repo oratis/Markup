@@ -101,6 +101,8 @@ export const en = {
   "toast.newFileFailed": "Create file failed: {0}",
   "toast.wordGoalBad": "Goal must be a non-negative integer",
   "toast.frontmatterExists": "Frontmatter already present",
+  "toast.jumpToLineNeedsSource": "Switch to source mode first",
+  "toast.jumpToLineBad": "Line number must be a positive integer",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",
@@ -109,6 +111,7 @@ export const en = {
   "prompt.newFileName": "New file name (under vault root):",
   "prompt.codeBlockLang": "Language (blank for none):",
   "prompt.wordGoal": "Word-count goal (0 = off):",
+  "prompt.jumpToLine": "Jump to line:",
   "reload.confirmDirty":
     '"{0}" has unsaved changes that will be lost on reload. Continue?',
   "reload.confirmDirtyAll":

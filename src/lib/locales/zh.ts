@@ -102,6 +102,8 @@ export const zh: Strings = {
   "toast.newFileFailed": "创建文件失败：{0}",
   "toast.wordGoalBad": "目标必须是非负整数",
   "toast.frontmatterExists": "已存在 frontmatter",
+  "toast.jumpToLineNeedsSource": "请先切换到源码模式",
+  "toast.jumpToLineBad": "行号必须是正整数",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "prompt.linkUrl": "链接 URL：",
   "prompt.linkText": "链接文本：",
@@ -110,6 +112,7 @@ export const zh: Strings = {
   "prompt.newFileName": "新文件名（位于 Vault 根目录）：",
   "prompt.codeBlockLang": "语言（留空表示无）：",
   "prompt.wordGoal": "字数目标（0 = 关闭）：",
+  "prompt.jumpToLine": "跳转到行：",
   "reload.confirmDirty": "「{0}」有未保存的修改，重新加载会丢失。继续吗？",
   "reload.confirmDirtyAll":
     "至少有一个标签页有未保存的修改（例如「{0}」）。仍然重新加载全部吗？",

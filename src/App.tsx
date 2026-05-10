@@ -1425,6 +1425,54 @@ export function App() {
         },
       },
       {
+        id: "copy_relative_path",
+        label: "Copy Vault-relative Path",
+        run: () => {
+          const s = useAppStore.getState();
+          const t2 = getActiveTab(s);
+          if (!t2?.path) {
+            showToast(tr("toast.copyFailed"));
+            return;
+          }
+          const root = s.vaultRoot;
+          let rel = t2.path;
+          if (root && t2.path.startsWith(`${root}/`)) {
+            rel = t2.path.slice(root.length + 1);
+          } else if (root && t2.path === root) {
+            rel = "";
+          }
+          navigator.clipboard
+            .writeText(rel)
+            .then(() => showToast(tr("toast.copied", rel)))
+            .catch(() => showToast(tr("toast.copyFailed")));
+        },
+      },
+      {
+        id: "jump_to_line",
+        label: "Jump to Line… (Source)",
+        run: () => {
+          const view = getActiveSourceView();
+          if (!view) {
+            showToast(tr("toast.jumpToLineNeedsSource"));
+            return;
+          }
+          const raw = window.prompt(tr("prompt.jumpToLine"), "1");
+          if (!raw) return;
+          const n = Number(raw);
+          if (!Number.isInteger(n) || n < 1) {
+            showToast(tr("toast.jumpToLineBad"));
+            return;
+          }
+          const lineIdx = Math.min(n, view.state.doc.lines);
+          const lineObj = view.state.doc.line(lineIdx);
+          view.dispatch({
+            selection: { anchor: lineObj.from, head: lineObj.from },
+            scrollIntoView: true,
+          });
+          view.focus();
+        },
+      },
+      {
         id: "reload_from_disk",
         label: "Reload from Disk",
         run: reloadFromDisk,
