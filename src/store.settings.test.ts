@@ -95,6 +95,13 @@ describe("settings", () => {
     expect(useAppStore.getState().showTabBar).toBe(true);
   });
 
+  it("round-trips vaultSort 'name' / 'mtime'", () => {
+    useAppStore.getState().setSettings({ vaultSort: "mtime" });
+    expect(useAppStore.getState().vaultSort).toBe("mtime");
+    useAppStore.getState().setSettings({ vaultSort: "name" });
+    expect(useAppStore.getState().vaultSort).toBe("name");
+  });
+
   it("clamps wordCountGoal to [0, 100000]", () => {
     useAppStore.getState().setSettings({ wordCountGoal: -50 });
     expect(useAppStore.getState().wordCountGoal).toBe(0);

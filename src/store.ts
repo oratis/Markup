@@ -77,6 +77,8 @@ interface AppState {
   showToolbar: boolean;
   /** Show the tab strip. Off hides it (single-doc focus). */
   showTabBar: boolean;
+  /** Sidebar file tree sort order. */
+  vaultSort: "name" | "mtime";
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -150,6 +152,7 @@ export interface Settings {
   wordCountGoal: number;
   showToolbar: boolean;
   showTabBar: boolean;
+  vaultSort: "name" | "mtime";
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -168,6 +171,7 @@ export const DEFAULT_SETTINGS: Settings = {
   wordCountGoal: 0,
   showToolbar: true,
   showTabBar: true,
+  vaultSort: "name",
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -271,6 +275,7 @@ export const useAppStore = create<AppState>((set) => ({
   wordCountGoal: DEFAULT_SETTINGS.wordCountGoal,
   showToolbar: DEFAULT_SETTINGS.showToolbar,
   showTabBar: DEFAULT_SETTINGS.showTabBar,
+  vaultSort: DEFAULT_SETTINGS.vaultSort,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -583,6 +588,7 @@ export const useAppStore = create<AppState>((set) => ({
       const wordCountGoal = clamp(patch.wordCountGoal ?? state.wordCountGoal, 0, 100_000);
       const showToolbar = patch.showToolbar ?? state.showToolbar;
       const showTabBar = patch.showTabBar ?? state.showTabBar;
+      const vaultSort = patch.vaultSort ?? state.vaultSort;
       return {
         fontSize,
         proseMaxWidth,
@@ -599,6 +605,7 @@ export const useAppStore = create<AppState>((set) => ({
         wordCountGoal,
         showToolbar,
         showTabBar,
+        vaultSort,
       };
     }),
 

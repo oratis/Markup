@@ -323,6 +323,7 @@ export function App() {
   const wordCountGoal = useAppStore((s) => s.wordCountGoal);
   const showToolbar = useAppStore((s) => s.showToolbar);
   const showTabBar = useAppStore((s) => s.showTabBar);
+  const vaultSort = useAppStore((s) => s.vaultSort);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -346,6 +347,7 @@ export function App() {
           wordCountGoal,
           showToolbar,
           showTabBar,
+          vaultSort,
         }),
       );
     } catch {
@@ -367,6 +369,7 @@ export function App() {
     wordCountGoal,
     showToolbar,
     showTabBar,
+    vaultSort,
   ]);
 
   // Push recent file when active tab changes to a real file. Mirror to
@@ -1630,6 +1633,16 @@ export function App() {
         },
       },
       {
+        id: "toggle_vault_sort",
+        label: "Toggle Vault Sort (Name ↔ Recent)",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({
+            vaultSort: s.vaultSort === "name" ? "mtime" : "name",
+          });
+        },
+      },
+      {
         id: "toggle_spellcheck",
         label: "Toggle Spell Check",
         run: () => {
@@ -1704,6 +1717,7 @@ export function App() {
               wordCountGoal: s.wordCountGoal,
               showToolbar: s.showToolbar,
               showTabBar: s.showTabBar,
+              vaultSort: s.vaultSort,
             },
             null,
             2,
@@ -2340,6 +2354,7 @@ export function App() {
             wordCountGoal: 0,
             showToolbar: true,
             showTabBar: true,
+            vaultSort: "name",
           });
           s.setTheme("auto");
           s.setRecentFiles([]);

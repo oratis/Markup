@@ -24,10 +24,16 @@ export function FileTree() {
     null,
   );
 
-  const sorted = useMemo(
-    () => [...files].sort((a, b) => a.relPath.localeCompare(b.relPath)),
-    [files],
-  );
+  const vaultSort = useAppStore((s) => s.vaultSort);
+  const sorted = useMemo(() => {
+    const copy = [...files];
+    if (vaultSort === "mtime") {
+      copy.sort((a, b) => b.mtimeMs - a.mtimeMs);
+    } else {
+      copy.sort((a, b) => a.relPath.localeCompare(b.relPath));
+    }
+    return copy;
+  }, [files, vaultSort]);
 
   const parentRef = useRef<HTMLDivElement | null>(null);
   const rowVirtualizer = useVirtualizer({

@@ -27,6 +27,7 @@ export function SettingsDialog({ onClose }: Props) {
   const wordCountGoal = useAppStore((s) => s.wordCountGoal);
   const showToolbar = useAppStore((s) => s.showToolbar);
   const showTabBar = useAppStore((s) => s.showTabBar);
+  const vaultSort = useAppStore((s) => s.vaultSort);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
@@ -43,6 +44,7 @@ export function SettingsDialog({ onClose }: Props) {
     wordCountGoal,
     showToolbar,
     showTabBar,
+    vaultSort,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -230,6 +232,7 @@ export function SettingsDialog({ onClose }: Props) {
                 wordCountGoal: 0,
                 showToolbar: true,
                 showTabBar: true,
+                vaultSort: "name",
               });
             }}
             className="opacity-70 hover:opacity-100 underline"
