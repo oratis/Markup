@@ -54,7 +54,7 @@ import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { installSmartPaste } from "./lib/smart-paste";
 import { stripMarkdown } from "./lib/strip-md";
-import { resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
+import { nextTheme, resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
 import {
   listRecentFilesNative,
   listVaultFiles,
@@ -1268,6 +1268,12 @@ export function App() {
         useAppStore.getState().moveActiveTab("right");
         return;
       }
+      if (matchesShortcut(e, "cycleTheme")) {
+        e.preventDefault();
+        const s = useAppStore.getState();
+        s.setTheme(nextTheme(s.theme));
+        return;
+      }
       // Cmd+1..9 = jump to tab N (last digit = last tab; matches browser).
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         const n = Number(e.key);
@@ -1872,6 +1878,15 @@ export function App() {
         id: "toggle_typewriter",
         label: "Toggle Typewriter Mode",
         run: toggleTypewriterMode,
+      },
+      {
+        id: "cycle_theme",
+        label: "Cycle Theme",
+        shortcut: "⌘⌥T",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setTheme(nextTheme(s.theme));
+        },
       },
       { id: "theme_auto", label: "Theme: Auto (system)", run: () => setTheme("auto") },
       { id: "theme_light", label: "Theme: Light", run: () => setTheme("light") },

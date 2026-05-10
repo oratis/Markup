@@ -1,5 +1,14 @@
 import type { ResolvedTheme, Theme } from "../store";
 
+/** Cycle order for the "Cycle Theme" command — light → dark → sepia → auto. */
+const CYCLE: readonly Theme[] = ["light", "dark", "sepia", "auto"] as const;
+
+/** Return the next theme in the cycle (wraps around). */
+export function nextTheme(theme: Theme): Theme {
+  const i = CYCLE.indexOf(theme);
+  return CYCLE[(i + 1) % CYCLE.length] ?? "light";
+}
+
 /** Resolve a Theme value (which may be "auto") to the concrete theme that
  *  the editor applies right now. */
 export function resolveTheme(t: Theme): ResolvedTheme {
