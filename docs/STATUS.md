@@ -1,15 +1,67 @@
-# Status — Last updated 2026-05-11 (52 batches landed)
+# Status — Last updated 2026-05-11 (67 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 70+ commits across **52 feature batches**, all CI-green.
+`main` branch has 90+ commits across **67 feature batches**, all CI-green.
 `v0.1.2` is the latest released DMG (unsigned). The app compiles,
-type-checks, lint-clean, **245 React tests + 17 Rust unit + 9 integration**,
+type-checks, lint-clean, **277 React tests + 17 Rust unit + 9 integration**,
 double-Codecov coverage upload, and runs cleanly in dev.
 
-## What landed in batches 32–52 (newest)
+## What landed in batches 53–67 (newest)
+
+### Big wins
+- **Session restore on launch**: path-backed open tabs + active tab
+  + scroll offsets (path-keyed, persisted 200-entry cap) come back
+  exactly where you left them. Toast confirms count restored.
+- **Persistent pinned tabs**: pin state survives relaunch via a
+  separate localStorage set; new tabs auto-mark pinned on open.
+
+### Editor commands
+- Move Section to Top / Bottom (iterative; respects sibling level)
+- Reverse Lines, Remove Duplicate Lines
+- Strip Markdown In Place, Copy as HTML, Copy Plain Text
+- Wrap Selection as Code Block… (language prompt)
+- Set Heading H1..H6 / None (absolute)
+- Jump to Line… (source-mode prompt + dispatch)
+- Insert YAML Frontmatter (skips when one exists)
+- Format Table, Toggle Task Checkbox on Line
+
+### Search / replace
+- FindBar: Replace (single) button alongside Replace All; both
+  honour case-sensitive + regex toggles
+- Find Selection in Vault (pre-fills SearchPanel with current
+  selection, 200-char cap)
+- New replaceOnce helper + extended replaceAll with caseSensitive
+
+### Tabs
+- Move Tab to First / Last; pinned-group preserved
+- Switch to Tab: <name> palette entries (subscription-driven)
+
+### UI / status
+- Reload from Disk, Reload All Files from Disk (parallel reads,
+  dirty-confirm + summary toast)
+- Rename Active File…, New File in Vault… (auto-extension)
+- Copy Vault-relative Path
+- Save As… auto-appends .md when missing extension
+- Status bar: file size pill (UTF-8 bytes, KB/MB) once ≥ 1 KB
+- Settings export / import (clipboard JSON)
+- Toggle Toolbar, Toggle Tab Bar, Toggle Spell Check (zen-mode flags)
+- Outline right-click context (Copy Wikilink / Heading Text /
+  Scroll To)
+
+### Help / shortcuts UX
+- ShortcutsEditor: filter input + duplicate-binding ⚠ warning
+- Shortcuts Cheatsheet modal + ⌘⇧/ shortcut
+- Cycle Theme (⌘⌥T)
+- Source-mode `[[` auto-trigger opens wikilink picker
+
+### Engineering
+- 277 React tests across 37 files (was 245 / 34)
+- All 32 shortcuts editable + filterable + conflict-flagged
+
+## What landed in batches 32–52
 
 ### Editor commands
 - Heading nav (⌘⇧J / ⌘⇧K), absolute Set Heading H1..H6, Move
