@@ -1365,6 +1365,11 @@ export function App() {
         s.setTheme(nextTheme(s.theme));
         return;
       }
+      if (matchesShortcut(e, "showCheatsheet")) {
+        e.preventDefault();
+        setShowCheatsheet(true);
+        return;
+      }
       // Cmd+1..9 = jump to tab N (last digit = last tab; matches browser).
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         const n = Number(e.key);
@@ -2056,6 +2061,7 @@ export function App() {
       {
         id: "shortcuts_cheatsheet",
         label: "Shortcuts Cheatsheet",
+        shortcut: "⌘⇧/",
         run: () => setShowCheatsheet(true),
       },
       {

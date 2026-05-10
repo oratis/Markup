@@ -51,7 +51,8 @@ export type ShortcutId =
   | "toggleOutline"
   | "moveTabLeft"
   | "moveTabRight"
-  | "cycleTheme";
+  | "cycleTheme"
+  | "showCheatsheet";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -92,6 +93,7 @@ export const defaults: Record<ShortcutId, string> = {
   moveTabLeft: "Mod+Shift+Alt+ArrowLeft",
   moveTabRight: "Mod+Shift+Alt+ArrowRight",
   cycleTheme: "Mod+Alt+T",
+  showCheatsheet: "Mod+Shift+/",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -133,6 +135,7 @@ export const labels: Record<ShortcutId, string> = {
   moveTabLeft: "Move Active Tab Left",
   moveTabRight: "Move Active Tab Right",
   cycleTheme: "Cycle Theme",
+  showCheatsheet: "Show Shortcuts Cheatsheet",
 };
 
 const STORAGE_KEY = "markup.shortcuts";
