@@ -37,6 +37,8 @@ export const en = {
     "Click a binding to record. Esc to cancel. Native menu items keep their default bindings.",
   "settings.shortcutsRecord": "Press keys…",
   "settings.shortcutsReset": "Reset all",
+  "settings.shortcutsFilter": "Filter shortcuts (label or binding)…",
+  "settings.shortcutsNoMatch": "No matching shortcuts.",
   "settings.exportTheme": "Export theme",
   "settings.spellcheck": "Spell check",
   "settings.spellcheckHint": "Browser-native",

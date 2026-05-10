@@ -38,6 +38,8 @@ export const zh: Strings = {
   "settings.shortcutsHint": "点击键位开始录制。Esc 取消。原生菜单项会保留默认快捷键。",
   "settings.shortcutsRecord": "请按键…",
   "settings.shortcutsReset": "全部重置",
+  "settings.shortcutsFilter": "过滤快捷键（名称或键位）…",
+  "settings.shortcutsNoMatch": "无匹配快捷键。",
   "settings.exportTheme": "导出主题",
   "settings.spellcheck": "拼写检查",
   "settings.spellcheckHint": "浏览器原生",

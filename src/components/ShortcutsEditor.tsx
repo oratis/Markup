@@ -28,6 +28,17 @@ export function ShortcutsEditor() {
   const t = useT();
   const bindings = useSyncExternalStore(subscribe, currentBindings, currentBindings);
   const [recording, setRecording] = useState<ShortcutId | null>(null);
+  const [filter, setFilter] = useState("");
+
+  const visibleIds = (() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return IDS;
+    return IDS.filter((id) => {
+      const label = labels[id].toLowerCase();
+      const binding = bindings[id].toLowerCase();
+      return label.includes(q) || binding.includes(q);
+    });
+  })();
 
   function startRecord(id: ShortcutId) {
     setRecording(id);
@@ -56,8 +67,20 @@ export function ShortcutsEditor() {
     <div className="border-t border-black/5 dark:border-white/10 pt-4 mt-4">
       <div className="text-[12px] font-medium mb-1">{t("settings.shortcuts")}</div>
       <div className="text-[10px] opacity-60 mb-2">{t("settings.shortcutsHint")}</div>
+      <input
+        type="text"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder={t("settings.shortcutsFilter")}
+        className="w-full text-[12px] px-2 py-1 mb-2 rounded border border-black/10 dark:border-white/15 bg-transparent outline-none focus:border-blue-500"
+      />
       <div className="space-y-0.5 max-h-[260px] overflow-auto no-scrollbar text-[12px]">
-        {IDS.map((id) => {
+        {visibleIds.length === 0 && (
+          <div className="text-[11px] opacity-50 py-1">
+            {t("settings.shortcutsNoMatch")}
+          </div>
+        )}
+        {visibleIds.map((id) => {
           const overridden = bindings[id] !== defaults[id];
           return (
             <div key={id} className="flex items-center gap-3 py-1">

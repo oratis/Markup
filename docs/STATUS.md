@@ -1,13 +1,61 @@
-# Status — Last updated 2026-05-11 (31 batches landed)
+# Status — Last updated 2026-05-11 (52 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 50+ commits across **31 feature batches**, all CI-green.
+`main` branch has 70+ commits across **52 feature batches**, all CI-green.
 `v0.1.2` is the latest released DMG (unsigned). The app compiles,
-type-checks, lint-clean, **192 React tests + 17 Rust unit + 9 integration**,
+type-checks, lint-clean, **245 React tests + 17 Rust unit + 9 integration**,
 double-Codecov coverage upload, and runs cleanly in dev.
+
+## What landed in batches 32–52 (newest)
+
+### Editor commands
+- Heading nav (⌘⇧J / ⌘⇧K), absolute Set Heading H1..H6, Move
+  Section Up / Down (sibling-only swap)
+- Format Table (auto-align), Toggle Task Checkbox on Line, Wrap as
+  Code Block, Insert YAML Frontmatter
+- Sort Lines Asc / Desc, UPPER/lower/Title case, Strip Markdown
+  in-place + Copy as Plain Text
+- Editor zoom (⌘= / ⌘- / ⌘0), Cycle Theme (⌘⌥T)
+- Insert Link prompt (⌘K), Copy as HTML
+
+### Tabs
+- Cmd+1..9 jump-to-tab, Move Active Tab Left / Right (⌘⇧⌥←/→)
+- Switch to Tab: <name> palette entries for fuzzy-search across open
+  docs, middle-click to close, Reveal in File Tree from tab ctx menu
+
+### Files / vault / save
+- Reload from Disk, Reload All Files, Rename Active File…,
+  New File in Vault…, Recent Vaults palette, Open Recent inline
+- Trim trailing whitespace on save (opt-in)
+
+### Find / replace / status
+- Find & Replace bar with case-sensitive (Aa) + regex (.*) toggles
+- Status bar: caret position, selection counter, heading breadcrumb,
+  reading time, word-count goal progress, dirty-count badge,
+  vault file count, clickable mode pill
+
+### UI polish
+- Toolbar formatting buttons (Bold/Italic/Code/Link/HR)
+- Outline H1..H6 level chips + filter input + right-click context
+  menu (Copy Wikilink, Copy Heading Text, Scroll To)
+- Sidebar / Outline drag-to-resize (persisted widths)
+- Toggle Toolbar / Tab Bar (zen mode), MRU command palette,
+  per-tab scroll memory, beforeunload dirty guard
+
+### Settings (15 persisted)
+- spellcheck, lineWrap, sidebarWidth, outlineWidth, saveOnBlur,
+  trimOnSave, showLineNumbers, wordCountGoal, showToolbar, showTabBar
+  + the original 5 (font / width / autosave / image dir / export theme)
+- ShortcutsEditor lists every registered binding (32 in total) and
+  has a filter input
+
+### Engineering
+- 245 React tests across 34 files (was 192 / 27); 17 Rust unit + 9
+  integration unchanged
+- All shortcuts editable from the Settings dialog
 
 ## What landed in batches 17–31 (recent)
 
