@@ -25,6 +25,7 @@ export function FileTree() {
   );
 
   const vaultSort = useAppStore((s) => s.vaultSort);
+  const setSettings = useAppStore((s) => s.setSettings);
   const sorted = useMemo(() => {
     const copy = [...files];
     if (vaultSort === "mtime") {
@@ -132,8 +133,18 @@ export function FileTree() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="px-3 py-2 text-[11px] uppercase tracking-wider opacity-50 truncate">
-        {vaultRoot.split("/").pop() || vaultRoot}
+      <div className="px-3 py-2 text-[11px] uppercase tracking-wider opacity-50 flex items-center gap-2">
+        <span className="flex-1 truncate">{vaultRoot.split("/").pop() || vaultRoot}</span>
+        <button
+          type="button"
+          title={vaultSort === "name" ? t("filetree.sortName") : t("filetree.sortMtime")}
+          onClick={() =>
+            setSettings({ vaultSort: vaultSort === "name" ? "mtime" : "name" })
+          }
+          className="text-[10px] font-mono opacity-70 hover:opacity-100"
+        >
+          {vaultSort === "name" ? "A↓" : "⏱"}
+        </button>
       </div>
       <div ref={parentRef} className="flex-1 min-h-0 overflow-auto no-scrollbar">
         <div

@@ -25,6 +25,8 @@ export const zh: Strings = {
   "tabs.welcome": "欢迎",
   "filetree.empty": "Vault 是空的。",
   "filetree.noVault": "未打开 Vault。⌘⇧O 打开一个。",
+  "filetree.sortName": "排序：A→Z（点击切换为最近优先）",
+  "filetree.sortMtime": "排序：最近优先（点击切换为 A→Z）",
 
   // dialogs
   "settings.title": "设置",

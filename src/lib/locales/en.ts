@@ -23,6 +23,8 @@ export const en = {
   "tabs.welcome": "Welcome",
   "filetree.empty": "Empty vault.",
   "filetree.noVault": "No vault open. Use ⌘⇧O to open one.",
+  "filetree.sortName": "Sort: A→Z (click for recent-first)",
+  "filetree.sortMtime": "Sort: Recent first (click for A→Z)",
 
   // dialogs
   "settings.title": "Settings",
