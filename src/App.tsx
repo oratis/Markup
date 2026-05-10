@@ -11,10 +11,12 @@ import { SearchPanel } from "./components/SearchPanel";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
+import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { installImagePaste } from "./lib/image-paste";
+import { buildParagraphLink } from "./lib/paragraph-link";
 import {
   listVaultFiles,
   listenMenu,
@@ -26,6 +28,7 @@ import {
   readFile,
   writeFile,
 } from "./lib/tauri";
+import { findVaultFile, wikilinkAtClick } from "./lib/wikilink";
 import { type Theme, getActiveTab, useAppStore } from "./store";
 
 const THEME_KEY = "markup.theme";
@@ -213,6 +216,73 @@ export function App() {
     });
     return dispose;
   }, [focusMode, typewriterMode]);
+
+  // Wikilink click handler — works in both Milkdown WYSIWYG and CM6 source mode.
+  // Detects a click landing inside `[[name]]` text and opens the matching
+  // vault file.
+  useEffect(() => {
+    const host = editorScrollRef.current;
+    if (!host) return;
+    const onClick = async (e: MouseEvent) => {
+      // For source mode CM6 also fires click; same DOM-text logic applies.
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      const name = wikilinkAtClick(range.startContainer, range.startOffset);
+      if (!name) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const files = useAppStore.getState().vaultFiles;
+      const target = findVaultFile(files, name);
+      if (!target) {
+        showToast(`No vault file matches "${name}"`);
+        return;
+      }
+      try {
+        const loaded = await readFile(target.path);
+        openLoadedFile(loaded);
+      } catch (err) {
+        console.error("readFile failed", err);
+        showToast(`Failed to open ${target.name}`);
+      }
+    };
+    host.addEventListener("click", onClick);
+    return () => host.removeEventListener("click", onClick);
+  }, [openLoadedFile]);
+
+  function copyParagraphLink() {
+    const sel = window.getSelection();
+    let cursorLine = 0;
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      // Heuristic: get line index by counting newlines in the editor content
+      // up to a position derived from the clicked block's position. For
+      // source mode this is precise via CM6; for WYSIWYG we approximate via
+      // the active block element's preceding text.
+      const block = (range.startContainer as Element).closest?.(
+        "p, h1, h2, h3, h4, h5, h6, li, blockquote, pre",
+      );
+      const t = useAppStore.getState();
+      const active = t.activeTabId ? t.tabs.find((x) => x.id === t.activeTabId) : null;
+      const text = active?.content ?? "";
+      const blockText = block?.textContent ?? "";
+      const idx = blockText ? text.indexOf(blockText) : -1;
+      if (idx >= 0) {
+        cursorLine = text.slice(0, idx).split("\n").length - 1;
+      }
+    }
+    const t = useAppStore.getState();
+    const active = t.activeTabId ? t.tabs.find((x) => x.id === t.activeTabId) : null;
+    const link = buildParagraphLink(
+      active?.path ?? null,
+      active?.content ?? "",
+      cursorLine,
+    );
+    navigator.clipboard.writeText(link).then(
+      () => showToast(`Copied ${link}`),
+      () => showToast("Copy failed"),
+    );
+  }
 
   // Image paste in WYSIWYG (Milkdown / contenteditable). Source-mode paste is
   // installed inside SourceEditor where the CM6 view is reachable.
@@ -518,6 +588,11 @@ export function App() {
         run: () => setShowSettings(true),
       },
       {
+        id: "copy_paragraph_link",
+        label: "Copy Link to Paragraph",
+        run: copyParagraphLink,
+      },
+      {
         id: "find_in_vault",
         label: "Find in Vault",
         shortcut: "⌘⇧F",
@@ -629,6 +704,7 @@ export function App() {
       )}
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
+      <ToastHost />
     </div>
   );
 }
