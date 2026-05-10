@@ -7,6 +7,7 @@ import {
   duplicateLine,
   moveLineDown,
   moveLineUp,
+  setHeadingLevel,
   sortLines,
   toggleBlockquote,
   toggleList,
@@ -113,6 +114,26 @@ describe("cycleHeadingLevel", () => {
     const view = mountView("- item", 0);
     cycleHeadingLevel(1);
     expect(view.state.doc.toString()).toBe("# item");
+  });
+});
+
+describe("setHeadingLevel", () => {
+  it("sets each selected line to the chosen level", () => {
+    const view = mountView("foo\nbar", 0, 7);
+    setHeadingLevel(3);
+    expect(view.state.doc.toString()).toBe("### foo\n### bar");
+  });
+
+  it("setHeadingLevel(0) strips the heading marker", () => {
+    const view = mountView("### deep", 0);
+    setHeadingLevel(0);
+    expect(view.state.doc.toString()).toBe("deep");
+  });
+
+  it("strips an existing list marker before assigning the heading", () => {
+    const view = mountView("- item", 0);
+    setHeadingLevel(2);
+    expect(view.state.doc.toString()).toBe("## item");
   });
 });
 

@@ -77,6 +77,7 @@ export const en = {
   // toasts
   "toast.copied": "Copied {0}",
   "toast.copyFailed": "Copy failed",
+  "toast.copiedPlainText": "Copied as plain text",
   "toast.savedAll": "Saved {0} files",
   "toast.saveAllFailed": "Saved {0}, {1} failed",
   "toast.tableSizeBad": "Format: rows x cols (e.g. 3x4)",

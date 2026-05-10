@@ -22,6 +22,7 @@ import {
   duplicateLine,
   moveLineDown,
   moveLineUp,
+  setHeadingLevel,
   sortLines,
   toggleBlockquote,
   toggleList,
@@ -50,6 +51,7 @@ import { trimTrailingWhitespace } from "./lib/save-prep";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { installSmartPaste } from "./lib/smart-paste";
+import { stripMarkdown } from "./lib/strip-md";
 import { resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
 import {
   listRecentFilesNative,
@@ -1514,6 +1516,20 @@ export function App() {
           cycleHeadingLevel(-1);
         },
       },
+      ...([1, 2, 3, 4, 5, 6] as const).map<Command>((lvl) => ({
+        id: `set_heading_${lvl}`,
+        label: `Set Heading H${lvl}`,
+        run: () => {
+          setHeadingLevel(lvl);
+        },
+      })),
+      {
+        id: "set_heading_0",
+        label: "Set Heading: None",
+        run: () => {
+          setHeadingLevel(0);
+        },
+      },
       {
         id: "list_bullet",
         label: "Toggle Bullet List",
@@ -1585,6 +1601,31 @@ export function App() {
         label: "Selection: Title Case",
         run: () => {
           transformSelection(toTitleCase);
+        },
+      },
+      {
+        id: "copy_plain_text",
+        label: "Copy as Plain Text",
+        run: () => {
+          const sel = window.getSelection()?.toString();
+          const v = getActiveSourceView();
+          let source = "";
+          if (sel && sel.length > 0) {
+            source = sel;
+          } else if (v) {
+            const { from, to } = v.state.selection.main;
+            source = from === to ? v.state.doc.toString() : v.state.sliceDoc(from, to);
+          } else {
+            source = tab?.content ?? "";
+          }
+          if (!source) {
+            showToast(tr("toast.copyFailed"));
+            return;
+          }
+          navigator.clipboard
+            .writeText(stripMarkdown(source))
+            .then(() => showToast(tr("toast.copiedPlainText")))
+            .catch(() => showToast(tr("toast.copyFailed")));
         },
       },
       {

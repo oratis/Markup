@@ -78,6 +78,7 @@ export const zh: Strings = {
   // toasts
   "toast.copied": "已复制 {0}",
   "toast.copyFailed": "复制失败",
+  "toast.copiedPlainText": "已作为纯文本复制",
   "toast.savedAll": "已保存 {0} 个文件",
   "toast.saveAllFailed": "已保存 {0}，{1} 个失败",
   "toast.tableSizeBad": "格式：行 x 列（例如 3x4）",

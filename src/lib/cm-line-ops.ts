@@ -82,6 +82,34 @@ function stripLineMarker(text: string): string {
   return m ? lead + body.slice(m[0].length) : text;
 }
 
+/** Set the heading level of every selected line to exactly `level`
+ * (0 = no heading; 1..6 = H1..H6). Existing list markers / blockquote
+ * markers are stripped when promoting to a heading. */
+export function setHeadingLevel(level: 0 | 1 | 2 | 3 | 4 | 5 | 6): boolean {
+  const view = getActiveSourceView();
+  if (!view) return false;
+  const block = selectedLines(view.state);
+  const lines: string[] = [];
+  for (let i = block.startLine; i <= block.endLine; i++) {
+    lines.push(view.state.doc.line(i).text);
+  }
+  const next = lines
+    .map((l) => {
+      const lead = l.match(/^[\t ]*/)?.[0] ?? "";
+      const body = l.slice(lead.length);
+      const m = body.match(/^(#{1,6}) +(.*)$/);
+      const text = m ? m[2] : stripLineMarker(l).slice(lead.length);
+      if (level === 0) return lead + text;
+      return `${lead}${"#".repeat(level)} ${text}`;
+    })
+    .join("\n");
+  view.dispatch({
+    changes: { from: block.from, to: block.to, insert: next },
+    userEvent: "input.heading",
+  });
+  return true;
+}
+
 /** Cycle the heading level of each selected line by `delta` (+1 / -1).
  * H0 (no heading) → H1 → H2 … → H6. Going below H1 strips the heading.
  * Existing list markers are removed when promoting a line to a heading. */
