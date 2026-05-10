@@ -1135,8 +1135,11 @@ export function App() {
       ? t.path.split("/").pop() || "Untitled.md"
       : `${(t.name || "Untitled").replace(/\.[^.]+$/, "")}.md`;
     try {
-      const target = await pickSavePath(defaultName);
-      if (!target) return;
+      const raw = await pickSavePath(defaultName);
+      if (!raw) return;
+      // Auto-append .md if the picked name has no markdown-ish extension.
+      // This matches the file-association list (md / markdown / mdx / mkd).
+      const target = /\.(md|markdown|mdx|mkd)$/i.test(raw) ? raw : `${raw}.md`;
       const newMtime = await writeFile(target, t.content, null);
       const fileName = target.split("/").pop() || target;
       setActivePathAndName(target, fileName, newMtime);
@@ -1406,6 +1409,16 @@ export function App() {
         label: "Previous Tab",
         shortcut: "⌘⌥[",
         run: () => useAppStore.getState().activatePrevTab(),
+      },
+      {
+        id: "move_tab_first",
+        label: "Move Tab to First",
+        run: () => useAppStore.getState().moveActiveTabToEdge("first"),
+      },
+      {
+        id: "move_tab_last",
+        label: "Move Tab to Last",
+        run: () => useAppStore.getState().moveActiveTabToEdge("last"),
       },
       {
         id: "toggle_pin_tab",

@@ -262,6 +262,26 @@ describe("app store", () => {
     ]);
   });
 
+  it("moveActiveTabToEdge moves to the first/last slot in the same pin group", () => {
+    const { openLoadedFile, moveActiveTabToEdge, setActiveTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    setActiveTab("/b.md");
+    moveActiveTabToEdge("first");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual([
+      "/b.md",
+      "/a.md",
+      "/c.md",
+    ]);
+    moveActiveTabToEdge("last");
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual([
+      "/a.md",
+      "/c.md",
+      "/b.md",
+    ]);
+  });
+
   it("moveActiveTab refuses to cross the pinned/unpinned boundary", () => {
     const { openLoadedFile, toggleTabPinned, moveActiveTab, setActiveTab } =
       useAppStore.getState();

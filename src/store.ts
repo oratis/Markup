@@ -95,6 +95,9 @@ interface AppState {
   /** Swap the active tab with its immediate neighbour. Pinned/unpinned
    * boundary is respected — never crosses it. */
   moveActiveTab: (direction: "left" | "right") => void;
+  /** Move the active tab to the first or last slot inside its
+   * pinned-group. */
+  moveActiveTabToEdge: (edge: "first" | "last") => void;
   /** Pops the latest entry from `recentlyClosed` and returns its path
    * (caller is responsible for reading + opening it). Returns null when
    * the stack is empty. */
@@ -458,6 +461,26 @@ export const useAppStore = create<AppState>((set) => ({
       if (Boolean(state.tabs[i].pinned) !== Boolean(state.tabs[j].pinned)) return state;
       const tabs = [...state.tabs];
       [tabs[i], tabs[j]] = [tabs[j], tabs[i]];
+      return { tabs };
+    }),
+
+  moveActiveTabToEdge: (edge) =>
+    set((state) => {
+      if (state.tabs.length < 2 || !state.activeTabId) return state;
+      const i = state.tabs.findIndex((t) => t.id === state.activeTabId);
+      if (i < 0) return state;
+      // Target the first / last slot in the same pinned-group as the
+      // moving tab so the pinned/unpinned boundary stays respected.
+      const isPinned = Boolean(state.tabs[i].pinned);
+      const indicesInGroup = state.tabs
+        .map((t, idx) => (Boolean(t.pinned) === isPinned ? idx : -1))
+        .filter((idx) => idx >= 0);
+      const j =
+        edge === "first" ? indicesInGroup[0] : indicesInGroup[indicesInGroup.length - 1];
+      if (j === i) return state;
+      const tabs = [...state.tabs];
+      const [moved] = tabs.splice(i, 1);
+      tabs.splice(j, 0, moved);
       return { tabs };
     }),
 
