@@ -30,6 +30,11 @@ function pressShiftTab(view: EditorView): boolean {
   return handler ? handler(view) : false;
 }
 
+function pressBackspace(view: EditorView): boolean {
+  const handler = continueListKeymap.find((b) => b.key === "Backspace")?.run;
+  return handler ? handler(view) : false;
+}
+
 describe("continueListKeymap", () => {
   it("inserts the next bullet on Enter at end of bullet line", () => {
     const view = mount("- item", 6);
@@ -97,5 +102,22 @@ describe("continueListKeymap", () => {
   it("Shift-Tab on an unindented list line is a no-op", () => {
     const view = mount("- item", 6);
     expect(pressShiftTab(view)).toBe(false);
+  });
+
+  it("Backspace at start of indented list outdents", () => {
+    // cursor positioned just before the "-" (after the 2-space indent)
+    const view = mount("  - item", 2);
+    expect(pressBackspace(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("- item");
+  });
+
+  it("Backspace mid-line on a list line falls through (default delete)", () => {
+    const view = mount("  - item", 5);
+    expect(pressBackspace(view)).toBe(false);
+  });
+
+  it("Backspace on a non-list line falls through", () => {
+    const view = mount("  para", 2);
+    expect(pressBackspace(view)).toBe(false);
   });
 });

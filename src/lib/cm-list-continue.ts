@@ -59,6 +59,22 @@ export const continueListKeymap: KeyBinding[] = [
     run: (view) => changeListIndent(view, "out"),
   },
   {
+    key: "Backspace",
+    run: (view) => {
+      // Outdent when Backspace is pressed at the very start of an
+      // indented list line. Falls through everywhere else.
+      const sel = view.state.selection.main;
+      if (sel.from !== sel.to) return false;
+      const line = view.state.doc.lineAt(sel.from);
+      if (!isListLine(line.text)) return false;
+      const lead = line.text.match(/^[\t ]*/)?.[0] ?? "";
+      if (lead.length === 0) return false;
+      // Cursor must be at the first non-whitespace position.
+      if (sel.from !== line.from + lead.length) return false;
+      return changeListIndent(view, "out");
+    },
+  },
+  {
     key: "Enter",
     run: (view) => {
       const sel = view.state.selection.main;
