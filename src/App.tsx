@@ -2056,6 +2056,22 @@ export function App() {
         },
       },
       {
+        id: "tabs_to_spaces",
+        label: "Selection: Tabs → Spaces (2)",
+        run: () => {
+          transformSelection((s) => s.replace(/\t/g, "  "));
+        },
+      },
+      {
+        id: "spaces_to_tabs",
+        label: "Selection: Spaces (2) → Tabs",
+        run: () => {
+          transformSelection((s) =>
+            s.replace(/^( {2})+/gm, (m) => "\t".repeat(m.length / 2)),
+          );
+        },
+      },
+      {
         id: "copy_html",
         label: "Copy as HTML",
         run: async () => {
