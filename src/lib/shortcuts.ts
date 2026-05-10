@@ -45,7 +45,9 @@ export type ShortcutId =
   | "zoomIn"
   | "zoomOut"
   | "zoomReset"
-  | "insertLink";
+  | "insertLink"
+  | "nextHeading"
+  | "prevHeading";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -80,6 +82,8 @@ export const defaults: Record<ShortcutId, string> = {
   zoomOut: "Mod+-",
   zoomReset: "Mod+0",
   insertLink: "Mod+K",
+  nextHeading: "Mod+Shift+J",
+  prevHeading: "Mod+Shift+K",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -115,6 +119,8 @@ export const labels: Record<ShortcutId, string> = {
   zoomOut: "Zoom Out",
   zoomReset: "Reset Zoom",
   insertLink: "Insert Link",
+  nextHeading: "Next Heading",
+  prevHeading: "Previous Heading",
 };
 
 const STORAGE_KEY = "markup.shortcuts";

@@ -28,6 +28,12 @@ import {
 } from "./lib/cm-line-ops";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
+import {
+  jumpToSourceLine,
+  nextHeadingFrom,
+  parseHeadings,
+  prevHeadingFrom,
+} from "./lib/headings";
 import { useT } from "./lib/i18n";
 import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
@@ -651,6 +657,45 @@ export function App() {
     }
   }, [openLoadedFile]);
 
+  const jumpToHeading = useCallback((direction: "next" | "prev") => {
+    const t2 = getActiveTab(useAppStore.getState());
+    if (!t2) return;
+    const headings = parseHeadings(t2.content);
+    if (headings.length === 0) return;
+    let cursorLine = 0;
+    const view = getActiveSourceView();
+    if (view) {
+      cursorLine = view.state.doc.lineAt(view.state.selection.main.head).number - 1;
+    } else {
+      // WYSIWYG — approximate by scanning the DOM Selection's enclosing
+      // block back to a position in the markdown source. Falls back to 0
+      // when nothing is selected, which lands on the first heading.
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const block = (sel.getRangeAt(0).startContainer as Element).closest?.(
+          "p, h1, h2, h3, h4, h5, h6, li, blockquote, pre",
+        );
+        const blockText = block?.textContent ?? "";
+        const idx = blockText ? t2.content.indexOf(blockText) : -1;
+        if (idx >= 0) cursorLine = t2.content.slice(0, idx).split("\n").length - 1;
+      }
+    }
+    const target =
+      direction === "next"
+        ? nextHeadingFrom(headings, cursorLine)
+        : prevHeadingFrom(headings, cursorLine);
+    if (!target) return;
+    if (jumpToSourceLine(target.line)) return;
+    // WYSIWYG fallback: scroll the rendered heading into view.
+    const tag = `H${target.level}`;
+    for (const node of Array.from(document.querySelectorAll(`.milkdown ${tag}`))) {
+      if ((node.textContent ?? "").trim() === target.text) {
+        (node as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+    }
+  }, []);
+
   const promptInsertLink = useCallback(() => {
     const url = window.prompt(tr("prompt.linkUrl"), "https://");
     if (!url) return;
@@ -1084,6 +1129,16 @@ export function App() {
         promptInsertLink();
         return;
       }
+      if (matchesShortcut(e, "nextHeading")) {
+        e.preventDefault();
+        jumpToHeading("next");
+        return;
+      }
+      if (matchesShortcut(e, "prevHeading")) {
+        e.preventDefault();
+        jumpToHeading("prev");
+        return;
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1370,6 +1425,18 @@ export function App() {
         label: "Insert Link…",
         shortcut: "⌘K",
         run: promptInsertLink,
+      },
+      {
+        id: "next_heading",
+        label: "Next Heading",
+        shortcut: "⌘⇧J",
+        run: () => jumpToHeading("next"),
+      },
+      {
+        id: "prev_heading",
+        label: "Previous Heading",
+        shortcut: "⌘⇧K",
+        run: () => jumpToHeading("prev"),
       },
       {
         id: "insert_table",
