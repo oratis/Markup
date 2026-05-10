@@ -23,6 +23,7 @@ export function SettingsDialog({ onClose }: Props) {
   const outlineWidth = useAppStore((s) => s.outlineWidth);
   const saveOnBlur = useAppStore((s) => s.saveOnBlur);
   const trimOnSave = useAppStore((s) => s.trimOnSave);
+  const showLineNumbers = useAppStore((s) => s.showLineNumbers);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
@@ -35,6 +36,7 @@ export function SettingsDialog({ onClose }: Props) {
     outlineWidth,
     saveOnBlur,
     trimOnSave,
+    showLineNumbers,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -186,6 +188,19 @@ export function SettingsDialog({ onClose }: Props) {
               </span>
             </label>
           </Row>
+
+          <Row label={t("settings.lineNumbers")} hint={t("settings.lineNumbersHint")}>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={draft.showLineNumbers}
+                onChange={(e) => commit({ showLineNumbers: e.target.checked })}
+              />
+              <span className="opacity-70">
+                {draft.showLineNumbers ? t("settings.on") : t("settings.off")}
+              </span>
+            </label>
+          </Row>
         </div>
 
         <ShortcutsEditor />
@@ -205,6 +220,7 @@ export function SettingsDialog({ onClose }: Props) {
                 outlineWidth: 220,
                 saveOnBlur: false,
                 trimOnSave: false,
+                showLineNumbers: true,
               });
             }}
             className="opacity-70 hover:opacity-100 underline"

@@ -69,6 +69,8 @@ interface AppState {
   saveOnBlur: boolean;
   /** Strip trailing whitespace from each line when saving. */
   trimOnSave: boolean;
+  /** Show CM6 line numbers in source mode. */
+  showLineNumbers: boolean;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -82,6 +84,8 @@ interface AppState {
   toggleTabPinned: (id: string) => void;
   activateNextTab: () => void;
   activatePrevTab: () => void;
+  /** Activate the tab at the given 0-based index. No-op when out of range. */
+  activateTabAt: (index: number) => void;
   /** Pops the latest entry from `recentlyClosed` and returns its path
    * (caller is responsible for reading + opening it). Returns null when
    * the stack is empty. */
@@ -130,6 +134,7 @@ export interface Settings {
   outlineWidth: number;
   saveOnBlur: boolean;
   trimOnSave: boolean;
+  showLineNumbers: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -144,6 +149,7 @@ export const DEFAULT_SETTINGS: Settings = {
   outlineWidth: 220,
   saveOnBlur: false,
   trimOnSave: false,
+  showLineNumbers: true,
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -243,6 +249,7 @@ export const useAppStore = create<AppState>((set) => ({
   outlineWidth: DEFAULT_SETTINGS.outlineWidth,
   saveOnBlur: DEFAULT_SETTINGS.saveOnBlur,
   trimOnSave: DEFAULT_SETTINGS.trimOnSave,
+  showLineNumbers: DEFAULT_SETTINGS.showLineNumbers,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -416,6 +423,12 @@ export const useAppStore = create<AppState>((set) => ({
       return { activeTabId: prev.id };
     }),
 
+  activateTabAt: (index) =>
+    set((state) => {
+      if (index < 0 || index >= state.tabs.length) return state;
+      return { activeTabId: state.tabs[index].id };
+    }),
+
   popRecentlyClosed: () => {
     let popped: string | null = null;
     set((state) => {
@@ -511,6 +524,7 @@ export const useAppStore = create<AppState>((set) => ({
       const outlineWidth = clamp(patch.outlineWidth ?? state.outlineWidth, 160, 600);
       const saveOnBlur = patch.saveOnBlur ?? state.saveOnBlur;
       const trimOnSave = patch.trimOnSave ?? state.trimOnSave;
+      const showLineNumbers = patch.showLineNumbers ?? state.showLineNumbers;
       return {
         fontSize,
         proseMaxWidth,
@@ -523,6 +537,7 @@ export const useAppStore = create<AppState>((set) => ({
         outlineWidth,
         saveOnBlur,
         trimOnSave,
+        showLineNumbers,
       };
     }),
 

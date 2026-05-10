@@ -39,9 +39,11 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
   const hostRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const wrapCompartmentRef = useRef<Compartment | null>(null);
+  const lineNoCompartmentRef = useRef<Compartment | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const lineWrap = useAppStore((s) => s.lineWrap);
+  const showLineNumbers = useAppStore((s) => s.showLineNumbers);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -53,29 +55,36 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     // expensive bit on monster files is repeatedly tokenising as the user
     // scrolls. The user keeps the basic editing keymap + lineWrapping.
     const isHuge = value.length > 500_000;
+    const wrapCompartment = new Compartment();
+    wrapCompartmentRef.current = wrapCompartment;
+    const lineNoCompartment = new Compartment();
+    lineNoCompartmentRef.current = lineNoCompartment;
+    const initialLineWrap = useAppStore.getState().lineWrap;
+    const initialShowLineNumbers = useAppStore.getState().showLineNumbers && !isHuge;
+
+    // The "heavy" markdown highlight + folding stack stays static — it's
+    // tied to the file (ie. recreated on fileKey change). Line numbers
+    // + their active-line gutter live in their own Compartment so the
+    // user can flip them on / off without recreating the editor.
     const heavyExts = isHuge
       ? []
       : [
-          lineNumbers(),
-          highlightActiveLineGutter(),
           highlightActiveLine(),
           markdown(),
           syntaxHighlighting(defaultHighlightStyle),
-          // Fold by heading / fenced code block via lang-markdown's tree
           codeFolding(),
           foldGutter(),
-          // Highlight matching `()`, `[]`, `{}` pairs around the cursor.
           bracketMatching(),
           autoClosePairs(),
         ];
 
-    const wrapCompartment = new Compartment();
-    wrapCompartmentRef.current = wrapCompartment;
-    const initialLineWrap = useAppStore.getState().lineWrap;
     const state = EditorState.create({
       doc: value,
       extensions: [
         ...heavyExts,
+        lineNoCompartment.of(
+          initialShowLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : [],
+        ),
         history(),
         drawSelection(),
         search({ top: true }),
@@ -149,6 +158,20 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
       effects: compartment.reconfigure(lineWrap ? EditorView.lineWrapping : []),
     });
   }, [lineWrap]);
+
+  // Live-toggle line numbers + active-line gutter via Compartment. Big
+  // files keep them off (the heavy-extension fast path also disables
+  // highlight + markdown lang to keep input latency low).
+  useEffect(() => {
+    const view = viewRef.current;
+    const compartment = lineNoCompartmentRef.current;
+    if (!view || !compartment) return;
+    view.dispatch({
+      effects: compartment.reconfigure(
+        showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : [],
+      ),
+    });
+  }, [showLineNumbers]);
 
   // External value updates while editing in another tab/source: replace doc only
   // when it diverges from current state, to avoid clobbering active typing.

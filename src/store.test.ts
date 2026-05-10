@@ -224,6 +224,24 @@ describe("app store", () => {
     expect(useAppStore.getState().activeTabId).toBe("/b.md");
   });
 
+  it("activateTabAt jumps to the tab at the given 0-based index", () => {
+    const { openLoadedFile, activateTabAt } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/c.md", content: "", mtime_ms: 1 });
+    activateTabAt(1);
+    expect(useAppStore.getState().activeTabId).toBe("/b.md");
+  });
+
+  it("activateTabAt is a no-op when index is out of range", () => {
+    const { openLoadedFile, activateTabAt, setActiveTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "", mtime_ms: 1 });
+    setActiveTab("/a.md");
+    activateTabAt(99);
+    expect(useAppStore.getState().activeTabId).toBe("/a.md");
+  });
+
   it("closeTab pushes the path onto recentlyClosed; popRecentlyClosed returns it", () => {
     const { openLoadedFile, closeTab, popRecentlyClosed } = useAppStore.getState();
     openLoadedFile({ path: "/a.md", content: "", mtime_ms: 1 });

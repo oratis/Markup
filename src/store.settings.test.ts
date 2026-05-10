@@ -73,4 +73,11 @@ describe("settings", () => {
     useAppStore.getState().setSettings({ trimOnSave: false });
     expect(useAppStore.getState().trimOnSave).toBe(false);
   });
+
+  it("toggles showLineNumbers boolean", () => {
+    useAppStore.getState().setSettings({ showLineNumbers: false });
+    expect(useAppStore.getState().showLineNumbers).toBe(false);
+    useAppStore.getState().setSettings({ showLineNumbers: true });
+    expect(useAppStore.getState().showLineNumbers).toBe(true);
+  });
 });

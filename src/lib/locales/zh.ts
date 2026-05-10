@@ -42,6 +42,8 @@ export const zh: Strings = {
   "settings.saveOnBlurHint": "窗口失去焦点",
   "settings.trimOnSave": "去除行尾空白",
   "settings.trimOnSaveHint": "保存时",
+  "settings.lineNumbers": "行号",
+  "settings.lineNumbersHint": "源码模式",
   "settings.on": "开启",
   "settings.off": "关闭",
   "settings.restore": "恢复默认",

@@ -120,6 +120,20 @@ export function TabBar() {
               },
               disabled: !tabs.find((t) => t.id === ctx.id)?.path,
             },
+            {
+              label: "Reveal in File Tree",
+              run: () => {
+                const tab = tabs.find((t) => t.id === ctx.id);
+                if (!tab?.path) return;
+                const s = useAppStore.getState();
+                if (s.activeTabId !== ctx.id) s.setActiveTab(ctx.id);
+                if (!s.sidebarOpen) s.toggleSidebar();
+                window.setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("markup:reveal-active"));
+                }, 0);
+              },
+              disabled: !tabs.find((t) => t.id === ctx.id)?.path,
+            },
             { label: "Close", run: () => closeTab(ctx.id) },
             { label: "Close Others", run: () => closeOtherTabs(ctx.id) },
             {

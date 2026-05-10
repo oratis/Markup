@@ -41,6 +41,8 @@ export const en = {
   "settings.saveOnBlurHint": "Window unfocus",
   "settings.trimOnSave": "Trim trailing whitespace",
   "settings.trimOnSaveHint": "On save",
+  "settings.lineNumbers": "Line numbers",
+  "settings.lineNumbersHint": "Source mode",
   "settings.on": "On",
   "settings.off": "Off",
   "settings.restore": "Restore defaults",

@@ -278,6 +278,7 @@ export function App() {
   const outlineWidth = useAppStore((s) => s.outlineWidth);
   const saveOnBlur = useAppStore((s) => s.saveOnBlur);
   const trimOnSave = useAppStore((s) => s.trimOnSave);
+  const showLineNumbers = useAppStore((s) => s.showLineNumbers);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -297,6 +298,7 @@ export function App() {
           outlineWidth,
           saveOnBlur,
           trimOnSave,
+          showLineNumbers,
         }),
       );
     } catch {
@@ -314,6 +316,7 @@ export function App() {
     outlineWidth,
     saveOnBlur,
     trimOnSave,
+    showLineNumbers,
   ]);
 
   // Push recent file when active tab changes to a real file. Mirror to
@@ -1139,6 +1142,17 @@ export function App() {
         jumpToHeading("prev");
         return;
       }
+      // Cmd+1..9 = jump to tab N (last digit = last tab; matches browser).
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        const n = Number(e.key);
+        if (Number.isInteger(n) && n >= 1 && n <= 9) {
+          e.preventDefault();
+          const tabs = useAppStore.getState().tabs;
+          const idx = n === 9 ? tabs.length - 1 : n - 1;
+          useAppStore.getState().activateTabAt(idx);
+          return;
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1225,6 +1239,14 @@ export function App() {
         run: () => {
           const s = useAppStore.getState();
           s.setSettings({ lineWrap: !s.lineWrap });
+        },
+      },
+      {
+        id: "toggle_line_numbers",
+        label: "Toggle Line Numbers (Source)",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ showLineNumbers: !s.showLineNumbers });
         },
       },
       {
@@ -1498,6 +1520,7 @@ export function App() {
             outlineWidth: 220,
             saveOnBlur: false,
             trimOnSave: false,
+            showLineNumbers: true,
           });
           s.setTheme("auto");
           s.setRecentFiles([]);
