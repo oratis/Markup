@@ -1714,6 +1714,34 @@ export function App() {
         },
       },
       {
+        id: "insert_mermaid",
+        label: "Insert Mermaid Diagram",
+        run: () => {
+          insertMarkdown("\n\n```mermaid\ngraph LR\n  A --> B\n```\n\n");
+        },
+      },
+      {
+        id: "insert_callout_note",
+        label: "Insert Callout: Note",
+        run: () => {
+          insertMarkdown("\n\n> [!NOTE]\n> \n\n");
+        },
+      },
+      {
+        id: "insert_callout_warning",
+        label: "Insert Callout: Warning",
+        run: () => {
+          insertMarkdown("\n\n> [!WARNING]\n> \n\n");
+        },
+      },
+      {
+        id: "insert_callout_tip",
+        label: "Insert Callout: Tip",
+        run: () => {
+          insertMarkdown("\n\n> [!TIP]\n> \n\n");
+        },
+      },
+      {
         id: "format_bold",
         label: "Bold",
         shortcut: "⌘B",
