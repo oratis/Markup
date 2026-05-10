@@ -1824,6 +1824,18 @@ export function App() {
         },
       },
       {
+        id: "delete_line",
+        label: "Delete Current Line (Source)",
+        shortcut: "⌘⇧K",
+        run: async () => {
+          const view = getActiveSourceView();
+          if (!view) return;
+          // deleteLine is a CM6 standalone command — call it directly.
+          const { deleteLine } = await import("@codemirror/commands");
+          deleteLine(view);
+        },
+      },
+      {
         id: "toggle_blockquote",
         label: "Toggle Blockquote (Source)",
         run: () => {
