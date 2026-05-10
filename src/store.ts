@@ -40,6 +40,12 @@ interface AppState {
   typewriterMode: boolean;
   recentFiles: string[];
 
+  // settings
+  fontSize: number; // base font size px (12-22)
+  proseMaxWidth: number; // px (560-980); the prose column width
+  autosaveMs: number; // 0 = autosave disabled
+  imagePasteDir: string; // relative to vault root
+
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
   newScratchTab: () => void;
@@ -66,7 +72,24 @@ interface AppState {
   // recent files
   pushRecentFile: (path: string) => void;
   setRecentFiles: (paths: string[]) => void;
+
+  // settings
+  setSettings: (patch: Partial<Settings>) => void;
 }
+
+export interface Settings {
+  fontSize: number;
+  proseMaxWidth: number;
+  autosaveMs: number;
+  imagePasteDir: string;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  fontSize: 16,
+  proseMaxWidth: 720,
+  autosaveMs: 300,
+  imagePasteDir: "assets",
+};
 
 const SCRATCH_PREFIX = "scratch:";
 
@@ -139,6 +162,11 @@ export const useAppStore = create<AppState>((set) => ({
   focusMode: false,
   typewriterMode: false,
   recentFiles: [],
+
+  fontSize: DEFAULT_SETTINGS.fontSize,
+  proseMaxWidth: DEFAULT_SETTINGS.proseMaxWidth,
+  autosaveMs: DEFAULT_SETTINGS.autosaveMs,
+  imagePasteDir: DEFAULT_SETTINGS.imagePasteDir,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -261,6 +289,20 @@ export const useAppStore = create<AppState>((set) => ({
   toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
   toggleTypewriterMode: () => set((s) => ({ typewriterMode: !s.typewriterMode })),
 
+  setSettings: (patch) =>
+    set((state) => {
+      const fontSize = clamp(patch.fontSize ?? state.fontSize, 11, 24);
+      const proseMaxWidth = clamp(patch.proseMaxWidth ?? state.proseMaxWidth, 480, 1200);
+      const autosaveMs = clamp(patch.autosaveMs ?? state.autosaveMs, 0, 5000);
+      const imagePasteDir = (patch.imagePasteDir ?? state.imagePasteDir).trim();
+      return {
+        fontSize,
+        proseMaxWidth,
+        autosaveMs,
+        imagePasteDir: imagePasteDir || "assets",
+      };
+    }),
+
   pushRecentFile: (path) =>
     set((state) => {
       const next = [path, ...state.recentFiles.filter((p) => p !== path)].slice(0, 20);
@@ -272,4 +314,9 @@ export const useAppStore = create<AppState>((set) => ({
 export function getActiveTab(state: AppState): Tab | null {
   if (!state.activeTabId) return null;
   return state.tabs.find((t) => t.id === state.activeTabId) ?? null;
+}
+
+function clamp(n: number, lo: number, hi: number): number {
+  if (Number.isNaN(n)) return lo;
+  return Math.max(lo, Math.min(hi, n));
 }

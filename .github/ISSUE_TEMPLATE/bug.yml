@@ -1,0 +1,55 @@
+name: Bug report
+description: Something doesn't work the way it should.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug, what you expected, what you got.
+      placeholder: |
+        I clicked X and Y crashed.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Markup
+        2. Cmd+O → /tmp/foo.md
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Markup version
+      placeholder: "0.1.0 (see About → Markup)"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "14.5 (Sonoma)"
+    validations:
+      required: true
+  - type: dropdown
+    id: arch
+    attributes:
+      label: Architecture
+      options:
+        - Apple Silicon
+        - Intel
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output (optional)
+      description: |
+        Run with `RUST_LOG=info pnpm tauri:dev` or check
+        `~/Library/Logs/markup/markup.log`. Paste relevant lines.
+      render: shell

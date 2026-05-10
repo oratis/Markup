@@ -1,9 +1,9 @@
 import { writeImage } from "./tauri";
 
-const IMG_DIR = "assets";
-
 interface InsertOpts {
   vaultRoot: string | null;
+  /** Where to drop the image, relative to vault root. Default "assets". */
+  imageDir?: string;
   /** Insert markdown text at cursor. Receives the relative path. */
   insert: (markdown: string) => void;
 }
@@ -44,7 +44,8 @@ export function installImagePaste(target: HTMLElement, opts: InsertOpts): () => 
     const buf = new Uint8Array(await file.arrayBuffer());
 
     try {
-      const rel = await writeImage(root, IMG_DIR, buf, ext);
+      const dir = opts.imageDir?.trim() || "assets";
+      const rel = await writeImage(root, dir, buf, ext);
       const md = `![](${rel})`;
       opts.insert(md);
     } catch (err) {

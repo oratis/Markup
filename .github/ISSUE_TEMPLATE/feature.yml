@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an improvement or new capability.
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the user need first; jump to the proposed solution after.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution (optional)
+      description: How might Markup support this? Mockups / shortcuts / menu placement.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)
+      description: Other tools, workarounds, or design alternatives.

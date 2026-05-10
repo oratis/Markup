@@ -1,0 +1,55 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { DEFAULT_SETTINGS, useAppStore } from "./store";
+
+beforeEach(() => {
+  useAppStore.setState({
+    fontSize: DEFAULT_SETTINGS.fontSize,
+    proseMaxWidth: DEFAULT_SETTINGS.proseMaxWidth,
+    autosaveMs: DEFAULT_SETTINGS.autosaveMs,
+    imagePasteDir: DEFAULT_SETTINGS.imagePasteDir,
+  });
+});
+
+describe("settings", () => {
+  it("clamps font size to [11, 24]", () => {
+    useAppStore.getState().setSettings({ fontSize: 5 });
+    expect(useAppStore.getState().fontSize).toBe(11);
+    useAppStore.getState().setSettings({ fontSize: 99 });
+    expect(useAppStore.getState().fontSize).toBe(24);
+  });
+
+  it("clamps prose width to [480, 1200]", () => {
+    useAppStore.getState().setSettings({ proseMaxWidth: 100 });
+    expect(useAppStore.getState().proseMaxWidth).toBe(480);
+    useAppStore.getState().setSettings({ proseMaxWidth: 5000 });
+    expect(useAppStore.getState().proseMaxWidth).toBe(1200);
+  });
+
+  it("treats autosaveMs=0 as 'autosave disabled' (allowed)", () => {
+    useAppStore.getState().setSettings({ autosaveMs: 0 });
+    expect(useAppStore.getState().autosaveMs).toBe(0);
+  });
+
+  it("clamps autosaveMs to <=5000", () => {
+    useAppStore.getState().setSettings({ autosaveMs: 999_999 });
+    expect(useAppStore.getState().autosaveMs).toBe(5000);
+  });
+
+  it("falls back to 'assets' when imagePasteDir is blank", () => {
+    useAppStore.getState().setSettings({ imagePasteDir: "  " });
+    expect(useAppStore.getState().imagePasteDir).toBe("assets");
+  });
+
+  it("preserves unrelated fields when patching one", () => {
+    useAppStore.getState().setSettings({ fontSize: 18 });
+    const s = useAppStore.getState();
+    expect(s.fontSize).toBe(18);
+    expect(s.proseMaxWidth).toBe(DEFAULT_SETTINGS.proseMaxWidth);
+    expect(s.autosaveMs).toBe(DEFAULT_SETTINGS.autosaveMs);
+  });
+
+  it("rejects NaN by clamping to lower bound", () => {
+    useAppStore.getState().setSettings({ fontSize: Number.NaN });
+    expect(useAppStore.getState().fontSize).toBe(11);
+  });
+});

@@ -8,6 +8,7 @@ import { Outline } from "./components/Outline";
 import { QuickOpen } from "./components/QuickOpen";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import { SearchPanel } from "./components/SearchPanel";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
 import { Toolbar } from "./components/Toolbar";
@@ -27,7 +28,6 @@ import {
 } from "./lib/tauri";
 import { type Theme, getActiveTab, useAppStore } from "./store";
 
-const SAVE_DEBOUNCE_MS = 300;
 const THEME_KEY = "markup.theme";
 const SOURCE_MODE_KEY = "markup.sourceMode";
 const SIDEBAR_KEY = "markup.sidebar";
@@ -35,6 +35,7 @@ const OUTLINE_KEY = "markup.outline";
 const FOCUS_KEY = "markup.focus";
 const TYPEWRITER_KEY = "markup.typewriter";
 const RECENT_KEY = "markup.recentFiles";
+const SETTINGS_KEY = "markup.settings";
 
 function applyThemeToHtml(theme: Theme) {
   const root = document.documentElement;
@@ -82,6 +83,12 @@ export function App() {
   const [showRecentOpen, setShowRecentOpen] = useState(false);
   const [showFindBar, setShowFindBar] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const fontSize = useAppStore((s) => s.fontSize);
+  const proseMaxWidth = useAppStore((s) => s.proseMaxWidth);
+  const autosaveMs = useAppStore((s) => s.autosaveMs);
+  const setSettings = useAppStore((s) => s.setSettings);
   const [reloadPromptDismissed, setReloadPromptDismissed] = useState<string | null>(null);
   const [externalMtime, setExternalMtime] = useState<number | null>(null);
 
@@ -104,6 +111,15 @@ export function App() {
           const arr = JSON.parse(recent);
           if (Array.isArray(arr))
             setRecentFiles(arr.filter((x) => typeof x === "string"));
+        } catch {
+          /*ignore*/
+        }
+      }
+      const settingsRaw = localStorage.getItem(SETTINGS_KEY);
+      if (settingsRaw) {
+        try {
+          const s = JSON.parse(settingsRaw);
+          if (s && typeof s === "object") setSettings(s);
         } catch {
           /*ignore*/
         }
@@ -168,6 +184,21 @@ export function App() {
     }
   }, [recentFiles]);
 
+  // Settings → CSS variables + persist
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--markup-font-size", `${fontSize}px`);
+    root.style.setProperty("--markup-prose-max-width", `${proseMaxWidth}px`);
+    try {
+      localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify({ fontSize, proseMaxWidth, autosaveMs }),
+      );
+    } catch {
+      /*ignore*/
+    }
+  }, [fontSize, proseMaxWidth, autosaveMs]);
+
   // Push recent file when active tab changes to a real file
   useEffect(() => {
     if (tab?.path) pushRecentFile(tab.path);
@@ -183,12 +214,15 @@ export function App() {
     return dispose;
   }, [focusMode, typewriterMode]);
 
-  // Image paste → vault/assets/
+  // Image paste in WYSIWYG (Milkdown / contenteditable). Source-mode paste is
+  // installed inside SourceEditor where the CM6 view is reachable.
   useEffect(() => {
+    if (sourceMode) return;
     const host = editorScrollRef.current;
     if (!host) return;
     const dispose = installImagePaste(host, {
       vaultRoot: useAppStore.getState().vaultRoot,
+      imageDir: useAppStore.getState().imagePasteDir,
       insert: (md) => {
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) return;
@@ -202,7 +236,7 @@ export function App() {
       },
     });
     return dispose;
-  }, [tab?.id]);
+  }, [tab?.id, sourceMode]);
 
   const performSave = useCallback(async () => {
     const state = useAppStore.getState();
@@ -232,7 +266,9 @@ export function App() {
         : null;
       if (!active?.path) return;
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = window.setTimeout(performSave, SAVE_DEBOUNCE_MS);
+      const delay = useAppStore.getState().autosaveMs;
+      if (delay <= 0) return; // autosave disabled — only ⌘S saves
+      saveTimerRef.current = window.setTimeout(performSave, delay);
     },
     [updateActiveContent, performSave],
   );
@@ -352,6 +388,9 @@ export function App() {
         case "about":
           setShowAbout(true);
           break;
+        case "settings":
+          setShowSettings(true);
+          break;
       }
     }).then((u) => (unMenu = u));
 
@@ -437,6 +476,9 @@ export function App() {
           e.preventDefault();
           setShowFindBar(true);
         }
+      } else if (k === ",") {
+        e.preventDefault();
+        setShowSettings(true);
       } else if (k === "/") {
         e.preventDefault();
         toggleSourceMode();
@@ -469,6 +511,12 @@ export function App() {
         run: () => setShowQuickOpen(true),
       },
       { id: "about", label: "About Markup", run: () => setShowAbout(true) },
+      {
+        id: "settings",
+        label: "Settings…",
+        shortcut: "⌘,",
+        run: () => setShowSettings(true),
+      },
       {
         id: "find_in_vault",
         label: "Find in Vault",
@@ -580,6 +628,7 @@ export function App() {
         />
       )}
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
+      {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

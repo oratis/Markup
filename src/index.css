@@ -65,7 +65,7 @@ body {
   padding: 48px max(24px, calc((100% - var(--markup-prose-max-width)) / 2));
   outline: none;
   min-height: 100%;
-  font-size: 16px;
+  font-size: var(--markup-font-size, 16px);
   line-height: 1.7;
 }
 

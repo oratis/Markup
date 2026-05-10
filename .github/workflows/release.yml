@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+# This workflow produces an UNSIGNED bundle and attaches it to the GitHub
+# Release for the pushed tag. Code signing + notarization require Apple
+# Developer ID secrets and aren't done here yet — to enable later, add the
+# secrets and call scripts/sign-and-notarize.sh after the bundle step.
+
+jobs:
+  bundle:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (Tauri bundle, x86_64-apple-darwin)
+        # Tauri's bundle_dmg.sh hangs on osascript Finder Automation in CI;
+        # build .app + binary, then make a plain DMG with hdiutil.
+        run: |
+          pnpm tauri build --target x86_64-apple-darwin --bundles app || true
+          BUNDLE_DIR=src-tauri/target/x86_64-apple-darwin/release/bundle
+          if [ ! -d "$BUNDLE_DIR/macos/Markup.app" ]; then
+            echo "::error ::Markup.app missing — bundle step failed"; exit 1
+          fi
+          mkdir -p "$BUNDLE_DIR/dmg"
+          hdiutil create -volname Markup \
+            -srcfolder "$BUNDLE_DIR/macos/Markup.app" \
+            -ov -format UDZO -fs HFS+ \
+            "$BUNDLE_DIR/dmg/Markup_${GITHUB_REF_NAME#v}_x64.dmg"
+          ls -lh "$BUNDLE_DIR/dmg" "$BUNDLE_DIR/macos"
+
+      - name: Compute checksums
+        run: |
+          BUNDLE_DIR=src-tauri/target/x86_64-apple-darwin/release/bundle
+          ( cd "$BUNDLE_DIR/dmg" && shasum -a 256 *.dmg > SHA256SUMS )
+          cat "$BUNDLE_DIR/dmg/SHA256SUMS"
+
+      - name: Create / update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/SHA256SUMS

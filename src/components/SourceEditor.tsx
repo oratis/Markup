@@ -13,7 +13,9 @@ import {
   lineNumbers,
 } from "@codemirror/view";
 import { useEffect, useRef } from "react";
+import { installImagePaste } from "../lib/image-paste";
 import { log as perfLog } from "../lib/perf";
+import { useAppStore } from "../store";
 
 interface SourceEditorProps {
   value: string;
@@ -55,7 +57,25 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     const view = new EditorView({ state, parent: hostRef.current });
     viewRef.current = view;
     perfLog(`source-load[${value.length}b]`, performance.now() - t0);
+
+    // Image paste → write to vault, dispatch CM6 transaction inserting the
+    // markdown reference at the current selection.
+    const detachPaste = installImagePaste(hostRef.current, {
+      vaultRoot: useAppStore.getState().vaultRoot,
+      imageDir: useAppStore.getState().imagePasteDir,
+      insert: (md) => {
+        const v = viewRef.current;
+        if (!v) return;
+        const { from, to } = v.state.selection.main;
+        v.dispatch({
+          changes: { from, to, insert: md },
+          selection: { anchor: from + md.length },
+        });
+      },
+    });
+
     return () => {
+      detachPaste();
       view.destroy();
       viewRef.current = null;
     };

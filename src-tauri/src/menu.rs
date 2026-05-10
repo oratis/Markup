@@ -8,6 +8,12 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let app_submenu = SubmenuBuilder::new(app, "Markup")
         .item(&PredefinedMenuItem::about(app, Some("About Markup"), None)?)
         .separator()
+        .item(
+            &MenuItemBuilder::with_id("settings", "Settings…")
+                .accelerator("CmdOrCtrl+,")
+                .build(app)?,
+        )
+        .separator()
         .item(&PredefinedMenuItem::services(app, None)?)
         .separator()
         .item(&PredefinedMenuItem::hide(app, None)?)
