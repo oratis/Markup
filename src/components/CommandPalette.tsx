@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "../lib/i18n";
 
 export interface Command {
   id: string;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function CommandPalette({ commands, onClose }: Props) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -66,7 +68,7 @@ export function CommandPalette({ commands, onClose }: Props) {
               runIndex(selected);
             }
           }}
-          placeholder="Run a command…"
+          placeholder={t("palette.placeholder")}
           className="w-full px-4 py-3 text-[14px] bg-transparent outline-none border-b border-black/5 dark:border-white/10"
         />
         <div className="max-h-[44vh] overflow-auto no-scrollbar">
@@ -87,7 +89,7 @@ export function CommandPalette({ commands, onClose }: Props) {
             </button>
           ))}
           {matches.length === 0 && (
-            <div className="px-4 py-3 text-xs opacity-50">No commands.</div>
+            <div className="px-4 py-3 text-xs opacity-50">{t("palette.empty")}</div>
           )}
         </div>
       </div>

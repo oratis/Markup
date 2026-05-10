@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../lib/i18n";
 
 interface Props {
   /** When true, this is rendered in source mode — CM6 has its own search
@@ -14,6 +15,7 @@ interface Props {
  * we defer to CodeMirror's native search overlay (⌘F).
  */
 export function FindBar({ sourceMode, onClose }: Props) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [missing, setMissing] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -32,9 +34,7 @@ export function FindBar({ sourceMode, onClose }: Props) {
   if (sourceMode) {
     return (
       <div className="absolute top-12 right-3 z-40 px-3 py-2 rounded shadow-lg bg-canvas-light dark:bg-canvas-dark border border-black/10 dark:border-white/15 text-[12px]">
-        <span className="opacity-70">
-          Press ⌘F again — CodeMirror has its own search overlay.
-        </span>
+        <span className="opacity-70">{t("find.cmHint")}</span>
         <button onClick={onClose} className="ml-3 opacity-60 hover:opacity-100">
           ×
         </button>
@@ -60,7 +60,7 @@ export function FindBar({ sourceMode, onClose }: Props) {
             findNext(e.shiftKey);
           }
         }}
-        placeholder="Find…"
+        placeholder={t("find.placeholder")}
         className={`w-[220px] px-2 py-0.5 text-[12px] bg-transparent outline-none ${
           missing ? "text-red-500" : ""
         }`}

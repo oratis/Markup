@@ -1,3 +1,4 @@
+import { useT } from "../lib/i18n";
 import { readFile } from "../lib/tauri";
 import { getActiveTab, useAppStore } from "../store";
 
@@ -12,6 +13,7 @@ interface Props {
  * reload or dismiss (and risk overwriting on next save).
  */
 export function ReloadPrompt({ onReload, onDismiss }: Props) {
+  const t = useT();
   const tab = useAppStore(getActiveTab);
   const openLoadedFile = useAppStore((s) => s.openLoadedFile);
   const setActiveStatus = useAppStore((s) => s.setActiveStatus);
@@ -31,21 +33,18 @@ export function ReloadPrompt({ onReload, onDismiss }: Props) {
 
   return (
     <div className="bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border-b border-amber-300 dark:border-amber-700 px-4 py-2 flex items-center gap-3 text-[12px]">
-      <span className="flex-1">
-        File changed on disk since you opened it. Reload to see the latest version (your
-        unsaved edits will be discarded).
-      </span>
+      <span className="flex-1">{t("reload.message")}</span>
       <button
         onClick={reload}
         className="px-2 py-0.5 rounded bg-amber-600 text-white hover:bg-amber-700"
       >
-        Reload
+        {t("reload.button")}
       </button>
       <button
         onClick={onDismiss}
         className="px-2 py-0.5 rounded hover:bg-amber-200 dark:hover:bg-amber-800"
       >
-        Dismiss
+        {t("reload.dismiss")}
       </button>
     </div>
   );

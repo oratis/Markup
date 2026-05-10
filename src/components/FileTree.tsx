@@ -1,5 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useMemo, useRef, useState } from "react";
+import { useT } from "../lib/i18n";
 import { listVaultFiles, readFile, renameFile, trashFile } from "../lib/tauri";
 import { type VaultFile, useAppStore } from "../store";
 
@@ -10,6 +11,7 @@ interface ContextState {
 }
 
 export function FileTree() {
+  const t = useT();
   const vaultRoot = useAppStore((s) => s.vaultRoot);
   const files = useAppStore((s) => s.vaultFiles);
   const setVaultFiles = useAppStore((s) => s.setVaultFiles);
@@ -97,17 +99,11 @@ export function FileTree() {
   }
 
   if (!vaultRoot) {
-    return (
-      <div className="text-xs opacity-60 px-3 py-3">
-        No vault open.
-        <br />
-        Use ⌘⇧O to open one.
-      </div>
-    );
+    return <div className="text-xs opacity-60 px-3 py-3">{t("filetree.noVault")}</div>;
   }
 
   if (sorted.length === 0) {
-    return <div className="text-xs opacity-60 px-3 py-3">Empty vault.</div>;
+    return <div className="text-xs opacity-60 px-3 py-3">{t("filetree.empty")}</div>;
   }
 
   return (

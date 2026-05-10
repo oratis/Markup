@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { type Locale, useLocale, useT } from "../lib/i18n";
 import { type Settings, useAppStore } from "../store";
 
 interface Props {
@@ -6,6 +7,8 @@ interface Props {
 }
 
 export function SettingsDialog({ onClose }: Props) {
+  const t = useT();
+  const [locale, setLocale] = useLocale();
   const fontSize = useAppStore((s) => s.fontSize);
   const proseMaxWidth = useAppStore((s) => s.proseMaxWidth);
   const autosaveMs = useAppStore((s) => s.autosaveMs);
@@ -34,10 +37,10 @@ export function SettingsDialog({ onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="w-[480px] max-w-[92vw] rounded-lg shadow-2xl bg-canvas-light dark:bg-canvas-dark border border-black/10 dark:border-white/15 p-5"
       >
-        <div className="text-base font-semibold mb-4">Settings</div>
+        <div className="text-base font-semibold mb-4">{t("settings.title")}</div>
 
         <div className="space-y-4 text-[12px]">
-          <Row label="Font size" hint={`${draft.fontSize}px`}>
+          <Row label={t("settings.fontSize")} hint={`${draft.fontSize}px`}>
             <input
               type="range"
               min={11}
@@ -48,7 +51,7 @@ export function SettingsDialog({ onClose }: Props) {
             />
           </Row>
 
-          <Row label="Prose width" hint={`${draft.proseMaxWidth}px`}>
+          <Row label={t("settings.proseWidth")} hint={`${draft.proseMaxWidth}px`}>
             <input
               type="range"
               min={480}
@@ -61,8 +64,12 @@ export function SettingsDialog({ onClose }: Props) {
           </Row>
 
           <Row
-            label="Autosave delay"
-            hint={draft.autosaveMs === 0 ? "Disabled" : `${draft.autosaveMs}ms`}
+            label={t("settings.autosaveDelay")}
+            hint={
+              draft.autosaveMs === 0
+                ? t("settings.autosaveDisabled")
+                : `${draft.autosaveMs}ms`
+            }
           >
             <input
               type="range"
@@ -75,7 +82,7 @@ export function SettingsDialog({ onClose }: Props) {
             />
           </Row>
 
-          <Row label="Image paste folder" hint="(relative to vault root)">
+          <Row label={t("settings.imageDir")} hint={t("settings.imageDirHint")}>
             <input
               type="text"
               value={draft.imagePasteDir}
@@ -83,6 +90,18 @@ export function SettingsDialog({ onClose }: Props) {
               placeholder="assets"
               className="flex-1 px-2 py-1 rounded border border-black/10 dark:border-white/20 bg-transparent outline-none focus:border-blue-500"
             />
+          </Row>
+
+          <Row label={t("settings.locale")}>
+            <select
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as Locale)}
+              className="flex-1 px-2 py-1 rounded border border-black/10 dark:border-white/20 bg-transparent outline-none focus:border-blue-500"
+            >
+              <option value="auto">Auto (system)</option>
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+            </select>
           </Row>
         </div>
 
@@ -99,13 +118,13 @@ export function SettingsDialog({ onClose }: Props) {
             }}
             className="opacity-70 hover:opacity-100 underline"
           >
-            Restore defaults
+            {t("settings.restore")}
           </button>
           <button
             onClick={onClose}
             className="px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
           >
-            Done
+            {t("settings.done")}
           </button>
         </div>
       </div>

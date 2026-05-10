@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useT } from "../lib/i18n";
 import { getActiveTab, useAppStore } from "../store";
 
 interface Heading {
@@ -60,18 +61,19 @@ function parseHeadings(md: string): Heading[] {
 }
 
 export function Outline() {
+  const t = useT();
   const tab = useAppStore(getActiveTab);
   const headings = useMemo(() => (tab ? parseHeadings(tab.content) : []), [tab?.content]);
 
   if (!tab) return null;
   if (headings.length === 0) {
-    return <div className="text-xs opacity-50 px-3 py-3">No headings.</div>;
+    return <div className="text-xs opacity-50 px-3 py-3">{t("outline.empty")}</div>;
   }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="px-3 py-2 text-[11px] uppercase tracking-wider opacity-50">
-        Outline
+        {t("outline.title")}
       </div>
       <nav className="flex-1 min-h-0 overflow-auto no-scrollbar pb-2">
         {headings.map((h, i) => (

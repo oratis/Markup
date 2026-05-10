@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../lib/i18n";
 import { readFile, searchVault } from "../lib/tauri";
 import type { SearchHit } from "../lib/types";
 import { useAppStore } from "../store";
@@ -8,6 +9,7 @@ interface SearchPanelProps {
 }
 
 export function SearchPanel({ onClose }: SearchPanelProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [busy, setBusy] = useState(false);
@@ -70,14 +72,14 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
           onKeyDown={(e) => {
             if (e.key === "Escape") onClose();
           }}
-          placeholder="Search vault…"
+          placeholder={t("search.placeholder")}
           className="w-full px-4 py-3 text-[14px] bg-transparent outline-none border-b border-black/5 dark:border-white/10"
         />
         <div className="max-h-[60vh] overflow-auto no-scrollbar">
-          {busy && <div className="px-4 py-2 text-xs opacity-50">Searching…</div>}
+          {busy && <div className="px-4 py-2 text-xs opacity-50">{t("search.busy")}</div>}
           {error && <div className="px-4 py-2 text-xs text-red-500">{error}</div>}
           {!busy && !error && hits.length === 0 && query.trim() && (
-            <div className="px-4 py-2 text-xs opacity-50">No matches.</div>
+            <div className="px-4 py-2 text-xs opacity-50">{t("search.empty")}</div>
           )}
           {hits.map((h) => (
             <button

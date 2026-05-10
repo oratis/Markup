@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "../lib/i18n";
 import { readFile } from "../lib/tauri";
 import { useAppStore } from "../store";
 
@@ -7,6 +8,7 @@ interface QuickOpenProps {
 }
 
 export function QuickOpen({ onClose }: QuickOpenProps) {
+  const t = useT();
   const files = useAppStore((s) => s.vaultFiles);
   const openLoadedFile = useAppStore((s) => s.openLoadedFile);
   const [query, setQuery] = useState("");
@@ -73,7 +75,7 @@ export function QuickOpen({ onClose }: QuickOpenProps) {
               pick(selected);
             }
           }}
-          placeholder="Open file in vault…"
+          placeholder={t("quickOpen.placeholder")}
           className="w-full px-4 py-3 text-[14px] bg-transparent outline-none border-b border-black/5 dark:border-white/10"
         />
         <div className="max-h-[40vh] overflow-auto no-scrollbar">
@@ -91,7 +93,7 @@ export function QuickOpen({ onClose }: QuickOpenProps) {
             </button>
           ))}
           {matches.length === 0 && (
-            <div className="px-4 py-3 text-xs opacity-50">No matches.</div>
+            <div className="px-4 py-3 text-xs opacity-50">{t("quickOpen.empty")}</div>
           )}
         </div>
       </div>

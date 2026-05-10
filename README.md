@@ -2,111 +2,142 @@
 
 > 高性能 macOS Markdown 编辑器 — Typora 风格的开源克隆。
 
+[![CI](https://github.com/oratis/Markup/actions/workflows/ci.yml/badge.svg)](https://github.com/oratis/Markup/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/oratis/Markup?label=release)](https://github.com/oratis/Markup/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 设计与决策见 [docs/README.md](./docs/README.md)。
 
-## 技术栈
+## 特性
 
-- **Tauri 2** (Rust + WKWebView shell)
-- **Milkdown** / ProseMirror (WYSIWYG editor)
-- **React + Tailwind**
-- 后端：comrak、Tantivy、notify
-- 渲染：Shiki、KaTeX、Mermaid
+**编辑**
+- WYSIWYG（Milkdown / ProseMirror）↔ Source mode（CodeMirror 6），`⌘/` 切换
+- Focus / Typewriter 模式，CSS 变量驱动主题
+- KaTeX 数学公式、Mermaid 图表、Shiki 代码高亮、GFM 表格 / 任务列表
 
-## 开发环境要求
+**文件管理**
+- Vault（任意 Markdown 文件夹）+ 虚拟滚动文件树 + 右键 rename / Move to Trash
+- 多 tab，Welcome 自动让位
+- Quick Open（`⌘P` 模糊匹配）
+- 全文搜索（`⌘⇧F`，Tantivy 索引）
+- 文件监听 + 外部修改 reload 提示
+- 自动保存（300ms debounce）+ 原子写入 + mtime 防覆盖
 
-- macOS 12+
+**心流**
+- Outline 面板（`⌘⌥O`）
+- Command Palette（`⌘⇧P`，~17 条命令）
+- Wikilinks `[[file]]` 点击跳转
+- Copy Link to Paragraph → `[[file#heading]]` 入剪贴板
+- Find in File（`⌘F`）
+- 三主题：Light / Dark / Sepia
+- Settings 面板（字号 / 行宽 / 自动保存延迟 / 图片目录 / 语言）
+- 中英文 UI（auto / en / zh）
+- 图片粘贴自动入库（vault/assets/）
+- Save As…（`⌘⇧S`）+ 导出 HTML / 打印 PDF
+
+**性能**（Spike 0.3 实测）
+- 10,000 文件 vault：扫描 15ms / 索引 1.09s / 搜索 2.4ms
+- 主 chunk 356KB（gzipped 102KB），Mermaid / KaTeX / Milkdown / CodeMirror 各自独立 lazy chunk
+- Idle RSS ~88MB（约为 Electron baseline 的 1/3）
+
+## 截图
+
+> 占位 — v1.0 公开发布前替换。
+> 当前推荐看 https://github.com/oratis/Markup/releases/tag/v0.1.1。
+
+## 安装
+
+下载 [最新 release](https://github.com/oratis/Markup/releases/latest) 的 `Markup_*_x64.dmg`。
+
+DMG 当前**未签名**（签名公证 pipeline 在 [scripts/sign-and-notarize.sh](./scripts/sign-and-notarize.sh)，需要 Apple Developer 凭据才能跑）。第一次打开时 macOS Gatekeeper 会拦截 — 在 **System Settings → Privacy & Security** 里点 "Open Anyway"。
+
+## 开发
+
+### 环境
+- macOS 12+（开发 / 运行）
+- [Node 18+](https://nodejs.org/) + pnpm 8+
+- [Rust 1.77+](https://rustup.rs/)
 - Xcode Command Line Tools (`xcode-select --install`)
-- Node 18+ + pnpm 8+
-- Rust 1.77+ via [rustup](https://rustup.rs)
-
-确认环境：
 
 ```bash
-. "$HOME/.cargo/env"  # 把 ~/.cargo/bin 加进 PATH
-pnpm tauri info
-```
-
-应该看到 rustup ✓ / rustc 1.95+ / Tauri 2.x。
-
-## 启动
-
-```bash
+git clone https://github.com/oratis/Markup
+cd Markup
 . "$HOME/.cargo/env"
-pnpm install        # 首次
-pnpm tauri:dev      # 启动开发窗口（首次会编译几分钟）
-```
-
-## 打包
-
-```bash
-. "$HOME/.cargo/env"
-pnpm tauri:build    # → src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/
-```
-
-打包目标固定 `x86_64-apple-darwin`（开发机为 Intel Mac）。
-
-## 测试性能（spike 0.2 后启用）
-
-```bash
-python3 scripts/gen-test-doc.py 5 test-fixtures/big.md
-```
-
-会生成一份 5MB 的合成 markdown，含混合内容（段落、列表、表格、代码、数学、Mermaid）。
-
-## 项目结构
-
-```
-markup/
-├── docs/              # 设计文档、ADR、调研、spike 记录
-├── scripts/           # 工具脚本（图标生成、测试文件生成）
-├── src/               # React 前端
-│   ├── components/    # Editor、Toolbar
-│   ├── lib/           # 类型化 invoke 包装
-│   └── store.ts       # Zustand store
-├── src-tauri/         # Rust 后端
-│   ├── src/
-│   │   ├── main.rs
-│   │   ├── lib.rs
-│   │   ├── commands.rs   # IPC commands
-│   │   └── error.rs
-│   ├── capabilities/  # Tauri 2 权限模型
-│   ├── icons/         # 应用图标
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── package.json
-├── vite.config.ts
-└── tailwind.config.js
-```
-
-## 状态
-
-**M0 阶段已基本完成**（Spike 0.1/0.3/0.4），M1 P0 主要功能已实现。
-
-进度跟进入口：
-- [docs/STATUS.md](./docs/STATUS.md) — 整体状态 + 醒来后的操作清单
-- [docs/research/05-spike-results.md](./docs/research/05-spike-results.md) — Spike 验证记录
-- [docs/decisions/](./docs/decisions/) — 架构决策（ADR-001、ADR-002）
-
-## 醒来后操作清单（TL;DR）
-
-```bash
-# 1. 跑 dev 验证
-. "$HOME/.cargo/env"
+pnpm install
 pnpm tauri:dev
+```
 
-# 2. 跑 Spike 0.3 bench（10k 文件索引）
-cd src-tauri && cargo test --release --test spike_03 -- --nocapture --ignored bench_10k_files
+首次 `tauri dev` 会编译大量 Rust 依赖，5–10 分钟。
 
-# 3. 准备签名（首次）
-xcrun notarytool store-credentials "AC_PASSWORD" \
-  --apple-id "wangharp@gmail.com" \
-  --team-id "<YOUR_TEAM_ID>" \
-  --password "<APP_SPECIFIC_PASSWORD>"
+### 测试 / 验证
 
-# 4. 出 release（签名 + 公证一条龙）
+```bash
+pnpm tsc --noEmit          # 类型检查
+pnpm lint                  # Biome
+pnpm test                  # Vitest（46 个 React 测试）
+pnpm test:rust             # Cargo dev tests
+pnpm bench:spike03         # 10k 文件 Tantivy 索引 benchmark
+pnpm build                 # Vite 前端构建
+pnpm tauri:build           # 完整 macOS bundle
+```
+
+### 出 Release
+
+```bash
+git tag -a vX.Y.Z -m "release notes"
+git push origin vX.Y.Z
+# Release workflow 自动跑 build + 上传 unsigned DMG + SHA256SUMS
+```
+
+签名版（需要 [docs/decisions/ADR-002](./docs/decisions/ADR-002-distribution.md) 描述的 keychain credentials）：
+
+```bash
 ./scripts/sign-and-notarize.sh
 ```
 
+## 技术栈
+
+```
+┌─ Tauri 2 (Rust) ──────────────────────────────┐
+│   commands  · vault scanner · notify watcher  │
+│   Tantivy index · comrak · tokio              │
+└────────────────────────────────────────────────┘
+                  │ IPC
+┌─ React + Vite ────────────────────────────────┐
+│   Milkdown WYSIWYG · CodeMirror 6 source mode │
+│   Zustand store · Tailwind                    │
+│   Mermaid · KaTeX · Shiki                     │
+└────────────────────────────────────────────────┘
+```
+
+完整说明：[docs/decisions/ADR-001-tech-stack.md](./docs/decisions/ADR-001-tech-stack.md)
+
+## 仓库结构
+
+```
+Markup/
+├── docs/                # 调研报告、ADR、设计文档、状态文档
+├── scripts/             # 占位图标生成、测试 fixture、签名脚本
+├── src/                 # React 前端
+│   ├── components/      # 30+ 组件
+│   ├── lib/             # i18n / wikilink / fuzzy / tauri 包装 / 等
+│   └── store.ts         # Zustand 全局状态
+├── src-tauri/           # Rust 后端
+│   ├── src/             # commands · vault · index · scanner · watcher
+│   └── tests/           # Spike 0.3 benchmark
+├── .github/
+│   ├── workflows/       # ci.yml + release.yml
+│   ├── ISSUE_TEMPLATE/  # bug + feature + config
+│   └── PULL_REQUEST_TEMPLATE.md
+└── README.md
+```
+
+## 路线图
+
+详见 [docs/STATUS.md](./docs/STATUS.md) 和 [docs/design/03-roadmap.md](./docs/design/03-roadmap.md)。当前位置：M2 polish 完成，向 V1.0 推进。
+
 ## License
 
-私人项目，license 待定（候选：MIT 或 Apache-2.0）。
+[MIT](./LICENSE) © 2026 Oratis
+
+由 Claude Code 协助开发。

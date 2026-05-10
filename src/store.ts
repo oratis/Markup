@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { t } from "./lib/i18n";
 import type { LoadedFile } from "./lib/types";
 
 export type SaveStatus = "saved" | "dirty" | "saving" | "error";
@@ -212,9 +213,7 @@ export const useAppStore = create<AppState>((set) => ({
       const target = state.tabs[idx];
       // Confirm if dirty (and we're closing a real file, not a scratch buffer)
       if (target.status === "dirty" && target.path) {
-        const ok = window.confirm(
-          `"${target.name}" has unsaved changes that will be lost. Close anyway?`,
-        );
+        const ok = window.confirm(t("tab.confirmClose", target.name));
         if (!ok) return state;
       }
       const tabs = state.tabs.filter((t) => t.id !== id);

@@ -15,6 +15,7 @@ import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
+import { useT } from "./lib/i18n";
 import { installImagePaste } from "./lib/image-paste";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import {
@@ -53,6 +54,7 @@ function applyClass(htmlClass: string, on: boolean) {
 }
 
 export function App() {
+  const tr = useT();
   const tab = useAppStore(getActiveTab);
   const sourceMode = useAppStore((s) => s.sourceMode);
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
@@ -235,7 +237,7 @@ export function App() {
       const files = useAppStore.getState().vaultFiles;
       const target = findVaultFile(files, name);
       if (!target) {
-        showToast(`No vault file matches "${name}"`);
+        showToast(tr("toast.wikilinkMiss", name));
         return;
       }
       try {
@@ -243,7 +245,7 @@ export function App() {
         openLoadedFile(loaded);
       } catch (err) {
         console.error("readFile failed", err);
-        showToast(`Failed to open ${target.name}`);
+        showToast(tr("toast.openFailed", target.name));
       }
     };
     host.addEventListener("click", onClick);
@@ -279,8 +281,8 @@ export function App() {
       cursorLine,
     );
     navigator.clipboard.writeText(link).then(
-      () => showToast(`Copied ${link}`),
-      () => showToast("Copy failed"),
+      () => showToast(tr("toast.copied", link)),
+      () => showToast(tr("toast.copyFailed")),
     );
   }
 

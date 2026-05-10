@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../lib/i18n";
 import { getVersion } from "../lib/tauri";
 
 interface Props {
@@ -9,6 +10,7 @@ const REPO_URL = "https://github.com/oratis/Markup";
 const BUNDLE_ID = "com.appkon.markup";
 
 export function AboutDialog({ onClose }: Props) {
+  const t = useT();
   const [version, setVersion] = useState<string>("…");
 
   useEffect(() => {
@@ -28,12 +30,10 @@ export function AboutDialog({ onClose }: Props) {
       >
         <div className="text-center">
           <div className="text-2xl font-semibold">Markup</div>
-          <div className="text-xs opacity-60 mt-1">
-            High-performance Markdown editor for macOS
-          </div>
+          <div className="text-xs opacity-60 mt-1">{t("about.tagline")}</div>
           <div className="mt-5 text-[11px] opacity-70 space-y-1">
             <div>
-              Version <span className="font-mono">{version}</span>
+              {t("about.version")} <span className="font-mono">{version}</span>
             </div>
             <div className="font-mono">{BUNDLE_ID}</div>
           </div>
@@ -51,7 +51,7 @@ export function AboutDialog({ onClose }: Props) {
             onClick={onClose}
             className="mt-6 px-4 py-1 text-[12px] rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
           >
-            Close
+            {t("about.close")}
           </button>
         </div>
       </div>
