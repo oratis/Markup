@@ -25,6 +25,12 @@ export const en = {
   "settings.imageDir": "Image paste folder",
   "settings.imageDirHint": "(relative to vault root)",
   "settings.locale": "Language",
+  "settings.shortcuts": "Keyboard shortcuts",
+  "settings.shortcutsHint":
+    "Click a binding to record. Esc to cancel. Native menu items keep their default bindings.",
+  "settings.shortcutsRecord": "Press keys…",
+  "settings.shortcutsReset": "Reset all",
+  "settings.exportTheme": "Export theme",
   "settings.restore": "Restore defaults",
   "settings.done": "Done",
 

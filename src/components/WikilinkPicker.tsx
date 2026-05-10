@@ -6,6 +6,12 @@ interface Props {
   /** Insert the wikilink string at the editor's current selection. */
   onInsert: (text: string) => void;
   onClose: () => void;
+  /**
+   * "full" — insert `[[name]]` (default, manual command path).
+   * "completion" — insert `name]]` only, assuming the user typed `[[`
+   * which is already in the document.
+   */
+  mode?: "full" | "completion";
 }
 
 /**
@@ -13,7 +19,7 @@ interface Props {
  * by typed query, and inserts `[[name]]` (without extension) at the
  * editor's current selection. Reuses the same scoring as QuickOpen.
  */
-export function WikilinkPicker({ onInsert, onClose }: Props) {
+export function WikilinkPicker({ onInsert, onClose, mode = "full" }: Props) {
   const t = useT();
   const files = useAppStore((s) => s.vaultFiles);
   const [query, setQuery] = useState("");
@@ -43,7 +49,7 @@ export function WikilinkPicker({ onInsert, onClose }: Props) {
     const f = matches[idx];
     if (!f) return;
     const base = f.name.replace(/\.(md|markdown|mdx|mkd)$/i, "");
-    onInsert(`[[${base}]]`);
+    onInsert(mode === "completion" ? `${base}]]` : `[[${base}]]`);
     onClose();
   }
 

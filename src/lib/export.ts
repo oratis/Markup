@@ -1,11 +1,17 @@
 import { renderHtml } from "./tauri";
 
+export type ExportTheme = "github" | "plain" | "tufte";
+
 /**
  * Open a print dialog with rendered HTML. The user can save as PDF from the
  * dialog (macOS standard "Save as PDF" in the print sheet's PDF popover).
  */
-export async function exportPdfViaPrint(content: string, title: string) {
-  const html = await renderHtml(content, title);
+export async function exportPdfViaPrint(
+  content: string,
+  title: string,
+  theme: ExportTheme = "github",
+) {
+  const html = await renderHtml(content, title, theme);
   const win = window.open("", "_blank", "width=900,height=1200");
   if (!win) {
     console.error("export: popup blocked");
@@ -33,7 +39,11 @@ function downloadString(text: string, filename: string, mime: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function exportHtml(content: string, baseName: string) {
-  const html = await renderHtml(content, baseName);
+export async function exportHtml(
+  content: string,
+  baseName: string,
+  theme: ExportTheme = "github",
+) {
+  const html = await renderHtml(content, baseName, theme);
   downloadString(html, `${baseName}.html`, "text/html");
 }

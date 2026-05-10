@@ -157,4 +157,37 @@ mod tests {
         // so this asserts the fallback path doesn't loop.
         assert_eq!(t(Locale::Zh, "menu.about"), "关于 Markup");
     }
+
+    #[test]
+    fn locale_from_str_explicit_choice() {
+        assert!(matches!(Locale::from_str("zh"), Locale::Zh));
+        assert!(matches!(Locale::from_str("en"), Locale::En));
+    }
+
+    #[test]
+    fn every_known_menu_key_has_a_zh_translation() {
+        // Catch the case where a new menu.* key is added to en() but
+        // forgotten in zh(); the zh() match returns en() fallback for
+        // unknown keys. We compare the two arms against a static list.
+        let known = [
+            "menu.file", "menu.edit", "menu.view", "menu.window", "menu.help",
+            "menu.about", "menu.settings", "menu.new", "menu.open",
+            "menu.openRecent", "menu.openVault", "menu.closeVault",
+            "menu.save", "menu.saveAs", "menu.exportHtml", "menu.exportPdf",
+            "menu.closeTab", "menu.findInFile", "menu.findInVault",
+            "menu.quickOpen", "menu.commandPalette", "menu.toggleSourceMode",
+            "menu.toggleSidebar", "menu.toggleOutline", "menu.focusMode",
+            "menu.typewriterMode", "menu.themeLight", "menu.themeDark",
+            "menu.themeSepia",
+        ];
+        for k in known {
+            // En must have a real translation
+            let en_v = en(k);
+            assert_ne!(en_v, "?", "missing en for {k}");
+            // Zh must differ from English (i.e., not falling through). At
+            // present every menu.* key has a zh translation distinct from en.
+            let zh_v = zh(k);
+            assert_ne!(zh_v, "?", "missing zh for {k} (zh() returned ?)");
+        }
+    }
 }

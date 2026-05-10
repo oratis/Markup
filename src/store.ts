@@ -46,6 +46,7 @@ interface AppState {
   proseMaxWidth: number; // px (560-980); the prose column width
   autosaveMs: number; // 0 = autosave disabled
   imagePasteDir: string; // relative to vault root
+  exportTheme: "github" | "plain" | "tufte";
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -83,6 +84,7 @@ export interface Settings {
   proseMaxWidth: number;
   autosaveMs: number;
   imagePasteDir: string;
+  exportTheme: "github" | "plain" | "tufte";
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -90,6 +92,7 @@ export const DEFAULT_SETTINGS: Settings = {
   proseMaxWidth: 720,
   autosaveMs: 300,
   imagePasteDir: "assets",
+  exportTheme: "github",
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -168,6 +171,7 @@ export const useAppStore = create<AppState>((set) => ({
   proseMaxWidth: DEFAULT_SETTINGS.proseMaxWidth,
   autosaveMs: DEFAULT_SETTINGS.autosaveMs,
   imagePasteDir: DEFAULT_SETTINGS.imagePasteDir,
+  exportTheme: DEFAULT_SETTINGS.exportTheme,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -294,11 +298,13 @@ export const useAppStore = create<AppState>((set) => ({
       const proseMaxWidth = clamp(patch.proseMaxWidth ?? state.proseMaxWidth, 480, 1200);
       const autosaveMs = clamp(patch.autosaveMs ?? state.autosaveMs, 0, 5000);
       const imagePasteDir = (patch.imagePasteDir ?? state.imagePasteDir).trim();
+      const exportTheme = patch.exportTheme ?? state.exportTheme;
       return {
         fontSize,
         proseMaxWidth,
         autosaveMs,
         imagePasteDir: imagePasteDir || "assets",
+        exportTheme,
       };
     }),
 

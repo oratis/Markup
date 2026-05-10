@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { type Locale, useLocale, useT } from "../lib/i18n";
 import { type Settings, useAppStore } from "../store";
+import { ShortcutsEditor } from "./ShortcutsEditor";
 
 interface Props {
   onClose: () => void;
@@ -15,11 +16,13 @@ export function SettingsDialog({ onClose }: Props) {
   const imagePasteDir = useAppStore((s) => s.imagePasteDir);
   const setSettings = useAppStore((s) => s.setSettings);
 
+  const exportTheme = useAppStore((s) => s.exportTheme);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
     autosaveMs,
     imagePasteDir,
+    exportTheme,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -103,18 +106,36 @@ export function SettingsDialog({ onClose }: Props) {
               <option value="zh">中文</option>
             </select>
           </Row>
+
+          <Row label={t("settings.exportTheme")}>
+            <select
+              value={draft.exportTheme}
+              onChange={(e) =>
+                commit({
+                  exportTheme: e.target.value as Settings["exportTheme"],
+                })
+              }
+              className="flex-1 px-2 py-1 rounded border border-black/10 dark:border-white/20 bg-transparent outline-none focus:border-blue-500"
+            >
+              <option value="github">GitHub</option>
+              <option value="plain">Plain (serif)</option>
+              <option value="tufte">Tufte</option>
+            </select>
+          </Row>
         </div>
+
+        <ShortcutsEditor />
 
         <div className="mt-6 flex items-center justify-between text-[11px]">
           <button
             onClick={() => {
-              const defaults = {
+              commit({
                 fontSize: 16,
                 proseMaxWidth: 720,
                 autosaveMs: 300,
                 imagePasteDir: "assets",
-              };
-              commit(defaults);
+                exportTheme: "github",
+              });
             }}
             className="opacity-70 hover:opacity-100 underline"
           >

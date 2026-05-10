@@ -27,6 +27,11 @@ export const zh: Strings = {
   "settings.imageDir": "图片粘贴目录",
   "settings.imageDirHint": "（相对于 Vault 根目录）",
   "settings.locale": "语言",
+  "settings.shortcuts": "键盘快捷键",
+  "settings.shortcutsHint": "点击键位开始录制。Esc 取消。原生菜单项会保留默认快捷键。",
+  "settings.shortcutsRecord": "请按键…",
+  "settings.shortcutsReset": "全部重置",
+  "settings.exportTheme": "导出主题",
   "settings.restore": "恢复默认",
   "settings.done": "完成",
 

@@ -21,6 +21,7 @@ import { useT } from "./lib/i18n";
 import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
 import { buildParagraphLink } from "./lib/paragraph-link";
+import { matches as matchesShortcut } from "./lib/shortcuts";
 import {
   listVaultFiles,
   listenMenu,
@@ -95,6 +96,9 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWikilinkPicker, setShowWikilinkPicker] = useState(false);
+  const [wikilinkPickerMode, setWikilinkPickerMode] = useState<"full" | "completion">(
+    "full",
+  );
 
   const fontSize = useAppStore((s) => s.fontSize);
   const proseMaxWidth = useAppStore((s) => s.proseMaxWidth);
@@ -212,6 +216,8 @@ export function App() {
   }, [recentFiles]);
 
   // Settings → CSS variables + persist
+  const exportTheme = useAppStore((s) => s.exportTheme);
+  const imagePasteDir = useAppStore((s) => s.imagePasteDir);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -219,12 +225,18 @@ export function App() {
     try {
       localStorage.setItem(
         SETTINGS_KEY,
-        JSON.stringify({ fontSize, proseMaxWidth, autosaveMs }),
+        JSON.stringify({
+          fontSize,
+          proseMaxWidth,
+          autosaveMs,
+          imagePasteDir,
+          exportTheme,
+        }),
       );
     } catch {
       /*ignore*/
     }
-  }, [fontSize, proseMaxWidth, autosaveMs]);
+  }, [fontSize, proseMaxWidth, autosaveMs, imagePasteDir, exportTheme]);
 
   // Push recent file when active tab changes to a real file
   useEffect(() => {
@@ -255,6 +267,34 @@ export function App() {
     });
     return dispose;
   }, [focusMode, typewriterMode]);
+
+  // Auto-trigger the wikilink picker when the user types `[[`. Only fires in
+  // WYSIWYG (Milkdown / contenteditable) — source mode users can use the
+  // command palette entry which is faster anyway. Source mode also has its
+  // own keymap so reaching across is fragile.
+  useEffect(() => {
+    if (sourceMode) return;
+    const host = editorScrollRef.current;
+    if (!host) return;
+    const onInput = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      const node = range.startContainer;
+      if (node.nodeType !== Node.TEXT_NODE) return;
+      const offset = range.startOffset;
+      if (offset < 2) return;
+      const text = node.textContent ?? "";
+      if (text.slice(offset - 2, offset) === "[[") {
+        // Avoid re-triggering when picker is already open
+        if (showWikilinkPicker) return;
+        setWikilinkPickerMode("completion");
+        setShowWikilinkPicker(true);
+      }
+    };
+    host.addEventListener("input", onInput);
+    return () => host.removeEventListener("input", onInput);
+  }, [sourceMode, showWikilinkPicker]);
 
   // Wikilink click handler — works in both Milkdown WYSIWYG and CM6 source mode.
   // Detects a click landing inside `[[name]]` text and opens the matching
@@ -557,53 +597,78 @@ export function App() {
     }
   }
 
-  // Keyboard shortcuts (mirror what the native menu offers, plus extras)
+  // Keyboard shortcuts — driven by lib/shortcuts.ts (user-overridable) so
+  // they can be re-bound from the Settings dialog.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const meta = e.metaKey || e.ctrlKey;
-      if (!meta) return;
-      const k = e.key.toLowerCase();
-      if (e.shiftKey && k === "p") {
-        e.preventDefault();
-        setShowCommandPalette(true);
-      } else if (e.shiftKey && k === "f") {
-        e.preventDefault();
-        setShowSearch(true);
-      } else if (e.shiftKey && k === "o") {
-        e.preventDefault();
-        handleOpenVault();
-      } else if (k === "p") {
-        e.preventDefault();
-        setShowQuickOpen(true);
-      } else if (k === "s") {
+      // Save (potentially Save As)
+      if (matchesShortcut(e, "save")) {
         e.preventDefault();
         if (saveTimerRef.current !== null) {
           window.clearTimeout(saveTimerRef.current);
           saveTimerRef.current = null;
         }
-        if (e.shiftKey) handleSaveAs();
-        else performSave();
-      } else if (k === "f" && !e.shiftKey) {
-        // ⌘F: open find bar — but only for WYSIWYG (CodeMirror has its own).
+        performSave();
+        return;
+      }
+      if (matchesShortcut(e, "saveAs")) {
+        e.preventDefault();
+        handleSaveAs();
+        return;
+      }
+      if (matchesShortcut(e, "openVault")) {
+        e.preventDefault();
+        handleOpenVault();
+        return;
+      }
+      if (matchesShortcut(e, "openFile")) {
+        e.preventDefault();
+        handleOpenFile();
+        return;
+      }
+      if (matchesShortcut(e, "quickOpen")) {
+        e.preventDefault();
+        setShowQuickOpen(true);
+        return;
+      }
+      if (matchesShortcut(e, "commandPalette")) {
+        e.preventDefault();
+        setShowCommandPalette(true);
+        return;
+      }
+      if (matchesShortcut(e, "findInVault")) {
+        e.preventDefault();
+        setShowSearch(true);
+        return;
+      }
+      if (matchesShortcut(e, "findInFile")) {
+        // CM6 binds ⌘F natively in source mode; let it through.
         if (!sourceMode) {
           e.preventDefault();
           setShowFindBar(true);
         }
-      } else if (k === ",") {
+        return;
+      }
+      if (matchesShortcut(e, "settings")) {
         e.preventDefault();
         setShowSettings(true);
-      } else if (k === "/") {
+        return;
+      }
+      if (matchesShortcut(e, "toggleSourceMode")) {
         e.preventDefault();
         toggleSourceMode();
-      } else if (k === "b") {
+        return;
+      }
+      if (matchesShortcut(e, "toggleSidebar")) {
         e.preventDefault();
         toggleSidebar();
+        return;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [performSave]);
+  }, [performSave, sourceMode]);
 
   const fileKey = tab?.id ?? "__none__";
   const initialValue = tab?.content ?? "";
@@ -638,7 +703,10 @@ export function App() {
       {
         id: "insert_wikilink",
         label: tr("cmd.insertWikilink"),
-        run: () => setShowWikilinkPicker(true),
+        run: () => {
+          setWikilinkPickerMode("full");
+          setShowWikilinkPicker(true);
+        },
       },
       {
         id: "find_in_vault",
@@ -767,7 +835,11 @@ export function App() {
       )}
       {showWikilinkPicker && (
         <WikilinkPicker
-          onClose={() => setShowWikilinkPicker(false)}
+          mode={wikilinkPickerMode}
+          onClose={() => {
+            setShowWikilinkPicker(false);
+            setWikilinkPickerMode("full");
+          }}
           onInsert={(text) => {
             // Insert at the current selection in whichever editor has focus.
             const sel = window.getSelection();

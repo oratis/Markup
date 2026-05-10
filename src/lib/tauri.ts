@@ -57,8 +57,12 @@ export async function writeImage(
   });
 }
 
-export async function renderHtml(content: string, title: string | null): Promise<string> {
-  return await invoke<string>("render_html", { content, title });
+export async function renderHtml(
+  content: string,
+  title: string | null,
+  theme: "github" | "plain" | "tufte" = "github",
+): Promise<string> {
+  return await invoke<string>("render_html", { content, title, theme });
 }
 
 export async function pickVault(): Promise<string | null> {

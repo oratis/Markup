@@ -150,9 +150,14 @@ pub async fn write_image(
     Ok(rel.to_string_lossy().into_owned())
 }
 
-/// Render markdown to standalone HTML (used by the export commands).
+/// Render markdown to standalone HTML using one of the named themes.
+/// `theme` accepts "github" (default), "plain", or "tufte".
 #[tauri::command]
-pub async fn render_html(content: String, title: Option<String>) -> AppResult<String> {
+pub async fn render_html(
+    content: String,
+    title: Option<String>,
+    theme: Option<String>,
+) -> AppResult<String> {
     let mut opts = comrak::Options::default();
     opts.extension.table = true;
     opts.extension.strikethrough = true;
@@ -163,6 +168,7 @@ pub async fn render_html(content: String, title: Option<String>) -> AppResult<St
 
     let body = comrak::markdown_to_html(&content, &opts);
     let title = title.unwrap_or_else(|| "Markup export".to_string());
+    let css = theme_css(theme.as_deref().unwrap_or("github"));
 
     let html = format!(
         r#"<!doctype html>
@@ -171,22 +177,7 @@ pub async fn render_html(content: String, title: Option<String>) -> AppResult<St
 <meta charset="utf-8">
 <title>{}</title>
 <style>
-  body {{
-    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
-    max-width: 720px;
-    margin: 2.5rem auto;
-    line-height: 1.7;
-    color: #1f2328;
-    padding: 0 1.25rem;
-  }}
-  h1, h2, h3, h4, h5, h6 {{ line-height: 1.25; }}
-  pre {{ background: #f6f8fa; padding: 1rem; border-radius: 6px; overflow: auto; }}
-  code {{ font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; }}
-  blockquote {{ border-left: 3px solid #d0d7de; padding-left: 1rem; color: #57606a; }}
-  table {{ border-collapse: collapse; }}
-  th, td {{ border: 1px solid #d0d7de; padding: 6px 12px; }}
-  hr {{ border: none; border-top: 1px solid #d0d7de; margin: 2rem 0; }}
-  img {{ max-width: 100%; }}
+{}
 </style>
 </head>
 <body>
@@ -195,10 +186,81 @@ pub async fn render_html(content: String, title: Option<String>) -> AppResult<St
 </html>
 "#,
         html_escape(&title),
+        css,
         body
     );
     Ok(html)
 }
+
+fn theme_css(name: &str) -> &'static str {
+    match name {
+        "plain" => PLAIN_CSS,
+        "tufte" => TUFTE_CSS,
+        _ => GITHUB_CSS,
+    }
+}
+
+const GITHUB_CSS: &str = r#"
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  max-width: 720px;
+  margin: 2.5rem auto;
+  line-height: 1.7;
+  color: #1f2328;
+  padding: 0 1.25rem;
+}
+h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
+h1 { font-size: 2em; border-bottom: 1px solid #d0d7de; padding-bottom: .3em; }
+h2 { font-size: 1.5em; border-bottom: 1px solid #d0d7de; padding-bottom: .3em; }
+pre { background: #f6f8fa; padding: 1rem; border-radius: 6px; overflow: auto; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; }
+blockquote { border-left: 3px solid #d0d7de; padding-left: 1rem; color: #57606a; margin: 1em 0; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #d0d7de; padding: 6px 12px; }
+hr { border: none; border-top: 1px solid #d0d7de; margin: 2rem 0; }
+img { max-width: 100%; }
+a { color: #0969da; }
+"#;
+
+const PLAIN_CSS: &str = r#"
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  max-width: 640px;
+  margin: 3rem auto;
+  line-height: 1.65;
+  color: #111;
+  padding: 0 1.25rem;
+}
+pre { background: #f5f5f5; padding: .75rem; overflow: auto; }
+code { font-family: monospace; font-size: 0.9em; }
+blockquote { border-left: 2px solid #888; padding-left: 1rem; color: #555; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #ccc; padding: 6px 10px; }
+img { max-width: 100%; }
+a { color: inherit; text-decoration: underline; }
+"#;
+
+const TUFTE_CSS: &str = r#"
+body {
+  font-family: et-book, Palatino, "Palatino Linotype", Georgia, serif;
+  max-width: 64em;
+  margin: 4rem auto;
+  padding: 0 5rem;
+  line-height: 1.5;
+  color: #111;
+  background: #fffff8;
+}
+h1 { font-weight: 400; font-size: 2.4em; }
+h2 { font-style: italic; font-weight: 400; font-size: 1.5em; }
+h3, h4, h5, h6 { font-style: italic; font-weight: 400; }
+p, ol, ul, blockquote { width: 55%; }
+blockquote { font-style: italic; }
+pre { width: 52.5%; padding-left: 2.5%; }
+code { font-family: "Consolas", monospace; font-size: 0.95em; }
+img { max-width: 55%; }
+hr { border: 0; border-top: 1px solid #ccc; margin: 1.5em 0; }
+a { color: inherit; }
+"#;
 
 fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
