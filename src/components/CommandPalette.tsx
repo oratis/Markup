@@ -14,6 +14,31 @@ interface Props {
   onClose: () => void;
 }
 
+const MRU_KEY = "markup.cmdMRU";
+const MRU_CAP = 8;
+
+function readMru(): string[] {
+  try {
+    const raw = localStorage.getItem(MRU_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((x) => typeof x === "string").slice(0, MRU_CAP);
+  } catch {
+    return [];
+  }
+}
+
+function pushMru(id: string): void {
+  const cur = readMru();
+  const next = [id, ...cur.filter((x) => x !== id)].slice(0, MRU_CAP);
+  try {
+    localStorage.setItem(MRU_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function CommandPalette({ commands, onClose }: Props) {
   const t = useT();
   const [query, setQuery] = useState("");
@@ -25,7 +50,22 @@ export function CommandPalette({ commands, onClose }: Props) {
   }, []);
 
   const matches = useMemo(() => {
-    if (!query.trim()) return commands;
+    if (!query.trim()) {
+      // No query: surface recently-used commands at the top, in their
+      // most-recently-used order, then everything else in registration
+      // order.
+      const mru = readMru();
+      const byId = new Map(commands.map((c) => [c.id, c]));
+      const head: Command[] = [];
+      for (const id of mru) {
+        const c = byId.get(id);
+        if (c) {
+          head.push(c);
+          byId.delete(id);
+        }
+      }
+      return [...head, ...commands.filter((c) => byId.has(c.id))];
+    }
     const q = query.toLowerCase();
     return commands.filter((c) => `${c.label} ${c.hint ?? ""}`.toLowerCase().includes(q));
   }, [commands, query]);
@@ -37,6 +77,7 @@ export function CommandPalette({ commands, onClose }: Props) {
   async function runIndex(i: number) {
     const c = matches[i];
     if (!c) return;
+    pushMru(c.id);
     onClose();
     // Defer one tick so the modal is gone before the action runs.
     setTimeout(() => Promise.resolve(c.run()).catch(console.error), 0);

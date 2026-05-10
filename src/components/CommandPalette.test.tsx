@@ -1,6 +1,16 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type Command, CommandPalette } from "./CommandPalette";
+
+beforeEach(() => {
+  // The palette persists MRU to localStorage; reset between tests so
+  // ordering is deterministic.
+  try {
+    localStorage.removeItem("markup.cmdMRU");
+  } catch {
+    /* ignore */
+  }
+});
 
 function makeCommands(): { commands: Command[]; runs: string[] } {
   const runs: string[] = [];
@@ -83,5 +93,18 @@ describe("CommandPalette", () => {
       key: "Escape",
     });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("recently-used commands surface at the top of the empty-query list", () => {
+    const { commands } = makeCommands();
+    // Seed MRU with two recent commands; freshest first.
+    localStorage.setItem("markup.cmdMRU", JSON.stringify(["toggle_focus", "save"]));
+    const { container } = render(
+      <CommandPalette commands={commands} onClose={() => {}} />,
+    );
+    const labels = Array.from(container.querySelectorAll("button")).map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(labels.slice(0, 3)).toEqual(["Toggle Focus Mode", "Save", "Open Recent"]);
   });
 });
