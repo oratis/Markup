@@ -75,6 +75,8 @@ interface AppState {
   wordCountGoal: number;
   /** Show the top toolbar. Off = zen mode. */
   showToolbar: boolean;
+  /** Show the tab strip. Off hides it (single-doc focus). */
+  showTabBar: boolean;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -144,6 +146,7 @@ export interface Settings {
   showLineNumbers: boolean;
   wordCountGoal: number;
   showToolbar: boolean;
+  showTabBar: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -161,6 +164,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showLineNumbers: true,
   wordCountGoal: 0,
   showToolbar: true,
+  showTabBar: true,
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -263,6 +267,7 @@ export const useAppStore = create<AppState>((set) => ({
   showLineNumbers: DEFAULT_SETTINGS.showLineNumbers,
   wordCountGoal: DEFAULT_SETTINGS.wordCountGoal,
   showToolbar: DEFAULT_SETTINGS.showToolbar,
+  showTabBar: DEFAULT_SETTINGS.showTabBar,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -554,6 +559,7 @@ export const useAppStore = create<AppState>((set) => ({
       const showLineNumbers = patch.showLineNumbers ?? state.showLineNumbers;
       const wordCountGoal = clamp(patch.wordCountGoal ?? state.wordCountGoal, 0, 100_000);
       const showToolbar = patch.showToolbar ?? state.showToolbar;
+      const showTabBar = patch.showTabBar ?? state.showTabBar;
       return {
         fontSize,
         proseMaxWidth,
@@ -569,6 +575,7 @@ export const useAppStore = create<AppState>((set) => ({
         showLineNumbers,
         wordCountGoal,
         showToolbar,
+        showTabBar,
       };
     }),
 

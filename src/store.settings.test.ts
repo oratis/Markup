@@ -88,6 +88,13 @@ describe("settings", () => {
     expect(useAppStore.getState().showToolbar).toBe(true);
   });
 
+  it("toggles showTabBar boolean", () => {
+    useAppStore.getState().setSettings({ showTabBar: false });
+    expect(useAppStore.getState().showTabBar).toBe(false);
+    useAppStore.getState().setSettings({ showTabBar: true });
+    expect(useAppStore.getState().showTabBar).toBe(true);
+  });
+
   it("clamps wordCountGoal to [0, 100000]", () => {
     useAppStore.getState().setSettings({ wordCountGoal: -50 });
     expect(useAppStore.getState().wordCountGoal).toBe(0);

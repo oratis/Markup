@@ -289,6 +289,7 @@ export function App() {
   const showLineNumbers = useAppStore((s) => s.showLineNumbers);
   const wordCountGoal = useAppStore((s) => s.wordCountGoal);
   const showToolbar = useAppStore((s) => s.showToolbar);
+  const showTabBar = useAppStore((s) => s.showTabBar);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--markup-font-size", `${fontSize}px`);
@@ -311,6 +312,7 @@ export function App() {
           showLineNumbers,
           wordCountGoal,
           showToolbar,
+          showTabBar,
         }),
       );
     } catch {
@@ -331,6 +333,7 @@ export function App() {
     showLineNumbers,
     wordCountGoal,
     showToolbar,
+    showTabBar,
   ]);
 
   // Push recent file when active tab changes to a real file. Mirror to
@@ -1415,6 +1418,14 @@ export function App() {
         },
       },
       {
+        id: "toggle_tab_bar",
+        label: "Toggle Tab Bar",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ showTabBar: !s.showTabBar });
+        },
+      },
+      {
         id: "reveal_in_tree",
         label: "Reveal in File Tree",
         run: () => {
@@ -1480,6 +1491,7 @@ export function App() {
               showLineNumbers: s.showLineNumbers,
               wordCountGoal: s.wordCountGoal,
               showToolbar: s.showToolbar,
+              showTabBar: s.showTabBar,
             },
             null,
             2,
@@ -1766,6 +1778,13 @@ export function App() {
         },
       },
       {
+        id: "strip_md_in_place",
+        label: "Selection: Strip Markdown",
+        run: () => {
+          transformSelection(stripMarkdown);
+        },
+      },
+      {
         id: "copy_plain_text",
         label: "Copy as Plain Text",
         run: () => {
@@ -1897,6 +1916,7 @@ export function App() {
             showLineNumbers: true,
             wordCountGoal: 0,
             showToolbar: true,
+            showTabBar: true,
           });
           s.setTheme("auto");
           s.setRecentFiles([]);
@@ -2007,7 +2027,7 @@ export function App() {
   return (
     <div className="flex flex-col h-full">
       {showToolbar && <Toolbar onInsertLink={promptInsertLink} />}
-      <TabBar />
+      {showTabBar && <TabBar />}
       {showReload && (
         <ReloadPrompt
           onReload={() => {
