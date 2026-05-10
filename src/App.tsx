@@ -218,11 +218,18 @@ export function App() {
     const sess = readSession();
     if (sess.open.length > 0) {
       Promise.all(sess.open.map((p) => readFile(p).catch(() => null))).then((all) => {
+        let restored = 0;
         for (const loaded of all) {
-          if (loaded) openLoadedFile(loaded);
+          if (loaded) {
+            openLoadedFile(loaded);
+            restored += 1;
+          }
         }
         if (sess.active) {
           useAppStore.getState().setActiveTab(sess.active);
+        }
+        if (restored > 0) {
+          showToast(tr("toast.sessionRestored", restored));
         }
       });
     }
@@ -1539,6 +1546,14 @@ export function App() {
         run: () => {
           const s = useAppStore.getState();
           s.setSettings({ showTabBar: !s.showTabBar });
+        },
+      },
+      {
+        id: "toggle_spellcheck",
+        label: "Toggle Spell Check",
+        run: () => {
+          const s = useAppStore.getState();
+          s.setSettings({ spellcheck: !s.spellcheck });
         },
       },
       {

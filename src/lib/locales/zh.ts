@@ -93,6 +93,7 @@ export const zh: Strings = {
   "toast.reloaded": "已从磁盘重新加载",
   "toast.reloadedAll": "已重新加载 {0} 个文件",
   "toast.reloadAllPartial": "已重新加载 {0}，{1} 个失败",
+  "toast.sessionRestored": "已从上次会话恢复 {0} 个标签页",
   "toast.renameNoFile": "没有可重命名的文件",
   "toast.renameBadName": "文件名不能包含 '/'",
   "toast.renameFailed": "重命名失败",

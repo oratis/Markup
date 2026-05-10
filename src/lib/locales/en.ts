@@ -92,6 +92,7 @@ export const en = {
   "toast.reloaded": "Reloaded from disk",
   "toast.reloadedAll": "Reloaded {0} files",
   "toast.reloadAllPartial": "Reloaded {0}, {1} failed",
+  "toast.sessionRestored": "Restored {0} tabs from last session",
   "toast.renameNoFile": "No file to rename",
   "toast.renameBadName": "Name can't contain '/'",
   "toast.renameFailed": "Rename failed",
