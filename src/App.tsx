@@ -2170,6 +2170,49 @@ export function App() {
         run: promptInsertLink,
       },
       {
+        id: "follow_wikilink_at_cursor",
+        label: "Follow Wikilink at Cursor",
+        run: async () => {
+          // Source mode only — scan the current line for a [[…]] that
+          // covers the cursor and open the matching vault file.
+          const view = getActiveSourceView();
+          if (!view) {
+            showToast(tr("toast.followNeedsSource"));
+            return;
+          }
+          const head = view.state.selection.main.head;
+          const line = view.state.doc.lineAt(head);
+          const text = line.text;
+          const offsetInLine = head - line.from;
+          const re = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
+          let m: RegExpExecArray | null;
+          let found: string | null = null;
+          while ((m = re.exec(text))) {
+            if (m.index <= offsetInLine && offsetInLine <= m.index + m[0].length) {
+              found = m[1];
+              break;
+            }
+          }
+          if (!found) {
+            showToast(tr("toast.noWikilinkAtCursor"));
+            return;
+          }
+          const vault = useAppStore.getState().vaultFiles;
+          const target = findVaultFile(vault, found);
+          if (!target) {
+            showToast(tr("toast.wikilinkMiss", found));
+            return;
+          }
+          try {
+            const loaded = await readFile(target.path);
+            openLoadedFile(loaded);
+          } catch (e) {
+            console.error("follow_wikilink failed", e);
+            showToast(tr("toast.openFailed", target.path));
+          }
+        },
+      },
+      {
         id: "toggle_wikilink",
         label: "Toggle Wikilink on Selection",
         run: () => {

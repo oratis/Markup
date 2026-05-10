@@ -88,6 +88,8 @@ export const en = {
   "toast.copyFailed": "Copy failed",
   "toast.clipboardReadFailed": "Couldn't read clipboard",
   "toast.clipboardNotUrl": "Clipboard doesn't contain a URL",
+  "toast.followNeedsSource": "Switch to source mode to follow a wikilink at the cursor",
+  "toast.noWikilinkAtCursor": "No wikilink under the cursor",
   "toast.copiedPlainText": "Copied as plain text",
   "toast.copiedHtml": "Copied as HTML",
   "toast.savedAll": "Saved {0} files",
