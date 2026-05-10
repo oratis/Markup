@@ -2154,6 +2154,19 @@ export function App() {
         run: promptInsertLink,
       },
       {
+        id: "toggle_wikilink",
+        label: "Toggle Wikilink on Selection",
+        run: () => {
+          transformSelection((s) => {
+            const trimmed = s.trim();
+            if (trimmed.startsWith("[[") && trimmed.endsWith("]]")) {
+              return trimmed.slice(2, -2);
+            }
+            return `[[${trimmed}]]`;
+          });
+        },
+      },
+      {
         id: "paste_as_link",
         label: "Paste Clipboard as Markdown Link",
         run: async () => {
