@@ -22,6 +22,7 @@ import {
 import { useEffect, useRef } from "react";
 import { setActiveSourceView } from "../lib/active-source-view";
 import { autoClosePairs } from "../lib/cm-auto-close";
+import { wikilinkTrigger } from "../lib/cm-wikilink-trigger";
 import { installImageDrop } from "../lib/image-drop";
 import { installImagePaste } from "../lib/image-paste";
 import { log as perfLog } from "../lib/perf";
@@ -77,6 +78,7 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
           foldGutter(),
           bracketMatching(),
           autoClosePairs(),
+          wikilinkTrigger(),
         ];
 
     const state = EditorState.create({

@@ -390,10 +390,21 @@ export function App() {
     };
   }, [tab?.id, sourceMode]);
 
+  // Source-mode `[[` trigger: SourceEditor's CM6 input handler dispatches
+  // markup:wikilink-trigger; we open the picker in completion mode here.
+  useEffect(() => {
+    const onTrigger = () => {
+      if (showWikilinkPicker) return;
+      setWikilinkPickerMode("completion");
+      setShowWikilinkPicker(true);
+    };
+    window.addEventListener("markup:wikilink-trigger", onTrigger);
+    return () => window.removeEventListener("markup:wikilink-trigger", onTrigger);
+  }, [showWikilinkPicker]);
+
   // Auto-trigger the wikilink picker when the user types `[[`. Only fires in
-  // WYSIWYG (Milkdown / contenteditable) — source mode users can use the
-  // command palette entry which is faster anyway. Source mode also has its
-  // own keymap so reaching across is fragile.
+  // WYSIWYG (Milkdown / contenteditable) — source mode handles its own
+  // detection via the CM6 input handler above.
   useEffect(() => {
     if (sourceMode) return;
     const host = editorScrollRef.current;
@@ -2125,17 +2136,12 @@ export function App() {
             setWikilinkPickerMode("full");
           }}
           onInsert={(text) => {
-            // Insert at the current selection in whichever editor has focus.
-            const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) {
-              const range = sel.getRangeAt(0);
-              range.deleteContents();
-              range.insertNode(document.createTextNode(text));
-              sel.collapseToEnd();
-            } else {
-              navigator.clipboard.writeText(text).catch(() => {});
-              showToast(tr("toast.copied", text));
-            }
+            // insertMarkdown picks the right surface (CM6 dispatch in
+            // source mode, DOM Selection in WYSIWYG); falls back to
+            // clipboard when neither editor has focus.
+            if (insertMarkdown(text)) return;
+            navigator.clipboard.writeText(text).catch(() => {});
+            showToast(tr("toast.copied", text));
           }}
         />
       )}
