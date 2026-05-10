@@ -22,6 +22,7 @@ import {
 import { useEffect, useRef } from "react";
 import { setActiveSourceView } from "../lib/active-source-view";
 import { autoClosePairs } from "../lib/cm-auto-close";
+import { continueListKeymap } from "../lib/cm-list-continue";
 import { wikilinkTrigger } from "../lib/cm-wikilink-trigger";
 import { installImageDrop } from "../lib/image-drop";
 import { installImagePaste } from "../lib/image-paste";
@@ -91,7 +92,15 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
         history(),
         drawSelection(),
         search({ top: true }),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...foldKeymap]),
+        // List-continuation keymap runs first so Enter on a list line
+        // pre-empts the default newline insertion.
+        keymap.of([
+          ...continueListKeymap,
+          ...defaultKeymap,
+          ...historyKeymap,
+          ...searchKeymap,
+          ...foldKeymap,
+        ]),
         wrapCompartment.of(initialLineWrap ? EditorView.lineWrapping : []),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
