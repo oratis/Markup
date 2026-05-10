@@ -18,6 +18,7 @@ import { Slice } from "@milkdown/prose/model";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
 import { useEffect, useRef } from "react";
+import { wikilinkDecorate } from "../lib/milkdown/wikilink-deco";
 import { log as perfLog } from "../lib/perf";
 import { SourceEditor } from "./SourceEditor";
 
@@ -56,7 +57,8 @@ function WysiwygEditor({
       .use(cursor)
       .use(indent)
       .use(math)
-      .use(diagram),
+      .use(diagram)
+      .use(wikilinkDecorate),
   );
 
   useEffect(() => {

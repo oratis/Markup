@@ -99,6 +99,40 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Toast animation phases */
+.toast-item {
+  transition: opacity 200ms ease, transform 160ms ease;
+}
+.toast-item[data-phase="in"] {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.toast-item[data-phase="settled"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast-item[data-phase="out"] {
+  opacity: 0;
+  transform: translateY(-2px);
+}
+
+/* Wikilink — visual treatment for [[xxx]] in WYSIWYG editor */
+.milkdown .wikilink {
+  background: rgba(9, 105, 218, 0.1);
+  color: #0969da;
+  border-radius: 3px;
+  padding: 0 2px;
+  cursor: pointer;
+}
+html.theme-dark .milkdown .wikilink {
+  background: rgba(88, 166, 255, 0.18);
+  color: #58a6ff;
+}
+html.theme-sepia .milkdown .wikilink {
+  background: rgba(139, 90, 43, 0.18);
+  color: #6b4523;
+}
+
 /* Focus mode: dim non-active blocks. Pure CSS via [data-active] attribute set
    by lib/focus-typewriter.ts on selectionchange. */
 .focus-mode .milkdown .editor > *,

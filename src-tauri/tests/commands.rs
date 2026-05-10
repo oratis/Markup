@@ -9,6 +9,10 @@ use markup_lib::scanner::{is_markdown, scan_markdown_files};
 use std::fs;
 use tempfile::tempdir;
 
+// Re-import the helpers we'll exercise. The #[tauri::command] macro keeps
+// the original async fn callable; we just need a tokio runtime.
+use markup_lib::vault::{file_mtime_ms, file_mtime_ms_from_meta};
+
 #[test]
 fn is_markdown_recognises_known_extensions() {
     assert!(is_markdown(std::path::Path::new("a.md")));
@@ -94,4 +98,62 @@ fn schema_fields_are_distinct() {
     assert_ne!(s.path, s.title);
     assert_ne!(s.title, s.body);
     assert_ne!(s.body, s.mtime_ms);
+}
+
+#[test]
+fn mtime_helpers_return_recent_timestamp() {
+    let tmp = tempdir().unwrap();
+    let p = tmp.path().join("a.md");
+    fs::write(&p, "x").unwrap();
+    let meta = fs::metadata(&p).unwrap();
+    let ms = file_mtime_ms_from_meta(&meta);
+    assert!(ms > 0);
+    let ms2 = file_mtime_ms(&p);
+    // Within 5s of each other
+    assert!((ms2 - ms).abs() < 5000);
+}
+
+#[test]
+fn mtime_for_missing_file_is_zero() {
+    let tmp = tempdir().unwrap();
+    let p = tmp.path().join("does-not-exist.md");
+    assert_eq!(file_mtime_ms(&p), 0);
+}
+
+#[test]
+fn search_returns_results_in_score_order() {
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    runtime.block_on(async {
+        let tmp = tempdir().unwrap();
+        let idx = MarkupIndex::open_or_create(tmp.path()).unwrap();
+        // Two docs, one mentions the term once, the other repeatedly.
+        idx.upsert_file(
+            std::path::Path::new("/a.md"),
+            "tantivy",
+            1,
+        )
+        .await
+        .unwrap();
+        idx.upsert_file(
+            std::path::Path::new("/b.md"),
+            "tantivy tantivy tantivy and more tantivy",
+            2,
+        )
+        .await
+        .unwrap();
+        idx.commit().await.unwrap();
+        let hits = idx.search("tantivy", 5).unwrap();
+        assert_eq!(hits.len(), 2);
+        // /b.md has more matches → higher BM25 score
+        assert_eq!(hits[0].path, "/b.md");
+        assert!(hits[0].score >= hits[1].score);
+    });
+}
+
+#[test]
+fn search_empty_index_returns_no_hits() {
+    let tmp = tempdir().unwrap();
+    let idx = MarkupIndex::open_or_create(tmp.path()).unwrap();
+    let hits = idx.search("anything", 10).unwrap();
+    assert!(hits.is_empty());
 }

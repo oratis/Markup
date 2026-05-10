@@ -53,6 +53,7 @@ interface AppState {
   newScratchTab: () => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
+  reorderTab: (fromId: string, toId: string) => void;
   updateActiveContent: (content: string) => void;
   setActiveStatus: (status: SaveStatus, errorMessage?: string | null) => void;
   setActiveMtime: (mtimeMs: number) => void;
@@ -233,6 +234,18 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   setActiveTab: (id) => set({ activeTabId: id }),
+
+  reorderTab: (fromId, toId) =>
+    set((state) => {
+      if (fromId === toId) return state;
+      const tabs = [...state.tabs];
+      const fromIdx = tabs.findIndex((t) => t.id === fromId);
+      const toIdx = tabs.findIndex((t) => t.id === toId);
+      if (fromIdx < 0 || toIdx < 0) return state;
+      const [moved] = tabs.splice(fromIdx, 1);
+      tabs.splice(toIdx, 0, moved);
+      return { tabs };
+    }),
 
   updateActiveContent: (content) =>
     set((state) => {

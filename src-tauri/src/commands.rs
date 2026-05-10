@@ -268,6 +268,77 @@ fn html_escape(s: &str) -> String {
         .replace('>', "&gt;")
 }
 
+#[cfg(test)]
+mod render_tests {
+    use super::*;
+
+    /// Recreates the body of `render_html` for unit testing — the
+    /// `#[tauri::command]` macro wraps the public fn behind a handler that
+    /// expects an Invoke context, which is awkward to fake.
+    fn run_render(content: &str, title: Option<&str>, theme: Option<&str>) -> String {
+        let mut opts = comrak::Options::default();
+        opts.extension.table = true;
+        opts.extension.strikethrough = true;
+        opts.extension.tasklist = true;
+        opts.extension.autolink = true;
+        opts.extension.footnotes = true;
+        opts.render.unsafe_ = true;
+        let body = comrak::markdown_to_html(content, &opts);
+        let title = title.unwrap_or("Markup export");
+        let css = theme_css(theme.unwrap_or("github"));
+        format!(
+            "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>{}</title>\n<style>\n{}\n</style>\n</head>\n<body>\n{}\n</body>\n</html>\n",
+            html_escape(title),
+            css,
+            body
+        )
+    }
+
+    #[test]
+    fn theme_css_unknown_falls_back_to_github() {
+        assert_eq!(theme_css("zhgrf"), theme_css("github"));
+    }
+
+    #[test]
+    fn theme_css_distinguishes_known_themes() {
+        let g = theme_css("github");
+        let p = theme_css("plain");
+        let t = theme_css("tufte");
+        assert!(g != p && p != t && g != t);
+        assert!(p.contains("Georgia"));
+        assert!(t.contains("Palatino") || t.contains("et-book"));
+    }
+
+    #[test]
+    fn render_emits_doctype_and_body_for_each_theme() {
+        for theme in ["github", "plain", "tufte"] {
+            let html = run_render("# Hi\n\nbody", Some("X"), Some(theme));
+            assert!(html.starts_with("<!doctype html>"));
+            assert!(html.contains("<title>X</title>"));
+            assert!(html.contains("<h1>"));
+            assert!(html.contains("body"));
+        }
+    }
+
+    #[test]
+    fn render_escapes_html_special_chars_in_title() {
+        let html = run_render("body", Some("<bad>"), None);
+        assert!(html.contains("<title>&lt;bad&gt;</title>"));
+    }
+
+    #[test]
+    fn render_supports_gfm_extensions() {
+        let html = run_render("| a | b |\n|---|---|\n| 1 | 2 |", None, None);
+        assert!(html.contains("<table>"));
+        let html = run_render("~~old~~", None, None);
+        assert!(html.contains("<del>"));
+        let html = run_render("- [x] done", None, None);
+        assert!(html.contains("type=\"checkbox\""));
+        let html = run_render("https://example.com", None, None);
+        assert!(html.contains("href=\"https://example.com\""));
+    }
+}
+
 /// Append a perf observation to ~/Library/Logs/markup/perf.log.
 /// Used by Spike 0.2 instrumentation. Failures are ignored.
 #[tauri::command]
