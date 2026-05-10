@@ -1482,6 +1482,37 @@ export function App() {
         },
       },
       {
+        id: "cursor_doc_start",
+        label: "Go to Document Start (Source)",
+        run: async () => {
+          const view = getActiveSourceView();
+          if (!view) return;
+          const { cursorDocStart } = await import("@codemirror/commands");
+          cursorDocStart(view);
+        },
+      },
+      {
+        id: "cursor_doc_end",
+        label: "Go to Document End (Source)",
+        run: async () => {
+          const view = getActiveSourceView();
+          if (!view) return;
+          const { cursorDocEnd } = await import("@codemirror/commands");
+          cursorDocEnd(view);
+        },
+      },
+      {
+        id: "select_next_occurrence",
+        label: "Select Next Occurrence (Source)",
+        shortcut: "⌘D",
+        run: async () => {
+          const view = getActiveSourceView();
+          if (!view) return;
+          const { selectNextOccurrence } = await import("@codemirror/search");
+          selectNextOccurrence(view);
+        },
+      },
+      {
         id: "jump_to_line",
         label: "Jump to Line… (Source)",
         run: () => {
