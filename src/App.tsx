@@ -19,9 +19,11 @@ import { WikilinkPicker } from "./components/WikilinkPicker";
 import { getActiveSourceView } from "./lib/active-source-view";
 import {
   cycleHeadingLevel,
+  dedupLines,
   duplicateLine,
   moveLineDown,
   moveLineUp,
+  reverseLines,
   setHeadingLevel,
   sortLines,
   toggleBlockquote,
@@ -1850,6 +1852,20 @@ export function App() {
         label: "Sort Lines Descending",
         run: () => {
           sortLines("desc");
+        },
+      },
+      {
+        id: "reverse_lines",
+        label: "Reverse Lines",
+        run: () => {
+          reverseLines();
+        },
+      },
+      {
+        id: "dedup_lines",
+        label: "Remove Duplicate Lines",
+        run: () => {
+          dedupLines();
         },
       },
       {

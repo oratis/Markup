@@ -212,6 +212,47 @@ export function sortLines(direction: "asc" | "desc"): boolean {
   return true;
 }
 
+/** Reverse the order of the selected lines. No-op when fewer than two
+ * lines are selected. */
+export function reverseLines(): boolean {
+  const view = getActiveSourceView();
+  if (!view) return false;
+  const block = selectedLines(view.state);
+  if (block.endLine - block.startLine < 1) return false;
+  const lines: string[] = [];
+  for (let i = block.startLine; i <= block.endLine; i++) {
+    lines.push(view.state.doc.line(i).text);
+  }
+  lines.reverse();
+  view.dispatch({
+    changes: { from: block.from, to: block.to, insert: lines.join("\n") },
+    userEvent: "input.reverse",
+  });
+  return true;
+}
+
+/** Remove consecutive duplicate lines (preserves first occurrence) over
+ * the selection. Returns false when fewer than two lines are selected. */
+export function dedupLines(): boolean {
+  const view = getActiveSourceView();
+  if (!view) return false;
+  const block = selectedLines(view.state);
+  if (block.endLine - block.startLine < 1) return false;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (let i = block.startLine; i <= block.endLine; i++) {
+    const t = view.state.doc.line(i).text;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  view.dispatch({
+    changes: { from: block.from, to: block.to, insert: out.join("\n") },
+    userEvent: "input.dedup",
+  });
+  return true;
+}
+
 /** Add or remove a leading `> ` on each selected line. If every line in
  * the selection is already a blockquote, strip the prefix; otherwise add
  * it everywhere. */

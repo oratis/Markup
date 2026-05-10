@@ -4,9 +4,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { setActiveSourceView } from "./active-source-view";
 import {
   cycleHeadingLevel,
+  dedupLines,
   duplicateLine,
   moveLineDown,
   moveLineUp,
+  reverseLines,
   setHeadingLevel,
   sortLines,
   toggleBlockquote,
@@ -186,5 +188,32 @@ describe("sortLines", () => {
     const view = mountView("only", 0);
     expect(sortLines("asc")).toBe(false);
     expect(view.state.doc.toString()).toBe("only");
+  });
+});
+
+describe("reverseLines", () => {
+  it("reverses the order of the selected lines", () => {
+    const view = mountView("a\nb\nc", 0, 5);
+    reverseLines();
+    expect(view.state.doc.toString()).toBe("c\nb\na");
+  });
+
+  it("is a no-op for a single-line selection", () => {
+    const view = mountView("solo", 0);
+    expect(reverseLines()).toBe(false);
+    expect(view.state.doc.toString()).toBe("solo");
+  });
+});
+
+describe("dedupLines", () => {
+  it("removes duplicate lines preserving first occurrence", () => {
+    const view = mountView("a\nb\na\nc\nb\na", 0, 11);
+    dedupLines();
+    expect(view.state.doc.toString()).toBe("a\nb\nc");
+  });
+
+  it("is a no-op for a single-line selection", () => {
+    mountView("only", 0);
+    expect(dedupLines()).toBe(false);
   });
 });
