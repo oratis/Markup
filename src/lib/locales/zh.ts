@@ -46,6 +46,9 @@ export const zh: Strings = {
   "quickOpen.empty": "无匹配。",
   "wikilinkPicker.placeholder": "插入 Wikilink…",
   "cmd.insertWikilink": "插入 Wikilink…",
+  "cmd.resetSettings": "重置所有设置…",
+  "settings.confirmReset":
+    "确认把所有设置（字体、版式、快捷键、语言、主题）重置为默认值吗？",
   "search.placeholder": "搜索 Vault…",
   "search.empty": "无结果。",
   "search.busy": "搜索中…",

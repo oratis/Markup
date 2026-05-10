@@ -45,6 +45,9 @@ export const en = {
   "quickOpen.empty": "No matches.",
   "wikilinkPicker.placeholder": "Insert wikilink to file…",
   "cmd.insertWikilink": "Insert Wikilink…",
+  "cmd.resetSettings": "Reset All Settings…",
+  "settings.confirmReset":
+    "Reset all settings (font, layout, shortcuts, language, theme) to defaults?",
   "search.placeholder": "Search vault…",
   "search.empty": "No matches.",
   "search.busy": "Searching…",

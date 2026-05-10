@@ -204,6 +204,19 @@ mod tests {
     }
 
     #[test]
+    fn locale_path_lives_under_application_support_when_home_is_set() {
+        // We don't mutate process env here (race-prone in test runners);
+        // just check the path *shape* derived from whatever HOME is.
+        if let Some(p) = locale_path() {
+            let s = p.to_string_lossy();
+            assert!(s.ends_with("markup/locale"), "got: {s}");
+            assert!(s.contains("Application Support"), "got: {s}");
+        }
+        // If HOME is unset, locale_path returns None — that's acceptable;
+        // detect() will then fall through to env-locale.
+    }
+
+    #[test]
     fn locale_from_str_explicit_choice() {
         assert!(matches!(Locale::from_str("zh"), Locale::Zh));
         assert!(matches!(Locale::from_str("en"), Locale::En));

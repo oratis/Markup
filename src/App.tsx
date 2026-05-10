@@ -21,6 +21,7 @@ import { useT } from "./lib/i18n";
 import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
 import { buildParagraphLink } from "./lib/paragraph-link";
+import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
 import {
@@ -768,6 +769,36 @@ export function App() {
         run: () => {
           setWikilinkPickerMode("full");
           setShowWikilinkPicker(true);
+        },
+      },
+      {
+        id: "reset_settings",
+        label: tr("cmd.resetSettings"),
+        run: () => {
+          if (!window.confirm(tr("settings.confirmReset"))) return;
+          // Reset every persisted preference to its default — store +
+          // shortcuts + theme + locale + onboarding flag.
+          const s = useAppStore.getState();
+          s.setSettings({
+            fontSize: 16,
+            proseMaxWidth: 720,
+            autosaveMs: 300,
+            imagePasteDir: "assets",
+            exportTheme: "github",
+          });
+          s.setTheme("auto");
+          s.setRecentFiles([]);
+          if (s.outlineOpen) s.toggleOutline();
+          if (s.focusMode) s.toggleFocusMode();
+          if (s.typewriterMode) s.toggleTypewriterMode();
+          resetAllShortcuts();
+          // Drop any persisted state that bypasses store (locale + onboarded)
+          try {
+            localStorage.removeItem("markup.locale");
+            localStorage.removeItem("markup.onboarded");
+          } catch {
+            /*ignore*/
+          }
         },
       },
       {
