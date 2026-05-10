@@ -36,7 +36,12 @@ export type ShortcutId =
   | "moveLineUp"
   | "moveLineDown"
   | "duplicateLine"
-  | "toggleBlockquote";
+  | "toggleBlockquote"
+  | "headingUp"
+  | "headingDown"
+  | "listBullet"
+  | "listOrdered"
+  | "listTask";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -62,6 +67,11 @@ export const defaults: Record<ShortcutId, string> = {
   moveLineDown: "Alt+ArrowDown",
   duplicateLine: "Shift+Alt+ArrowDown",
   toggleBlockquote: "Mod+'",
+  headingUp: "Mod+Alt+ArrowUp",
+  headingDown: "Mod+Alt+ArrowDown",
+  listBullet: "Mod+Shift+8",
+  listOrdered: "Mod+Shift+7",
+  listTask: "Mod+Shift+9",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -88,6 +98,11 @@ export const labels: Record<ShortcutId, string> = {
   moveLineDown: "Move Line Down",
   duplicateLine: "Duplicate Line",
   toggleBlockquote: "Toggle Blockquote",
+  headingUp: "Promote Heading",
+  headingDown: "Demote Heading",
+  listBullet: "Toggle Bullet List",
+  listOrdered: "Toggle Numbered List",
+  listTask: "Toggle Task List",
 };
 
 const STORAGE_KEY = "markup.shortcuts";

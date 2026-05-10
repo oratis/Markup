@@ -2,7 +2,14 @@ import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { afterEach, describe, expect, it } from "vitest";
 import { setActiveSourceView } from "./active-source-view";
-import { duplicateLine, moveLineDown, moveLineUp, toggleBlockquote } from "./cm-line-ops";
+import {
+  cycleHeadingLevel,
+  duplicateLine,
+  moveLineDown,
+  moveLineUp,
+  toggleBlockquote,
+  toggleList,
+} from "./cm-line-ops";
 
 function mountView(doc: string, anchor = 0, head?: number): EditorView {
   const view = new EditorView({
@@ -73,5 +80,69 @@ describe("toggleBlockquote", () => {
     const view = mountView("> a\nb\n> c", 0, 9);
     expect(toggleBlockquote()).toBe(true);
     expect(view.state.doc.toString()).toBe("> > a\n> b\n> > c");
+  });
+});
+
+describe("cycleHeadingLevel", () => {
+  it("promotes plain text to H1", () => {
+    const view = mountView("hello", 0);
+    expect(cycleHeadingLevel(1)).toBe(true);
+    expect(view.state.doc.toString()).toBe("# hello");
+  });
+
+  it("promotes H2 to H3", () => {
+    const view = mountView("## title", 0);
+    cycleHeadingLevel(1);
+    expect(view.state.doc.toString()).toBe("### title");
+  });
+
+  it("clamps at H6", () => {
+    const view = mountView("###### deep", 0);
+    cycleHeadingLevel(1);
+    expect(view.state.doc.toString()).toBe("###### deep");
+  });
+
+  it("demoting H1 strips the heading marker entirely", () => {
+    const view = mountView("# top", 0);
+    cycleHeadingLevel(-1);
+    expect(view.state.doc.toString()).toBe("top");
+  });
+
+  it("converts a bullet line into a heading when promoting", () => {
+    const view = mountView("- item", 0);
+    cycleHeadingLevel(1);
+    expect(view.state.doc.toString()).toBe("# item");
+  });
+});
+
+describe("toggleList", () => {
+  it("turns plain lines into a bullet list", () => {
+    const view = mountView("a\nb", 0, 3);
+    toggleList("bullet");
+    expect(view.state.doc.toString()).toBe("- a\n- b");
+  });
+
+  it("strips the marker when every line is already that list type", () => {
+    const view = mountView("- a\n- b", 0, 7);
+    toggleList("bullet");
+    expect(view.state.doc.toString()).toBe("a\nb");
+  });
+
+  it("converts a bullet list into a numbered list", () => {
+    const view = mountView("- a\n- b\n- c", 0, 11);
+    toggleList("ordered");
+    expect(view.state.doc.toString()).toBe("1. a\n2. b\n3. c");
+  });
+
+  it("turns plain lines into a task list", () => {
+    const view = mountView("buy milk\nfeed cat", 0, 17);
+    toggleList("task");
+    expect(view.state.doc.toString()).toBe("- [ ] buy milk\n- [ ] feed cat");
+  });
+
+  it("strips a task list when every line is already a task", () => {
+    const view = mountView("- [x] done\n- [ ] todo", 0, 21);
+    toggleList("task");
+    expect(view.state.doc.toString()).toBe("done\ntodo");
   });
 });

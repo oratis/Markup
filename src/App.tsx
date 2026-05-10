@@ -17,10 +17,12 @@ import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { WikilinkPicker } from "./components/WikilinkPicker";
 import {
+  cycleHeadingLevel,
   duplicateLine,
   moveLineDown,
   moveLineUp,
   toggleBlockquote,
+  toggleList,
 } from "./lib/cm-line-ops";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
@@ -949,6 +951,36 @@ export function App() {
           return;
         }
       }
+      if (matchesShortcut(e, "headingUp")) {
+        if (cycleHeadingLevel(1)) {
+          e.preventDefault();
+          return;
+        }
+      }
+      if (matchesShortcut(e, "headingDown")) {
+        if (cycleHeadingLevel(-1)) {
+          e.preventDefault();
+          return;
+        }
+      }
+      if (matchesShortcut(e, "listBullet")) {
+        if (toggleList("bullet")) {
+          e.preventDefault();
+          return;
+        }
+      }
+      if (matchesShortcut(e, "listOrdered")) {
+        if (toggleList("ordered")) {
+          e.preventDefault();
+          return;
+        }
+      }
+      if (matchesShortcut(e, "listTask")) {
+        if (toggleList("task")) {
+          e.preventDefault();
+          return;
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1127,6 +1159,46 @@ export function App() {
         label: "Toggle Blockquote (Source)",
         run: () => {
           toggleBlockquote();
+        },
+      },
+      {
+        id: "promote_heading",
+        label: "Promote Heading (+ #)",
+        shortcut: "⌘⌥↑",
+        run: () => {
+          cycleHeadingLevel(1);
+        },
+      },
+      {
+        id: "demote_heading",
+        label: "Demote Heading (- #)",
+        shortcut: "⌘⌥↓",
+        run: () => {
+          cycleHeadingLevel(-1);
+        },
+      },
+      {
+        id: "list_bullet",
+        label: "Toggle Bullet List",
+        shortcut: "⌘⇧8",
+        run: () => {
+          toggleList("bullet");
+        },
+      },
+      {
+        id: "list_ordered",
+        label: "Toggle Numbered List",
+        shortcut: "⌘⇧7",
+        run: () => {
+          toggleList("ordered");
+        },
+      },
+      {
+        id: "list_task",
+        label: "Toggle Task List",
+        shortcut: "⌘⇧9",
+        run: () => {
+          toggleList("task");
         },
       },
       {
