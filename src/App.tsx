@@ -1261,6 +1261,15 @@ export function App() {
         useAppStore.getState().activatePrevTab();
         return;
       }
+      // Ctrl+Tab / Ctrl+Shift+Tab — alternate next/prev tab bindings
+      // (VSCode / browser convention). Distinct from the user-bound
+      // shortcuts so both pairs work simultaneously.
+      if (e.ctrlKey && !e.metaKey && !e.altKey && e.key === "Tab") {
+        e.preventDefault();
+        if (e.shiftKey) useAppStore.getState().activatePrevTab();
+        else useAppStore.getState().activateNextTab();
+        return;
+      }
       if (matchesShortcut(e, "reopenClosed")) {
         e.preventDefault();
         reopenLastClosed();
