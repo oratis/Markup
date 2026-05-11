@@ -3,6 +3,7 @@ import { setActiveSourceView } from "./active-source-view";
 import {
   buildTableMarkdown,
   insertMarkdown,
+  toSentenceCase,
   toTitleCase,
   toggleHtmlCommentText,
   transformSelection,
@@ -82,6 +83,30 @@ describe("toTitleCase", () => {
 
   it("lowercases the rest of an ALL-CAPS word", () => {
     expect(toTitleCase("ENGLISH and 中文")).toBe("English And 中文");
+  });
+});
+
+describe("toSentenceCase", () => {
+  it("capitalises the first letter and lowercases the rest", () => {
+    expect(toSentenceCase("HELLO WORLD")).toBe("Hello world");
+  });
+
+  it("capitalises after . ! ?", () => {
+    expect(toSentenceCase("FIRST. SECOND! THIRD? FOURTH")).toBe(
+      "First. Second! Third? Fourth",
+    );
+  });
+
+  it("returns empty string unchanged", () => {
+    expect(toSentenceCase("")).toBe("");
+  });
+
+  it("preserves non-letter content", () => {
+    expect(toSentenceCase("HELLO 123 WORLD")).toBe("Hello 123 world");
+  });
+
+  it("handles unicode letters", () => {
+    expect(toSentenceCase("ÉCOLE EST OUVERTE. ÇA VA?")).toBe("École est ouverte. Ça va?");
   });
 });
 

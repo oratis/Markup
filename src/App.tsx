@@ -52,6 +52,7 @@ import { installImagePaste } from "./lib/image-paste";
 import {
   buildTableMarkdown,
   insertMarkdown,
+  toSentenceCase,
   toTitleCase,
   toggleHtmlCommentText,
   transformSelection,
@@ -2135,6 +2136,13 @@ export function App() {
         label: "Selection: Title Case",
         run: () => {
           transformSelection(toTitleCase);
+        },
+      },
+      {
+        id: "case_sentence",
+        label: "Selection: Sentence case",
+        run: () => {
+          transformSelection(toSentenceCase);
         },
       },
       {

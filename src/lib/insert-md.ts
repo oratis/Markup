@@ -101,6 +101,19 @@ export function toTitleCase(s: string): string {
   );
 }
 
+/** Sentence-case: lowercase everything, then capitalise the first letter
+ * of each sentence (start of string or after `. ! ?` + whitespace).
+ * Useful for un-shouting ALL-CAPS paragraphs without losing sentence
+ * boundaries. */
+export function toSentenceCase(s: string): string {
+  return s
+    .toLocaleLowerCase()
+    .replace(
+      /(^|[.!?]\s+)(\p{L})/gu,
+      (_, sep, letter) => sep + letter.toLocaleUpperCase(),
+    );
+}
+
 /** Pure toggle: if `s` is wrapped in `<!-- … -->` (with optional padding),
  * return the inside; otherwise wrap it in `<!-- … -->`. Keeps the comment
  * command idempotent — running it twice on a selection returns the
