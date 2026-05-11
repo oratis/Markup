@@ -52,7 +52,8 @@ export type ShortcutId =
   | "moveTabLeft"
   | "moveTabRight"
   | "cycleTheme"
-  | "showCheatsheet";
+  | "showCheatsheet"
+  | "insertHr";
 
 export const defaults: Record<ShortcutId, string> = {
   save: "Mod+S",
@@ -94,6 +95,7 @@ export const defaults: Record<ShortcutId, string> = {
   moveTabRight: "Mod+Shift+Alt+ArrowRight",
   cycleTheme: "Mod+Alt+T",
   showCheatsheet: "Mod+Shift+/",
+  insertHr: "Mod+Shift+-",
 };
 
 export const labels: Record<ShortcutId, string> = {
@@ -136,6 +138,7 @@ export const labels: Record<ShortcutId, string> = {
   moveTabRight: "Move Active Tab Right",
   cycleTheme: "Cycle Theme",
   showCheatsheet: "Show Shortcuts Cheatsheet",
+  insertHr: "Insert Horizontal Rule",
 };
 
 const STORAGE_KEY = "markup.shortcuts";

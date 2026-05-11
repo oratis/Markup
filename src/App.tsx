@@ -1412,6 +1412,11 @@ export function App() {
         setShowCheatsheet(true);
         return;
       }
+      if (matchesShortcut(e, "insertHr")) {
+        e.preventDefault();
+        insertMarkdown("\n\n---\n\n");
+        return;
+      }
       // Cmd+1..9 = jump to tab N (last digit = last tab; matches browser).
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         const n = Number(e.key);
@@ -1779,6 +1784,7 @@ export function App() {
       {
         id: "insert_hr",
         label: "Insert Horizontal Rule",
+        shortcut: "⌘⇧-",
         run: () => {
           insertMarkdown("\n\n---\n\n");
         },
