@@ -85,6 +85,7 @@ import {
   renderHtml,
   writeFile,
 } from "./lib/tauri";
+import { buildToc } from "./lib/toc";
 import { checkForUpdates } from "./lib/updater";
 import { findVaultFile, wikilinkAtClick } from "./lib/wikilink";
 import { DEFAULT_SETTINGS, type Theme, getActiveTab, useAppStore } from "./store";
@@ -1893,6 +1894,22 @@ export function App() {
           const mm = String(d.getMonth() + 1).padStart(2, "0");
           const dd = String(d.getDate()).padStart(2, "0");
           insertMarkdown(`${yyyy}-${mm}-${dd}`);
+        },
+      },
+      {
+        id: "insert_toc",
+        label: "Insert Table of Contents",
+        run: () => {
+          if (!tab) {
+            showToast(tr("toast.copyFailed"));
+            return;
+          }
+          const toc = buildToc(parseHeadings(tab.content));
+          if (!toc) {
+            showToast(tr("toast.noHeadings"));
+            return;
+          }
+          insertMarkdown(`\n${toc}\n`);
         },
       },
       {
