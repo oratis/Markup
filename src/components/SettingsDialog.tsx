@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { type Locale, useLocale, useT } from "../lib/i18n";
-import { type Settings, useAppStore } from "../store";
+import { DEFAULT_SETTINGS, type Settings, useAppStore } from "../store";
 import { ShortcutsEditor } from "./ShortcutsEditor";
 
 interface Props {
@@ -216,24 +216,7 @@ export function SettingsDialog({ onClose }: Props) {
         <div className="mt-6 flex items-center justify-between text-[11px]">
           <button
             onClick={() => {
-              commit({
-                fontSize: 16,
-                proseMaxWidth: 720,
-                autosaveMs: 300,
-                imagePasteDir: "assets",
-                exportTheme: "github",
-                spellcheck: false,
-                lineWrap: true,
-                sidebarWidth: 260,
-                outlineWidth: 220,
-                saveOnBlur: false,
-                trimOnSave: false,
-                showLineNumbers: true,
-                wordCountGoal: 0,
-                showToolbar: true,
-                showTabBar: true,
-                vaultSort: "name",
-              });
+              commit(DEFAULT_SETTINGS);
             }}
             className="opacity-70 hover:opacity-100 underline"
           >

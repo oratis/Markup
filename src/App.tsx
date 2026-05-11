@@ -86,7 +86,7 @@ import {
 } from "./lib/tauri";
 import { checkForUpdates } from "./lib/updater";
 import { findVaultFile, wikilinkAtClick } from "./lib/wikilink";
-import { type Theme, getActiveTab, useAppStore } from "./store";
+import { DEFAULT_SETTINGS, type Theme, getActiveTab, useAppStore } from "./store";
 
 const THEME_KEY = "markup.theme";
 const SOURCE_MODE_KEY = "markup.sourceMode";
@@ -2361,24 +2361,7 @@ export function App() {
           // Reset every persisted preference to its default — store +
           // shortcuts + theme + locale + onboarding flag.
           const s = useAppStore.getState();
-          s.setSettings({
-            fontSize: 16,
-            proseMaxWidth: 720,
-            autosaveMs: 300,
-            imagePasteDir: "assets",
-            exportTheme: "github",
-            spellcheck: false,
-            lineWrap: true,
-            sidebarWidth: 260,
-            outlineWidth: 220,
-            saveOnBlur: false,
-            trimOnSave: false,
-            showLineNumbers: true,
-            wordCountGoal: 0,
-            showToolbar: true,
-            showTabBar: true,
-            vaultSort: "name",
-          });
+          s.setSettings(DEFAULT_SETTINGS);
           s.setTheme("auto");
           s.setRecentFiles([]);
           if (s.outlineOpen) s.toggleOutline();
