@@ -1161,9 +1161,22 @@ export function App() {
       ? state.tabs.find((x) => x.id === state.activeTabId)
       : null;
     if (!t) return;
+    // For scratch buffers, derive the default name from the first H1
+    // in the content (slugified) so the user doesn't always have to
+    // type "Untitled" each time.
+    const firstH1 = !t.path
+      ? t.content.split("\n").find((l) => /^#\s+\S/.test(l))
+      : undefined;
+    const fromH1 = firstH1
+      ? firstH1
+          .replace(/^#\s+/, "")
+          .trim()
+          .slice(0, 80)
+          .replace(/[/\\:*?"<>|]/g, "-")
+      : "";
     const defaultName = t.path
       ? t.path.split("/").pop() || "Untitled.md"
-      : `${(t.name || "Untitled").replace(/\.[^.]+$/, "")}.md`;
+      : `${fromH1 || (t.name || "Untitled").replace(/\.[^.]+$/, "")}.md`;
     try {
       const raw = await pickSavePath(defaultName);
       if (!raw) return;
