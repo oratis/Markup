@@ -31,6 +31,7 @@ import {
   toggleList,
 } from "./lib/cm-line-ops";
 import {
+  getCurrentSectionText,
   moveSectionDown,
   moveSectionToBottom,
   moveSectionToTop,
@@ -1492,6 +1493,21 @@ export function App() {
         shortcut: "⌘⇧T",
         run: () => {
           reopenLastClosed();
+        },
+      },
+      {
+        id: "copy_current_section",
+        label: "Copy Current Section",
+        run: () => {
+          const text = getCurrentSectionText();
+          if (!text) {
+            showToast(tr("toast.noSection"));
+            return;
+          }
+          navigator.clipboard
+            .writeText(text)
+            .then(() => showToast(tr("toast.copiedSection")))
+            .catch(() => showToast(tr("toast.copyFailed")));
         },
       },
       {

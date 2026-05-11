@@ -99,6 +99,19 @@ function findPrevSibling(lines: string[], beforeLine: number, level: number): nu
   return -1;
 }
 
+/** Return the full text of the section enclosing the cursor (including
+ * its heading line and all nested subsections). Returns null when no
+ * source-mode view is mounted or the cursor isn't inside any heading. */
+export function getCurrentSectionText(): string | null {
+  const view = getActiveSourceView();
+  if (!view) return null;
+  const lines = view.state.doc.toString().split("\n");
+  const cursorLine = view.state.doc.lineAt(view.state.selection.main.head).number - 1;
+  const range = findSection(lines, cursorLine);
+  if (!range) return null;
+  return lines.slice(range.headingLine, range.endLine + 1).join("\n");
+}
+
 /** Move the section enclosing the cursor up past the previous sibling
  * heading. No-op when there is no peer above or the cursor isn't inside
  * a section. */

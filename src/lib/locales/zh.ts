@@ -116,6 +116,8 @@ export const zh: Strings = {
   "toast.jumpToLineNeedsSource": "请先切换到源码模式",
   "toast.jumpToLineBad": "行号必须是正整数",
   "toast.noHeadings": "文档中没有标题",
+  "toast.noSection": "光标不在任何小节中（请切换到源码模式）",
+  "toast.copiedSection": "已复制当前小节",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "prompt.linkUrl": "链接 URL：",
   "prompt.linkText": "链接文本：",

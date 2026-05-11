@@ -3,6 +3,7 @@ import { EditorView } from "@codemirror/view";
 import { afterEach, describe, expect, it } from "vitest";
 import { setActiveSourceView } from "./active-source-view";
 import {
+  getCurrentSectionText,
   moveSectionDown,
   moveSectionToBottom,
   moveSectionToLine,
@@ -143,5 +144,41 @@ describe("moveSectionToLine", () => {
     mountView(SAMPLE, 0);
     // Line 4 is "a1", not a heading.
     expect(moveSectionToLine(4, 3, "before")).toBe(false);
+  });
+});
+
+describe("getCurrentSectionText", () => {
+  it("returns the heading line plus its body up to the next peer", () => {
+    // Cursor on "a1" — section is ## A (one heading + 3 lines of body).
+    const idx = SAMPLE.indexOf("a1");
+    mountView(SAMPLE, idx);
+    const text = getCurrentSectionText();
+    expect(text).toBe("## A\na1\na2\n");
+  });
+
+  it("includes nested subsections inside the enclosing section", () => {
+    // Cursor on "b1" — section ## B owns ### B.1 too.
+    const idx = SAMPLE.indexOf("b1");
+    mountView(SAMPLE, idx);
+    const text = getCurrentSectionText();
+    expect(text).toBe("## B\nb1\n\n### B.1\ndeep\n");
+  });
+
+  it("returns the top-level section when cursor is in the preamble of H1", () => {
+    // Cursor on "intro line" — enclosing heading is "# Top".
+    const idx = SAMPLE.indexOf("intro line");
+    mountView(SAMPLE, idx);
+    const text = getCurrentSectionText();
+    expect(text?.startsWith("# Top\nintro line")).toBe(true);
+  });
+
+  it("returns null when no source view is mounted", () => {
+    setActiveSourceView(null);
+    expect(getCurrentSectionText()).toBeNull();
+  });
+
+  it("returns null when cursor is in pre-heading text (no enclosing heading)", () => {
+    mountView("just some text\nmore text", 0);
+    expect(getCurrentSectionText()).toBeNull();
   });
 });

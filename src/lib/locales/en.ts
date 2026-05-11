@@ -115,6 +115,8 @@ export const en = {
   "toast.jumpToLineNeedsSource": "Switch to source mode first",
   "toast.jumpToLineBad": "Line number must be a positive integer",
   "toast.noHeadings": "No headings in document",
+  "toast.noSection": "Cursor isn't in a section (source mode)",
+  "toast.copiedSection": "Section copied",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",
