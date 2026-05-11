@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { countMatches } from "../lib/count-matches";
 import { useT } from "../lib/i18n";
 import { replaceAll, replaceOnce } from "../lib/text-replace";
 import { getActiveTab, useAppStore } from "../store";
@@ -8,46 +9,6 @@ interface Props {
    * panel; this bar is suppressed because CM6 binds ⌘F natively. */
   sourceMode: boolean;
   onClose: () => void;
-}
-
-/** Count occurrences of `query` in `text`. Case-insensitive by default
- *  (`caseSensitive` flips it). When `regex` is true, `query` is treated
- *  as a JS regex pattern; an invalid pattern yields 0. Bounded at 9999
- *  to avoid O(n) work on pathological docs. */
-function countMatches(
-  text: string,
-  query: string,
-  caseSensitive: boolean,
-  regex: boolean,
-): number {
-  if (!query) return 0;
-  if (regex) {
-    try {
-      const re = new RegExp(query, caseSensitive ? "g" : "gi");
-      let count = 0;
-      while (re.exec(text)) {
-        count++;
-        if (count >= 9999) break;
-        // Avoid infinite loop on zero-length matches.
-        if (re.lastIndex === 0) break;
-      }
-      return count;
-    } catch {
-      return 0;
-    }
-  }
-  const haystack = caseSensitive ? text : text.toLowerCase();
-  const needle = caseSensitive ? query : query.toLowerCase();
-  let count = 0;
-  let i = 0;
-  while (true) {
-    const idx = haystack.indexOf(needle, i);
-    if (idx < 0) break;
-    count++;
-    if (count >= 9999) break;
-    i = idx + needle.length;
-  }
-  return count;
 }
 
 /**
