@@ -16,6 +16,7 @@ export const zh: Strings = {
   "status.readingTime": "约 {0} 分钟阅读",
   "status.readingTimeTitle": "按 200 字 / 分钟估算",
   "status.sizeTitle": "UTF-8 字节大小",
+  "status.lastSavedTitle": "磁盘文件的修改时间",
   "status.mode.wysiwyg": "所见即所得",
   "status.mode.source": "源码",
   "status.modeToggleTitle": "切换源码 / 所见即所得（⌘/）",

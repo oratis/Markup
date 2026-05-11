@@ -14,6 +14,7 @@ export const en = {
   "status.readingTime": "~{0} min read",
   "status.readingTimeTitle": "Estimated at 200 words / minute",
   "status.sizeTitle": "UTF-8 byte size",
+  "status.lastSavedTitle": "Mtime of the file on disk",
   "status.mode.wysiwyg": "WYSIWYG",
   "status.mode.source": "Source",
   "status.modeToggleTitle": "Toggle source ↔ WYSIWYG (⌘/)",

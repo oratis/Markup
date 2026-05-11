@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getActiveSourceView } from "../lib/active-source-view";
 import { type Heading, headingBreadcrumb, parseHeadings } from "../lib/headings";
 import { useT } from "../lib/i18n";
+import { relTime } from "../lib/rel-time";
 import { getActiveTab, useAppStore } from "../store";
 
 export function countWords(text: string): number {
@@ -86,6 +87,14 @@ export function StatusBar() {
   const [selStats, setSelStats] = useState<{ words: number; chars: number } | null>(null);
   const [caret, setCaret] = useState<{ line: number; col: number } | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<Heading[]>([]);
+  // Ticking "now" so the "saved Ns ago" pill updates without waiting
+  // for the next selectionchange. 5s cadence is enough granularity for
+  // the s/m/h/d resolution relTime exposes.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 5_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   // Heading list is derived from current tab content. Memoised so the
   // selection-tracking effect below doesn't reparse on every keystroke.
@@ -244,6 +253,11 @@ export function StatusBar() {
       )}
       <span className="opacity-30">|</span>
       <span aria-live="polite">{statusLabel}</span>
+      {status === "saved" && tab?.path && tab.mtimeMs && (
+        <span className="opacity-60" title={t("status.lastSavedTitle")}>
+          {relTime(tab.mtimeMs, now)}
+        </span>
+      )}
     </div>
   );
 }
