@@ -61,7 +61,7 @@ import { getPinnedPaths, persistPinnedPath } from "./lib/pinned-paths";
 import { trimTrailingWhitespace } from "./lib/save-prep";
 import { getScroll, setScroll } from "./lib/scroll-memory";
 import { readSession, writeSession } from "./lib/session";
-import { serializeSettings } from "./lib/settings-io";
+import { parseSettings, serializeSettings } from "./lib/settings-io";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { firstHeadingText, slugifyForFilename } from "./lib/slugify";
@@ -1762,9 +1762,9 @@ export function App() {
           const raw = window.prompt(tr("prompt.importSettings"), "");
           if (!raw) return;
           try {
-            const parsed = JSON.parse(raw);
-            if (parsed && typeof parsed === "object") {
-              useAppStore.getState().setSettings(parsed);
+            const validated = parseSettings(JSON.parse(raw));
+            if (validated) {
+              useAppStore.getState().setSettings(validated);
               showToast(tr("toast.settingsImported"));
             } else {
               showToast(tr("toast.settingsImportBad"));
