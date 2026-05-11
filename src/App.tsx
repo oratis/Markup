@@ -53,6 +53,7 @@ import {
   buildTableMarkdown,
   insertMarkdown,
   toTitleCase,
+  toggleHtmlCommentText,
   transformSelection,
   wrapMarkdown,
 } from "./lib/insert-md";
@@ -1875,10 +1876,12 @@ export function App() {
         },
       },
       {
-        id: "wrap_html_comment",
-        label: "Wrap Selection in HTML Comment",
+        id: "toggle_html_comment",
+        label: "Toggle HTML Comment",
         run: () => {
-          wrapMarkdown("<!-- ", " -->");
+          if (!transformSelection(toggleHtmlCommentText)) {
+            wrapMarkdown("<!-- ", " -->");
+          }
         },
       },
       {

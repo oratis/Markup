@@ -4,6 +4,7 @@ import {
   buildTableMarkdown,
   insertMarkdown,
   toTitleCase,
+  toggleHtmlCommentText,
   transformSelection,
   wrapMarkdown,
 } from "./insert-md";
@@ -81,6 +82,36 @@ describe("toTitleCase", () => {
 
   it("lowercases the rest of an ALL-CAPS word", () => {
     expect(toTitleCase("ENGLISH and 中文")).toBe("English And 中文");
+  });
+});
+
+describe("toggleHtmlCommentText", () => {
+  it("wraps plain text", () => {
+    expect(toggleHtmlCommentText("draft note")).toBe("<!-- draft note -->");
+  });
+
+  it("unwraps an existing comment", () => {
+    expect(toggleHtmlCommentText("<!-- draft note -->")).toBe("draft note");
+  });
+
+  it("unwraps comments with no padding", () => {
+    expect(toggleHtmlCommentText("<!--foo-->")).toBe("foo");
+  });
+
+  it("is idempotent over two toggles (wrap -> unwrap)", () => {
+    const s = "alpha";
+    expect(toggleHtmlCommentText(toggleHtmlCommentText(s))).toBe(s);
+  });
+
+  it("handles multi-line comments", () => {
+    const inner = "line 1\nline 2";
+    expect(toggleHtmlCommentText(toggleHtmlCommentText(inner))).toBe(inner);
+  });
+
+  it("does not unwrap when comment markers are only embedded", () => {
+    expect(toggleHtmlCommentText("prefix <!-- mid --> suffix")).toBe(
+      "<!-- prefix <!-- mid --> suffix -->",
+    );
   });
 });
 

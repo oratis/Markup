@@ -101,6 +101,16 @@ export function toTitleCase(s: string): string {
   );
 }
 
+/** Pure toggle: if `s` is wrapped in `<!-- … -->` (with optional padding),
+ * return the inside; otherwise wrap it in `<!-- … -->`. Keeps the comment
+ * command idempotent — running it twice on a selection returns the
+ * original text, instead of nesting `<!-- <!-- … --> -->`. */
+export function toggleHtmlCommentText(s: string): string {
+  const m = s.match(/^<!--\s?([\s\S]*?)\s?-->$/);
+  if (m) return m[1];
+  return `<!-- ${s} -->`;
+}
+
 /** Build a minimal `rows × cols` GFM table skeleton (header + separator + body). */
 export function buildTableMarkdown(rows: number, cols: number): string {
   const r = Math.max(1, Math.min(50, Math.floor(rows)));
