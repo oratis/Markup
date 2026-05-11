@@ -119,6 +119,8 @@ export const zh: Strings = {
   "toast.noSection": "光标不在任何小节中（请切换到源码模式）",
   "toast.copiedSection": "已复制当前小节",
   "toast.cutSection": "已剪切当前小节",
+  "toast.trimmed": "已删除行尾空白",
+  "toast.nothingToTrim": "没有需要清理的行尾空白",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "prompt.linkUrl": "链接 URL：",
   "prompt.linkText": "链接文本：",

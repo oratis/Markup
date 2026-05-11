@@ -2135,6 +2135,20 @@ export function App() {
         },
       },
       {
+        id: "trim_trailing_whitespace",
+        label: "Trim Trailing Whitespace",
+        run: () => {
+          if (!tab) return;
+          const next = trimTrailingWhitespace(tab.content);
+          if (next === tab.content) {
+            showToast(tr("toast.nothingToTrim"));
+            return;
+          }
+          updateActiveContent(next);
+          showToast(tr("toast.trimmed"));
+        },
+      },
+      {
         id: "insert_frontmatter",
         label: "Insert YAML Frontmatter",
         run: () => {

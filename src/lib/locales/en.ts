@@ -118,6 +118,8 @@ export const en = {
   "toast.noSection": "Cursor isn't in a section (source mode)",
   "toast.copiedSection": "Section copied",
   "toast.cutSection": "Section cut",
+  "toast.trimmed": "Trailing whitespace trimmed",
+  "toast.nothingToTrim": "No trailing whitespace to trim",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",
