@@ -64,17 +64,17 @@ describe("app store", () => {
     expect(t?.status).toBe("saved");
   });
 
-  it("pushes recent files with deduplication and 20-cap", () => {
+  it("pushes recent files with deduplication and 50-cap", () => {
     const { pushRecentFile } = useAppStore.getState();
-    for (let i = 0; i < 25; i++) pushRecentFile(`/p${i}.md`);
+    for (let i = 0; i < 60; i++) pushRecentFile(`/p${i}.md`);
     const r = useAppStore.getState().recentFiles;
-    expect(r.length).toBe(20);
-    expect(r[0]).toBe("/p24.md"); // most recent first
-    pushRecentFile("/p10.md");
+    expect(r.length).toBe(50);
+    expect(r[0]).toBe("/p59.md"); // most recent first
+    pushRecentFile("/p30.md");
     const r2 = useAppStore.getState().recentFiles;
-    expect(r2[0]).toBe("/p10.md");
+    expect(r2[0]).toBe("/p30.md");
     // No duplicate
-    expect(r2.filter((p) => p === "/p10.md").length).toBe(1);
+    expect(r2.filter((p) => p === "/p30.md").length).toBe(1);
   });
 
   it("toggles boolean view flags", () => {

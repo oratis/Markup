@@ -611,7 +611,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   pushRecentFile: (path) =>
     set((state) => {
-      const next = [path, ...state.recentFiles.filter((p) => p !== path)].slice(0, 20);
+      const next = [path, ...state.recentFiles.filter((p) => p !== path)].slice(0, 50);
       return { recentFiles: next };
     }),
   setRecentFiles: (paths) => set({ recentFiles: paths }),
