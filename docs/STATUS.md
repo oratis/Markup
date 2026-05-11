@@ -1,15 +1,71 @@
-# Status — Last updated 2026-05-11 (67 batches landed)
+# Status — Last updated 2026-05-11 (90 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 90+ commits across **67 feature batches**, all CI-green.
+`main` branch has 110+ commits across **90 feature batches**, all CI-green.
 `v0.1.2` is the latest released DMG (unsigned). The app compiles,
-type-checks, lint-clean, **277 React tests + 17 Rust unit + 9 integration**,
+type-checks, lint-clean, **303 React tests + 17 Rust unit + 9 integration**,
 double-Codecov coverage upload, and runs cleanly in dev.
 
-## What landed in batches 53–67 (newest)
+## What landed in batches 68–90 (newest)
+
+### Substantive
+- **Outline drag-to-reorder section** (source mode): drag a heading
+  row onto another to insert before/after based on pointer position.
+  New moveSectionToLine primitive handles shrunken-doc reindexing.
+- **Source-mode list editing**: Enter on a bullet/numbered/task line
+  continues the list (auto-increments numbers); Tab/Shift-Tab indent/
+  outdent by 2 spaces; Backspace at start of indented list outdents.
+- **Cmd+click follows wikilink** in source mode (new lib/follow-wikilink
+  shared with the palette "Follow Wikilink at Cursor" command).
+- **Source-mode `[[` auto-trigger** opens the wikilink picker in
+  completion mode (parity with WYSIWYG).
+- **Vault sort: name / mtime** persisted setting + FileTree header
+  toggle button (A↓ / ⏱).
+
+### Editor commands
+- Math: Wrap as Inline Math ($…$), Insert Math Block ($$…$$)
+- Insert Mermaid Diagram, Insert Callout (Note/Warning/Tip)
+- Wrap Selection in HTML Comment, Wrap as Code Block
+- Toggle Wikilink on Selection, Paste Clipboard as Markdown Link
+- Selection: Strip Markdown In Place, Tabs↔Spaces (2)
+- Go to Document Start/End, Jump to Line, Select Next Occurrence
+- Delete Current Line, Copy Line Up/Down
+- Move Section to Top/Bottom
+
+### Tabs / vault
+- Ctrl+Tab / Ctrl+Shift+Tab alternate next/prev tab bindings
+- Move Tab to First / Last
+- Reload All Files from Disk
+- New File in Vault, Rename Active File, Copy Vault-relative Path
+- Recent-files cap bumped 20 → 50
+
+### UI / status
+- Shortcuts Cheatsheet modal + ⌘⇧/ shortcut
+- Cycle Theme (⌘⌥T)
+- Prose: Wider / Narrower column palette commands
+- Toggle Spell Check, Toggle Toolbar, Toggle Tab Bar
+- Outline: auto-scroll active heading into view
+- StatusBar: file-size pill (UTF-8 bytes, ≥ 1 KB)
+- Settings Export / Import (clipboard JSON)
+- ShortcutsEditor: filter input + duplicate-binding ⚠ warning
+
+### Session restore + persistence
+- **Restore last open tabs** on launch (tabs + active + scroll
+  offsets via path-keyed memory; "Restored N tabs" toast)
+- **Persistent pinned tabs** survive relaunch
+- **Persistent scroll memory** survives relaunch (path-keyed,
+  200-entry cap)
+- per-tab WYSIWYG scroll memory (in-session)
+
+### Engineering
+- 303 React tests across 39 files (was 277 / 37)
+- All 32 shortcuts editable + filterable + conflict-flagged
+- 17 persisted settings
+
+## What landed in batches 53–67
 
 ### Big wins
 - **Session restore on launch**: path-backed open tabs + active tab
