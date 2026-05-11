@@ -63,6 +63,7 @@ import { getScroll, setScroll } from "./lib/scroll-memory";
 import { readSession, writeSession } from "./lib/session";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
+import { firstHeadingText, slugifyForFilename } from "./lib/slugify";
 import { installSmartPaste } from "./lib/smart-paste";
 import { stripMarkdown } from "./lib/strip-md";
 import { nextTheme, resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
@@ -1164,16 +1165,7 @@ export function App() {
     // For scratch buffers, derive the default name from the first H1
     // in the content (slugified) so the user doesn't always have to
     // type "Untitled" each time.
-    const firstH1 = !t.path
-      ? t.content.split("\n").find((l) => /^#\s+\S/.test(l))
-      : undefined;
-    const fromH1 = firstH1
-      ? firstH1
-          .replace(/^#\s+/, "")
-          .trim()
-          .slice(0, 80)
-          .replace(/[/\\:*?"<>|]/g, "-")
-      : "";
+    const fromH1 = !t.path ? slugifyForFilename(firstHeadingText(t.content) ?? "") : "";
     const defaultName = t.path
       ? t.path.split("/").pop() || "Untitled.md"
       : `${fromH1 || (t.name || "Untitled").replace(/\.[^.]+$/, "")}.md`;
