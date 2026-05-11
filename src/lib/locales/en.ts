@@ -120,6 +120,8 @@ export const en = {
   "toast.cutSection": "Section cut",
   "toast.trimmed": "Trailing whitespace trimmed",
   "toast.nothingToTrim": "No trailing whitespace to trim",
+  "toast.collapsed": "Blank lines collapsed",
+  "toast.nothingToCollapse": "No blank-line runs to collapse",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",

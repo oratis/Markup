@@ -39,6 +39,7 @@ import {
   moveSectionUp,
 } from "./lib/cm-section";
 import { formatTable, toggleTaskCheckboxOnLine } from "./lib/cm-table-format";
+import { collapseBlankLines } from "./lib/collapse-blanks";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { wikilinkAtCursor } from "./lib/follow-wikilink";
@@ -2146,6 +2147,20 @@ export function App() {
           }
           updateActiveContent(next);
           showToast(tr("toast.trimmed"));
+        },
+      },
+      {
+        id: "collapse_blank_lines",
+        label: "Collapse Blank Lines",
+        run: () => {
+          if (!tab) return;
+          const next = collapseBlankLines(tab.content);
+          if (next === tab.content) {
+            showToast(tr("toast.nothingToCollapse"));
+            return;
+          }
+          updateActiveContent(next);
+          showToast(tr("toast.collapsed"));
         },
       },
       {

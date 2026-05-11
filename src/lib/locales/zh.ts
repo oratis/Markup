@@ -121,6 +121,8 @@ export const zh: Strings = {
   "toast.cutSection": "已剪切当前小节",
   "toast.trimmed": "已删除行尾空白",
   "toast.nothingToTrim": "没有需要清理的行尾空白",
+  "toast.collapsed": "已合并多余空行",
+  "toast.nothingToCollapse": "没有需要合并的空行",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "prompt.linkUrl": "链接 URL：",
   "prompt.linkText": "链接文本：",
