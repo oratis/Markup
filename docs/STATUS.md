@@ -1,15 +1,61 @@
-# Status — Last updated 2026-05-11 (90 batches landed)
+# Status — Last updated 2026-05-11 (107 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 110+ commits across **90 feature batches**, all CI-green.
+`main` branch has 125+ commits across **107 feature batches**, all CI-green.
 `v0.1.2` is the latest released DMG (unsigned). The app compiles,
-type-checks, lint-clean, **303 React tests + 17 Rust unit + 9 integration**,
+type-checks, lint-clean, **377 React tests + 17 Rust unit + 9 integration**,
 double-Codecov coverage upload, and runs cleanly in dev.
 
-## What landed in batches 68–90 (newest)
+## What landed in batches 91–107 (newest)
+
+### User-visible
+- **Insert Table of Contents** palette command — markdown bullet list
+  with GitHub-flavoured anchors (Unicode-preserving slugs, duplicate
+  slugs suffixed with -N, indent normalised to the doc's shallowest
+  heading level).
+- **Copy Current Section** — copies the heading the cursor sits in,
+  plus its body and nested subsections, to the clipboard.
+- **Selection: Sentence case** — pairs with the existing upper/lower/
+  title commands. Lowercases then capitalises after . ! ? + ws.
+- **Toggle HTML Comment** replaces the old "Wrap in HTML Comment"
+  command — running it twice now unwraps instead of producing
+  `<!-- <!-- … --> -->`.
+- **Insert Horizontal Rule** shortcut (⌘⇧-).
+- **Wrap Selection in Collapsible Block** (`<details><summary>`).
+- **Export Settings (Download File)** alongside the existing clipboard
+  copy — both share a serializeSettings helper so JSON shape stays
+  consistent.
+- **Save As: default name from first H1** of scratch buffers.
+- **StatusBar: relative "last saved" pill** ticks every 5 s.
+
+### Engineering / hardening
+- `parseSettings` validator on Import Settings — drops fields with the
+  wrong type, rejects invalid enum values, rejects non-finite numbers.
+  Previous `JSON.parse + typeof === "object"` check passed garbage
+  straight into setSettings.
+- `DEFAULT_SETTINGS` is now the single source of truth — both the
+  "Reset All" palette command and the Settings dialog's "Restore
+  defaults" button consume it instead of inlining 17 fields each.
+- `countMatches` (regex search bound used by FindBar) had a subtle
+  zero-length-match infinite-loop bug — escape clause only triggered
+  when lastIndex was exactly 0. Now advances lastIndex manually when
+  it stalls anywhere.
+- Helpers extracted from components for direct test coverage:
+  `serializeSettings` / `parseSettings` (settings-io.ts),
+  `scoreSubsequence` (fuzzy.ts), `countWords` / `byteSize` /
+  `humanSize` (text-stats.ts), `countMatches` (count-matches.ts),
+  `slugifyForFilename` / `firstHeadingText` (slugify.ts),
+  `toggleHtmlCommentText` / `toSentenceCase` (insert-md.ts),
+  `getCurrentSectionText` (cm-section.ts), `buildToc` (toc.ts).
+
+### Tabs / shortcuts
+- Ctrl+Tab / Ctrl+Shift+Tab as alternate next/prev tab bindings.
+- Recent-files cap bumped 20 → 50.
+
+## What landed in batches 68–90
 
 ### Substantive
 - **Outline drag-to-reorder section** (source mode): drag a heading
