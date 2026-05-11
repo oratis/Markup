@@ -3,15 +3,8 @@ import { getActiveSourceView } from "../lib/active-source-view";
 import { type Heading, headingBreadcrumb, parseHeadings } from "../lib/headings";
 import { useT } from "../lib/i18n";
 import { relTime } from "../lib/rel-time";
+import { byteSize, countWords, humanSize } from "../lib/text-stats";
 import { getActiveTab, useAppStore } from "../store";
-
-export function countWords(text: string): number {
-  // CJK characters each count as a word; runs of non-whitespace as one word.
-  const cjk = (text.match(/[㐀-鿿豈-﫿]/g) ?? []).length;
-  const nonCjk = text.replace(/[㐀-鿿豈-﫿]/g, " ");
-  const words = nonCjk.trim().length === 0 ? 0 : nonCjk.trim().split(/\s+/).length;
-  return cjk + words;
-}
 
 function readSelection(sourceMode: boolean): string {
   if (sourceMode) {
@@ -51,21 +44,6 @@ interface Stats {
   chars: number;
   lines: number;
   bytes: number;
-}
-
-const ENCODER = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
-
-function byteSize(text: string): number {
-  if (!text) return 0;
-  if (ENCODER) return ENCODER.encode(text).length;
-  // jsdom historically lacked TextEncoder; fall back to a rough char count.
-  return text.length;
-}
-
-function humanSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 const HEAVY_THRESHOLD = 100_000;
