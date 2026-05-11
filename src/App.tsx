@@ -1866,6 +1866,16 @@ export function App() {
         },
       },
       {
+        id: "wrap_collapsible",
+        label: "Wrap Selection in Collapsible Block",
+        run: () => {
+          wrapMarkdown(
+            "\n\n<details>\n<summary>Details</summary>\n\n",
+            "\n\n</details>\n\n",
+          );
+        },
+      },
+      {
         id: "wrap_html_comment",
         label: "Wrap Selection in HTML Comment",
         run: () => {
