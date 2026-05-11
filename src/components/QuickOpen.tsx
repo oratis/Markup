@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { scoreSubsequence } from "../lib/fuzzy";
 import { useT } from "../lib/i18n";
 import { readFile } from "../lib/tauri";
 import { useAppStore } from "../store";
@@ -99,24 +100,4 @@ export function QuickOpen({ onClose }: QuickOpenProps) {
       </div>
     </div>
   );
-}
-
-/** Greedy subsequence match. Returns score, -Infinity if no match. */
-function scoreSubsequence(haystack: string, needle: string): number {
-  let score = 0;
-  let h = 0;
-  let lastMatchH = -1;
-  for (let n = 0; n < needle.length; n++) {
-    while (h < haystack.length && haystack[h] !== needle[n]) h++;
-    if (h >= haystack.length) return Number.NEGATIVE_INFINITY;
-    // bonuses: consecutive runs, after a separator
-    if (lastMatchH === h - 1) score += 3;
-    else score += 1;
-    if (h === 0 || /[\/_\-. ]/.test(haystack[h - 1])) score += 2;
-    lastMatchH = h;
-    h++;
-  }
-  // shorter haystack wins ties
-  score -= haystack.length * 0.01;
-  return score;
 }

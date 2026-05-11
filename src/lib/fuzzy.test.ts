@@ -1,27 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { scoreSubsequence } from "./fuzzy";
 
-/** Inline copy of QuickOpen's scorer so this test isn't coupled to the
- *  React component's render. Kept in sync with the implementation. */
-function scoreSubsequence(haystack: string, needle: string): number {
-  let score = 0;
-  let h = 0;
-  let lastMatchH = -1;
-  for (let n = 0; n < needle.length; n++) {
-    while (h < haystack.length && haystack[h] !== needle[n]) h++;
-    if (h >= haystack.length) return Number.NEGATIVE_INFINITY;
-    if (lastMatchH === h - 1) score += 3;
-    else score += 1;
-    if (h === 0 || /[\/_\-. ]/.test(haystack[h - 1])) score += 2;
-    lastMatchH = h;
-    h++;
-  }
-  score -= haystack.length * 0.01;
-  return score;
-}
-
-describe("fuzzy subsequence matcher", () => {
+describe("scoreSubsequence", () => {
   it("returns -Infinity when needle is not a subsequence", () => {
     expect(scoreSubsequence("hello", "xyz")).toBe(Number.NEGATIVE_INFINITY);
+    expect(scoreSubsequence("abc", "abcd")).toBe(Number.NEGATIVE_INFINITY);
   });
 
   it("scores consecutive matches higher than scattered", () => {
@@ -36,15 +19,32 @@ describe("fuzzy subsequence matcher", () => {
     expect(sepBoundary).toBeGreaterThan(midword);
   });
 
-  it("prefers shorter haystacks on ties", () => {
+  it("treats _ . - and space as boundaries", () => {
+    expect(scoreSubsequence("a_b", "b")).toBeGreaterThan(scoreSubsequence("ab", "b"));
+    expect(scoreSubsequence("a-b", "b")).toBeGreaterThan(scoreSubsequence("ab", "b"));
+    expect(scoreSubsequence("a.b", "b")).toBeGreaterThan(scoreSubsequence("ab", "b"));
+    expect(scoreSubsequence("a b", "b")).toBeGreaterThan(scoreSubsequence("ab", "b"));
+  });
+
+  it("uses index 0 as a boundary (start of string bonus)", () => {
+    const atStart = scoreSubsequence("foo.md", "f");
+    const inMid = scoreSubsequence("xfoo.md", "f");
+    expect(atStart).toBeGreaterThan(inMid);
+  });
+
+  it("prefers shorter haystacks on otherwise-equal matches", () => {
     const short = scoreSubsequence("api.md", "api");
     const long = scoreSubsequence("api.long_name_here.md", "api");
     expect(short).toBeGreaterThan(long);
   });
 
-  it("scores an empty needle as 0 (no characters to match)", () => {
+  it("scores an empty needle as just the length penalty", () => {
     expect(scoreSubsequence("anything.md", "")).toBeCloseTo(
       -("anything.md".length * 0.01),
     );
+  });
+
+  it("respects in-order matching (no reordering)", () => {
+    expect(scoreSubsequence("abc", "cba")).toBe(Number.NEGATIVE_INFINITY);
   });
 });
