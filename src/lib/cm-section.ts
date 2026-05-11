@@ -99,6 +99,41 @@ function findPrevSibling(lines: string[], beforeLine: number, level: number): nu
   return -1;
 }
 
+/** Delete the section enclosing the cursor (heading + body + nested
+ * subsections). Caret lands at where the section began. Returns false
+ * when no source view is mounted or the cursor isn't inside a section. */
+export function deleteCurrentSection(): boolean {
+  const view = getActiveSourceView();
+  if (!view) return false;
+  const lines = view.state.doc.toString().split("\n");
+  const cursorLine = view.state.doc.lineAt(view.state.selection.main.head).number - 1;
+  const range = findSection(lines, cursorLine);
+  if (!range) return false;
+
+  const fromLine = view.state.doc.line(range.headingLine + 1);
+  const lastLineNo = Math.min(range.endLine + 1, view.state.doc.lines);
+  const toLine = view.state.doc.line(lastLineNo);
+  const isLastLineOfDoc = lastLineNo === view.state.doc.lines;
+  // When the section isn't at the bottom of the doc, swallow the
+  // trailing newline so we don't leave a blank line; when it IS at the
+  // bottom, swallow the preceding newline instead (if any) to avoid a
+  // stray empty line above the new EOF.
+  let from = fromLine.from;
+  let to = toLine.to;
+  if (!isLastLineOfDoc) {
+    to = to + 1;
+  } else if (from > 0) {
+    from = from - 1;
+  }
+
+  view.dispatch({
+    changes: { from, to, insert: "" },
+    selection: { anchor: from },
+    userEvent: "delete.section",
+  });
+  return true;
+}
+
 /** Return the full text of the section enclosing the cursor (including
  * its heading line and all nested subsections). Returns null when no
  * source-mode view is mounted or the cursor isn't inside any heading. */

@@ -3,6 +3,7 @@ import { EditorView } from "@codemirror/view";
 import { afterEach, describe, expect, it } from "vitest";
 import { setActiveSourceView } from "./active-source-view";
 import {
+  deleteCurrentSection,
   getCurrentSectionText,
   moveSectionDown,
   moveSectionToBottom,
@@ -144,6 +145,54 @@ describe("moveSectionToLine", () => {
     mountView(SAMPLE, 0);
     // Line 4 is "a1", not a heading.
     expect(moveSectionToLine(4, 3, "before")).toBe(false);
+  });
+});
+
+describe("deleteCurrentSection", () => {
+  it("removes the section + its body + nested subsections", () => {
+    // Cursor on "b1" — should remove ## B and ### B.1.
+    const idx = SAMPLE.indexOf("b1");
+    const view = mountView(SAMPLE, idx);
+    expect(deleteCurrentSection()).toBe(true);
+    const out = view.state.doc.toString();
+    expect(out).not.toContain("## B");
+    expect(out).not.toContain("### B.1");
+    expect(out).not.toContain("deep");
+    // Sibling sections still present.
+    expect(out).toContain("## A");
+    expect(out).toContain("## C");
+  });
+
+  it("removes the last section without leaving a trailing blank line", () => {
+    // Cursor on "c1" — ## C is the last section.
+    const idx = SAMPLE.indexOf("c1");
+    const view = mountView(SAMPLE, idx);
+    expect(deleteCurrentSection()).toBe(true);
+    const out = view.state.doc.toString();
+    expect(out).not.toContain("## C");
+    expect(out).not.toContain("c1");
+    expect(out.endsWith("\n\n")).toBe(false);
+  });
+
+  it("returns false when no source view is mounted", () => {
+    setActiveSourceView(null);
+    expect(deleteCurrentSection()).toBe(false);
+  });
+
+  it("returns false when cursor is in preamble (no enclosing heading)", () => {
+    mountView("just some text\nmore", 0);
+    expect(deleteCurrentSection()).toBe(false);
+  });
+
+  it("places caret at where the section began", () => {
+    const idx = SAMPLE.indexOf("a1");
+    const view = mountView(SAMPLE, idx);
+    const beforeHead = view.state.doc.lineAt(view.state.selection.main.head).from;
+    deleteCurrentSection();
+    // Selection should now anchor at the start of what used to be the heading
+    // line, which equals the original heading-line start (before any text
+    // shift).
+    expect(view.state.selection.main.head).toBeLessThanOrEqual(beforeHead);
   });
 });
 

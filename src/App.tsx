@@ -31,6 +31,7 @@ import {
   toggleList,
 } from "./lib/cm-line-ops";
 import {
+  deleteCurrentSection,
   getCurrentSectionText,
   moveSectionDown,
   moveSectionToBottom,
@@ -1508,6 +1509,33 @@ export function App() {
             .writeText(text)
             .then(() => showToast(tr("toast.copiedSection")))
             .catch(() => showToast(tr("toast.copyFailed")));
+        },
+      },
+      {
+        id: "cut_current_section",
+        label: "Cut Current Section",
+        run: () => {
+          const text = getCurrentSectionText();
+          if (!text) {
+            showToast(tr("toast.noSection"));
+            return;
+          }
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              deleteCurrentSection();
+              showToast(tr("toast.cutSection"));
+            })
+            .catch(() => showToast(tr("toast.copyFailed")));
+        },
+      },
+      {
+        id: "delete_current_section",
+        label: "Delete Current Section",
+        run: () => {
+          if (!deleteCurrentSection()) {
+            showToast(tr("toast.noSection"));
+          }
         },
       },
       {
