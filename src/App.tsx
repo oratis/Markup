@@ -1715,6 +1715,42 @@ export function App() {
         run: renameActiveFile,
       },
       {
+        id: "export_settings_file",
+        label: "Export Settings (Download File)",
+        run: () => {
+          const s = useAppStore.getState();
+          const payload = JSON.stringify(
+            {
+              fontSize: s.fontSize,
+              proseMaxWidth: s.proseMaxWidth,
+              autosaveMs: s.autosaveMs,
+              imagePasteDir: s.imagePasteDir,
+              exportTheme: s.exportTheme,
+              spellcheck: s.spellcheck,
+              lineWrap: s.lineWrap,
+              sidebarWidth: s.sidebarWidth,
+              outlineWidth: s.outlineWidth,
+              saveOnBlur: s.saveOnBlur,
+              trimOnSave: s.trimOnSave,
+              showLineNumbers: s.showLineNumbers,
+              wordCountGoal: s.wordCountGoal,
+              showToolbar: s.showToolbar,
+              showTabBar: s.showTabBar,
+              vaultSort: s.vaultSort,
+            },
+            null,
+            2,
+          );
+          const blob = new Blob([payload], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "markup-settings.json";
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+      },
+      {
         id: "export_settings",
         label: "Export Settings (Copy JSON)",
         run: () => {
