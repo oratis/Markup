@@ -61,6 +61,7 @@ import { getPinnedPaths, persistPinnedPath } from "./lib/pinned-paths";
 import { trimTrailingWhitespace } from "./lib/save-prep";
 import { getScroll, setScroll } from "./lib/scroll-memory";
 import { readSession, writeSession } from "./lib/session";
+import { serializeSettings } from "./lib/settings-io";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { firstHeadingText, slugifyForFilename } from "./lib/slugify";
@@ -1718,29 +1719,7 @@ export function App() {
         id: "export_settings_file",
         label: "Export Settings (Download File)",
         run: () => {
-          const s = useAppStore.getState();
-          const payload = JSON.stringify(
-            {
-              fontSize: s.fontSize,
-              proseMaxWidth: s.proseMaxWidth,
-              autosaveMs: s.autosaveMs,
-              imagePasteDir: s.imagePasteDir,
-              exportTheme: s.exportTheme,
-              spellcheck: s.spellcheck,
-              lineWrap: s.lineWrap,
-              sidebarWidth: s.sidebarWidth,
-              outlineWidth: s.outlineWidth,
-              saveOnBlur: s.saveOnBlur,
-              trimOnSave: s.trimOnSave,
-              showLineNumbers: s.showLineNumbers,
-              wordCountGoal: s.wordCountGoal,
-              showToolbar: s.showToolbar,
-              showTabBar: s.showTabBar,
-              vaultSort: s.vaultSort,
-            },
-            null,
-            2,
-          );
+          const payload = serializeSettings(useAppStore.getState());
           const blob = new Blob([payload], { type: "application/json" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
@@ -1754,29 +1733,7 @@ export function App() {
         id: "export_settings",
         label: "Export Settings (Copy JSON)",
         run: () => {
-          const s = useAppStore.getState();
-          const payload = JSON.stringify(
-            {
-              fontSize: s.fontSize,
-              proseMaxWidth: s.proseMaxWidth,
-              autosaveMs: s.autosaveMs,
-              imagePasteDir: s.imagePasteDir,
-              exportTheme: s.exportTheme,
-              spellcheck: s.spellcheck,
-              lineWrap: s.lineWrap,
-              sidebarWidth: s.sidebarWidth,
-              outlineWidth: s.outlineWidth,
-              saveOnBlur: s.saveOnBlur,
-              trimOnSave: s.trimOnSave,
-              showLineNumbers: s.showLineNumbers,
-              wordCountGoal: s.wordCountGoal,
-              showToolbar: s.showToolbar,
-              showTabBar: s.showTabBar,
-              vaultSort: s.vaultSort,
-            },
-            null,
-            2,
-          );
+          const payload = serializeSettings(useAppStore.getState());
           navigator.clipboard
             .writeText(payload)
             .then(() => showToast(tr("toast.settingsCopied")))
