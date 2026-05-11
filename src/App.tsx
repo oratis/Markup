@@ -66,6 +66,7 @@ import { trimTrailingWhitespace } from "./lib/save-prep";
 import { getScroll, setScroll } from "./lib/scroll-memory";
 import { readSession, writeSession } from "./lib/session";
 import { parseSettings, serializeSettings } from "./lib/settings-io";
+import { shiftAllHeadings } from "./lib/shift-headings";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
 import { matches as matchesShortcut } from "./lib/shortcuts";
 import { firstHeadingText, slugifyForFilename } from "./lib/slugify";
@@ -2048,6 +2049,22 @@ export function App() {
         label: "Set Heading: None",
         run: () => {
           setHeadingLevel(0);
+        },
+      },
+      {
+        id: "promote_all_headings",
+        label: "Promote All Headings (one level shallower)",
+        run: () => {
+          if (!tab) return;
+          updateActiveContent(shiftAllHeadings(tab.content, -1));
+        },
+      },
+      {
+        id: "demote_all_headings",
+        label: "Demote All Headings (one level deeper)",
+        run: () => {
+          if (!tab) return;
+          updateActiveContent(shiftAllHeadings(tab.content, 1));
         },
       },
       {
