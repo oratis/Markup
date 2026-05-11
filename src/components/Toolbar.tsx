@@ -1,4 +1,4 @@
-import { insertMarkdown, wrapMarkdown } from "../lib/insert-md";
+import { insertMarkdown, toggleWrap, wrapMarkdown } from "../lib/insert-md";
 import { getActiveTab, useAppStore } from "../store";
 
 interface ToolbarProps {
@@ -24,9 +24,9 @@ export function Toolbar({ onInsertLink }: ToolbarProps) {
   const dirty = tab?.status === "dirty" ? "● " : "";
 
   const fmtButtons: FormatButton[] = [
-    { label: "B", title: "Bold (⌘B)", run: () => wrapMarkdown("**", "**") },
-    { label: "I", title: "Italic (⌘I)", run: () => wrapMarkdown("*", "*") },
-    { label: "<>", title: "Inline code (⌘E)", run: () => wrapMarkdown("`", "`") },
+    { label: "B", title: "Bold (⌘B)", run: () => toggleWrap("**", "**") },
+    { label: "I", title: "Italic (⌘I)", run: () => toggleWrap("*", "*") },
+    { label: "<>", title: "Inline code (⌘E)", run: () => toggleWrap("`", "`") },
     {
       label: "🔗",
       title: "Insert link (⌘K)",

@@ -124,6 +124,27 @@ export function toggleHtmlCommentText(s: string): string {
   return `<!-- ${s} -->`;
 }
 
+/** Pure toggle for symmetric wrappers (e.g. `**…**`, `*…*`, `` `…` ``):
+ *  if `s` already opens with `open` and ends with `close`, strip them;
+ *  otherwise wrap. Used by the bold/italic/code/strike commands so
+ *  pressing the shortcut on an already-formatted span unwraps instead of
+ *  nesting markers. */
+export function toggleWrapText(s: string, open: string, close: string): string {
+  if (s.length >= open.length + close.length && s.startsWith(open) && s.endsWith(close)) {
+    return s.slice(open.length, s.length - close.length);
+  }
+  return open + s + close;
+}
+
+/** Live-editor toggle wrapper. Tries to apply {@link toggleWrapText} to
+ *  the current selection; falls back to inserting the `open`/`close`
+ *  pair at the caret when there's no selection. Returns true on either
+ *  branch when an editor accepts the change. */
+export function toggleWrap(open: string, close: string): boolean {
+  if (transformSelection((s) => toggleWrapText(s, open, close))) return true;
+  return wrapMarkdown(open, close);
+}
+
 /** Build a minimal `rows × cols` GFM table skeleton (header + separator + body). */
 export function buildTableMarkdown(rows: number, cols: number): string {
   const r = Math.max(1, Math.min(50, Math.floor(rows)));

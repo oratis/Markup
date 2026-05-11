@@ -6,6 +6,7 @@ import {
   toSentenceCase,
   toTitleCase,
   toggleHtmlCommentText,
+  toggleWrapText,
   transformSelection,
   wrapMarkdown,
 } from "./insert-md";
@@ -137,6 +138,38 @@ describe("toggleHtmlCommentText", () => {
     expect(toggleHtmlCommentText("prefix <!-- mid --> suffix")).toBe(
       "<!-- prefix <!-- mid --> suffix -->",
     );
+  });
+});
+
+describe("toggleWrapText", () => {
+  it("wraps plain text in symmetric markers", () => {
+    expect(toggleWrapText("foo", "**", "**")).toBe("**foo**");
+  });
+
+  it("unwraps when already wrapped in the same markers", () => {
+    expect(toggleWrapText("**foo**", "**", "**")).toBe("foo");
+  });
+
+  it("wraps when only one side matches", () => {
+    expect(toggleWrapText("**foo", "**", "**")).toBe("****foo**");
+  });
+
+  it("handles inline code single-backtick wrapper", () => {
+    expect(toggleWrapText("x", "`", "`")).toBe("`x`");
+    expect(toggleWrapText("`x`", "`", "`")).toBe("x");
+  });
+
+  it("wraps empty string into open+close", () => {
+    expect(toggleWrapText("", "*", "*")).toBe("**");
+  });
+
+  it("unwraps a string that's exactly open+close into empty", () => {
+    expect(toggleWrapText("****", "**", "**")).toBe("");
+  });
+
+  it("supports asymmetric wrappers too", () => {
+    expect(toggleWrapText("foo", "[", "]")).toBe("[foo]");
+    expect(toggleWrapText("[foo]", "[", "]")).toBe("foo");
   });
 });
 

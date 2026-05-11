@@ -57,6 +57,7 @@ import {
   toSentenceCase,
   toTitleCase,
   toggleHtmlCommentText,
+  toggleWrap,
   transformSelection,
   wrapMarkdown,
 } from "./lib/insert-md";
@@ -1289,22 +1290,22 @@ export function App() {
       }
       if (matchesShortcut(e, "fmtBold")) {
         e.preventDefault();
-        wrapMarkdown("**", "**");
+        toggleWrap("**", "**");
         return;
       }
       if (matchesShortcut(e, "fmtItalic")) {
         e.preventDefault();
-        wrapMarkdown("*", "*");
+        toggleWrap("*", "*");
         return;
       }
       if (matchesShortcut(e, "fmtCode")) {
         e.preventDefault();
-        wrapMarkdown("`", "`");
+        toggleWrap("`", "`");
         return;
       }
       if (matchesShortcut(e, "fmtStrike")) {
         e.preventDefault();
-        wrapMarkdown("~~", "~~");
+        toggleWrap("~~", "~~");
         return;
       }
       if (matchesShortcut(e, "moveLineUp")) {
@@ -1877,7 +1878,7 @@ export function App() {
         label: "Bold",
         shortcut: "⌘B",
         run: () => {
-          wrapMarkdown("**", "**");
+          toggleWrap("**", "**");
         },
       },
       {
@@ -1885,7 +1886,7 @@ export function App() {
         label: "Italic",
         shortcut: "⌘I",
         run: () => {
-          wrapMarkdown("*", "*");
+          toggleWrap("*", "*");
         },
       },
       {
@@ -1893,7 +1894,7 @@ export function App() {
         label: "Inline Code",
         shortcut: "⌘E",
         run: () => {
-          wrapMarkdown("`", "`");
+          toggleWrap("`", "`");
         },
       },
       {
@@ -1901,7 +1902,7 @@ export function App() {
         label: "Strikethrough",
         shortcut: "⌘⇧X",
         run: () => {
-          wrapMarkdown("~~", "~~");
+          toggleWrap("~~", "~~");
         },
       },
       {
