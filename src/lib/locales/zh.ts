@@ -70,7 +70,8 @@ export const zh: Strings = {
   // command palette / quick open
   "palette.placeholder": "运行命令…",
   "palette.empty": "无匹配命令。",
-  "quickOpen.placeholder": "在 Vault 中打开文件…",
+  "quickOpen.placeholder": "在 Vault 中打开文件…（以 # 开头跳转标题）",
+  "quickOpen.headingPlaceholder": "跳转到 Vault 中的标题…",
   "quickOpen.empty": "无匹配。",
   "wikilinkPicker.placeholder": "插入 Wikilink…",
   "cmd.insertWikilink": "插入 Wikilink…",

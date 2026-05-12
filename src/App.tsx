@@ -50,6 +50,12 @@ import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { wikilinkAtCursor } from "./lib/follow-wikilink";
 import {
+  onFileSaved as headingFileSaved,
+  rebuildFromFiles as headingRebuild,
+  setVaultPaths as headingSetVaultPaths,
+  setVaultRoot as headingSetVaultRoot,
+} from "./lib/heading-index-store";
+import {
   jumpToSourceLine,
   nextHeadingFrom,
   parseHeadings,
@@ -206,12 +212,14 @@ export function App() {
   useEffect(() => {
     indexSetVaultRoot(vaultRoot);
     tagSetVaultRoot(vaultRoot);
+    headingSetVaultRoot(vaultRoot);
   }, [vaultRoot]);
 
   useEffect(() => {
     const paths = vaultFiles.map((f) => f.path);
     indexSetVaultPaths(paths);
     tagSetVaultPaths(paths);
+    headingSetVaultPaths(paths);
   }, [vaultFiles]);
 
   // Restore prefs on mount
@@ -757,6 +765,7 @@ export function App() {
       const newMtime = await writeFile(t.path, content, t.mtimeMs);
       indexFileSaved(t.path, content);
       tagFileSaved(t.path, content);
+      headingFileSaved(t.path, content);
       if (state.trimOnSave && content !== t.content) {
         // Push the trimmed content back into the store so the editor reflects
         // the on-disk version; SourceEditor's reconcile effect picks it up.
@@ -2246,6 +2255,7 @@ export function App() {
             );
             indexRebuild(validFiles);
             tagRebuild(validFiles);
+            headingRebuild(validFiles);
             const linkS = indexStats();
             const tagS = tagStats();
             showToast(
