@@ -125,6 +125,8 @@ export const en = {
   "toast.indexBuilding": "Scanning vault for links…",
   "toast.indexBuilt": "Indexed {0} links across {1} files",
   "toast.indexFailed": "Failed to build link index",
+  "backlinks.title": "Backlinks",
+  "backlinks.empty": "No backlinks. Run Rebuild Link Index to scan the vault.",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",

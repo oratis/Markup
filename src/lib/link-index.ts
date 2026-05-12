@@ -203,8 +203,14 @@ export function updateFileLinks(
   return index;
 }
 
-/** Look up incoming references for a given resolved path. Returns empty
- *  array when there are no backlinks (rather than undefined). */
+/** Stable empty sentinel — callers using useSyncExternalStore need the
+ *  reference to NOT change between renders when there are no backlinks,
+ *  otherwise React thinks the snapshot mutated and re-renders forever. */
+const EMPTY_REFS: LinkRef[] = [];
+
+/** Look up incoming references for a given resolved path. Returns the
+ *  stable empty sentinel (not a fresh `[]`) when there are no backlinks,
+ *  so React subscribers don't see a new array reference every call. */
 export function getBacklinks(index: LinkIndex, targetPath: string): LinkRef[] {
-  return index[targetPath] ?? [];
+  return index[targetPath] ?? EMPTY_REFS;
 }

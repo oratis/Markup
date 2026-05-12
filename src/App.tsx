@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AboutDialog } from "./components/AboutDialog";
+import { BacklinksPanel } from "./components/BacklinksPanel";
 import { type Command, CommandPalette } from "./components/CommandPalette";
 import { MarkupEditor } from "./components/Editor";
 import { FileTree } from "./components/FileTree";
@@ -531,6 +532,25 @@ export function App() {
     window.addEventListener("markup:wikilink-trigger", onTrigger);
     return () => window.removeEventListener("markup:wikilink-trigger", onTrigger);
   }, [showWikilinkPicker]);
+
+  // BacklinksPanel + other consumers dispatch markup:jump-to-line when they
+  // open a file and want the source editor to scroll to a specific line.
+  // Source-mode only; in WYSIWYG we just open the file and let the user
+  // scroll. If we're not yet in source mode, switch first.
+  useEffect(() => {
+    const onJump = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { line?: number } | undefined;
+      const line = detail?.line;
+      if (typeof line !== "number") return;
+      if (!useAppStore.getState().sourceMode) setSourceMode(true);
+      // CM6 mount runs in a microtask after source-mode flips — defer.
+      window.requestAnimationFrame(() => {
+        jumpToSourceLine(line);
+      });
+    };
+    window.addEventListener("markup:jump-to-line", onJump);
+    return () => window.removeEventListener("markup:jump-to-line", onJump);
+  }, [setSourceMode]);
 
   // Auto-trigger the wikilink picker when the user types `[[`. Only fires in
   // WYSIWYG (Milkdown / contenteditable) — source mode handles its own
@@ -2719,7 +2739,10 @@ export function App() {
               className="shrink-0 border-l border-black/5 dark:border-white/10 flex flex-col"
               style={{ width: outlineWidth }}
             >
-              <Outline />
+              <div className="flex-1 min-h-0 flex flex-col">
+                <Outline />
+              </div>
+              <BacklinksPanel />
             </aside>
           </>
         )}

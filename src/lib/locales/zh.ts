@@ -126,6 +126,8 @@ export const zh: Strings = {
   "toast.indexBuilding": "正在扫描 Vault 中的链接…",
   "toast.indexBuilt": "已索引 {0} 条链接，覆盖 {1} 个文件",
   "toast.indexFailed": "构建链接索引失败",
+  "backlinks.title": "反向链接",
+  "backlinks.empty": "暂无反向链接。可执行「重建链接索引」扫描 Vault。",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "prompt.linkUrl": "链接 URL：",
   "prompt.linkText": "链接文本：",
