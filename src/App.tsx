@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AboutDialog } from "./components/AboutDialog";
 import { BacklinksPanel } from "./components/BacklinksPanel";
+import { BookmarksPane } from "./components/BookmarksPane";
 import { type Command, CommandPalette } from "./components/CommandPalette";
 import { MarkupEditor } from "./components/Editor";
 import { FileTree } from "./components/FileTree";
@@ -21,6 +22,7 @@ import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { WikilinkPicker } from "./components/WikilinkPicker";
 import { getActiveSourceView } from "./lib/active-source-view";
+import { toggleBookmark } from "./lib/bookmarks";
 import {
   cycleHeadingLevel,
   dedupLines,
@@ -2275,6 +2277,19 @@ export function App() {
         },
       },
       {
+        id: "toggle_bookmark",
+        label: "Toggle Bookmark for Active File",
+        run: () => {
+          const t2 = getActiveTab(useAppStore.getState());
+          if (!t2?.path) {
+            showToast(tr("toast.renameNoFile"));
+            return;
+          }
+          const nowOn = toggleBookmark(t2.path);
+          showToast(nowOn ? tr("toast.bookmarkAdded") : tr("toast.bookmarkRemoved"));
+        },
+      },
+      {
         id: "copy_with_embeds_resolved",
         label: "Copy Document with Embeds Resolved",
         run: async () => {
@@ -2919,6 +2934,9 @@ export function App() {
               </div>
               <div className="max-h-[30vh] flex flex-col">
                 <TagsPane />
+              </div>
+              <div className="max-h-[30vh] flex flex-col">
+                <BookmarksPane />
               </div>
             </aside>
           </>
