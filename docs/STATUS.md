@@ -1,15 +1,86 @@
-# Status — Last updated 2026-05-11 (107 batches landed)
+# Status — Last updated 2026-05-12 (124 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 125+ commits across **107 feature batches**, all CI-green.
-`v0.1.2` is the latest released DMG (unsigned). The app compiles,
-type-checks, lint-clean, **377 React tests + 17 Rust unit + 9 integration**,
-double-Codecov coverage upload, and runs cleanly in dev.
+`main` branch has 140+ commits across **124 feature batches**, all CI-green.
+`main` is now protected (linear history, required CI, no force-push, no
+deletion; admin can hotfix). `v0.1.2` is the latest released DMG (unsigned).
+The app compiles, type-checks, lint-clean, **572 React tests + 17 Rust
+unit + 9 integration**, double-Codecov coverage upload, runs cleanly in dev.
 
-## What landed in batches 91–107 (newest)
+## What landed in batches 114–124 (newest) — Obsidian Tier-1
+
+After researching Obsidian's defining features, set a Tier-1 list of
+five that turn Markup from "Markdown editor with wikilinks" into a
+credible Obsidian alternative. **All five now have at least their core
+shipped.**
+
+### #1 Backlinks (✅ panel + indexer)
+- `extractLinks` / `resolveTarget` / `buildIndex` / `updateFileLinks`
+  in src/lib/link-index.ts — parse `[[…]]` / `![[…]]`, skip fences +
+  inline code, GitHub-style basename + path-suffix resolution
+- Singleton store in src/lib/link-index-store.ts with subscribe API,
+  vault-root keyed localStorage cache (4 MB cap), incremental
+  onFileSaved hook wired into the App.tsx save path
+- BacklinksPanel.tsx under the Outline aside — grouped by source file,
+  L<line> + snippet, click to open + jump via `markup:jump-to-line`
+- "Rebuild Link Index" palette command (opt-in full scan — touching
+  every file on vault-open would freeze 1000+-file vaults)
+
+### #2 Tag system (✅ panel + indexer)
+- `extractTags` in src/lib/tag-extract.ts — inline `#tag` (incl. nested
+  `#tag/sub`), YAML frontmatter inline + block array forms, Unicode-aware,
+  case-preserving, skips fences / inline code / ATX heading prefix /
+  pure-numeric `#42`
+- Singleton tag-index store with sorted-snapshot caching for
+  useSyncExternalStore stability
+- TagsPane.tsx stacked under BacklinksPanel — alpha-sorted with file
+  counts, inline filter, click → cross-vault SearchPanel pre-filled
+  with `#tag`
+- Rebuild palette command builds both indices in one pass, toast
+  reports `links/files/tags`
+
+### #3 Daily notes + templates (✅)
+- Three persisted settings: `dailyNotesFolder` (default `journal`),
+  `dailyNotesFormat` (`YYYY-MM-DD`), `dailyNotesTemplate` (vault-
+  relative path, optional)
+- Pure helpers in src/lib/template.ts — `formatDate` (YYYY MM DD HH mm
+  ss), `applyTemplate` (`{{title}}` `{{date}}` `{{date:FMT}}` `{{time}}`
+  `{{cursor}}`), `dailyNotePath` (slash-formats nest by date)
+- "Open Today's Daily Note" palette command — opens existing or creates
+  from template, refreshes file tree, places caret at `{{cursor}}` slot
+
+### #4 Properties UI (✅)
+- `parseFrontmatter` / `serializeFrontmatter` round-trip — scalars,
+  inline + block arrays, booleans (`true/false/yes/no`), nulls, quote
+  preservation, ambiguity-aware quoting on emit
+- PropertiesEditor.tsx mounted above the editor body in WYSIWYG mode
+  (hidden in source mode — raw YAML is already visible) — text /
+  number / boolean / list rows, × removes, bottom-row submit adds key
+- Edits round-trip through serialiser + updateActiveContent in place
+
+### #5 Embeds (✅ slicer + resolve-to-clipboard)
+- `splitEmbedTarget` / `findSectionByHeading` / `findBlock` /
+  `sliceEmbed` in src/lib/embed-slice.ts — handles `Foo`, `Foo#Section`
+  (fence-aware heading match), `Foo^block` (paragraph marker with
+  whitespace boundary, stops at heading lines)
+- "Copy Document with Embeds Resolved" palette command — walks the
+  active doc, resolves every `![[…]]` via vault read + slice, emits a
+  blockquote-style expansion below each embed line, copies to clipboard.
+  Reports resolved/unresolved counts. Future batch will add a Milkdown
+  inline renderer.
+
+### Other (batches 114-124)
+- Branch protection on `main` (linear history, required CI checks,
+  conversation resolution, no force-push, no deletion, admin can override)
+- `markup:open-search` custom event for cross-component filter triggers
+- `markup:jump-to-line` custom event for cross-component scroll
+- `EMPTY_REFS` / cached-snapshot sentinels to keep useSyncExternalStore
+  stable across renders
+
+## What landed in batches 91–107
 
 ### User-visible
 - **Insert Table of Contents** palette command — markdown bullet list
