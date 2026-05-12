@@ -660,6 +660,27 @@ export function App() {
     return () => host.removeEventListener("click", onClick);
   }, [openLoadedFile]);
 
+  // Click on a tag chip (`.tag` decoration in WYSIWYG) → open
+  // SearchPanel filtered by that tag. Mirrors the TagsPane behaviour.
+  useEffect(() => {
+    const host = editorScrollRef.current;
+    if (!host) return;
+    const onTagClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const el = target?.closest?.(".tag") as HTMLElement | null;
+      if (!el) return;
+      const name = el.getAttribute("data-tag-name");
+      if (!name) return;
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(
+        new CustomEvent("markup:open-search", { detail: { query: `#${name}` } }),
+      );
+    };
+    host.addEventListener("click", onTagClick);
+    return () => host.removeEventListener("click", onTagClick);
+  }, []);
+
   function copyParagraphLink() {
     const sel = window.getSelection();
     let cursorLine = 0;

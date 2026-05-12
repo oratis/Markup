@@ -133,6 +133,24 @@ html.theme-sepia .milkdown .wikilink {
   color: #6b4523;
 }
 
+/* Tag chip — visual treatment for #tag in WYSIWYG editor */
+.milkdown .tag {
+  background: rgba(101, 110, 117, 0.12);
+  color: #57606a;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+html.theme-dark .milkdown .tag {
+  background: rgba(139, 148, 158, 0.2);
+  color: #8b949e;
+}
+html.theme-sepia .milkdown .tag {
+  background: rgba(139, 90, 43, 0.12);
+  color: #6b4523;
+}
+
 /* Focus mode: dim non-active blocks. Pure CSS via [data-active] attribute set
    by lib/focus-typewriter.ts on selectionchange. */
 .focus-mode .milkdown .editor > *,
