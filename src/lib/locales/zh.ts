@@ -136,6 +136,7 @@ export const zh: Strings = {
   "properties.empty": "（空）",
   "properties.remove": "删除属性",
   "properties.addKey": "添加属性…",
+  "toast.embedsResolved": "已复制，解析 {0} 个嵌入，未解析 {1} 个",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "prompt.linkUrl": "链接 URL：",
   "prompt.linkText": "链接文本：",

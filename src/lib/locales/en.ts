@@ -135,6 +135,7 @@ export const en = {
   "properties.empty": "(empty)",
   "properties.remove": "Remove property",
   "properties.addKey": "Add property…",
+  "toast.embedsResolved": "Copied with {0} embeds resolved, {1} unresolved",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",

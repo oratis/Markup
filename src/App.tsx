@@ -43,6 +43,7 @@ import {
 } from "./lib/cm-section";
 import { formatTable, toggleTaskCheckboxOnLine } from "./lib/cm-table-format";
 import { collapseBlankLines } from "./lib/collapse-blanks";
+import { sliceEmbed, splitEmbedTarget } from "./lib/embed-slice";
 import { exportHtml, exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { wikilinkAtCursor } from "./lib/follow-wikilink";
@@ -2271,6 +2272,83 @@ export function App() {
           }
           updateActiveContent(next);
           showToast(tr("toast.collapsed"));
+        },
+      },
+      {
+        id: "copy_with_embeds_resolved",
+        label: "Copy Document with Embeds Resolved",
+        run: async () => {
+          if (!tab) return;
+          const s = useAppStore.getState();
+          if (!s.vaultRoot) {
+            showToast(tr("toast.newFileNoVault"));
+            return;
+          }
+          // Find every ![[…]] (skip code blocks / inline code via the
+          // same regex / fence skip as the indexer).
+          const embedRe = /!\[\[([^\]|\n]+?)(?:\|[^\]\n]+?)?\]\]/g;
+          const lines = tab.content.split("\n");
+          let inFence = false;
+          let fenceMarker = "";
+          const out: string[] = [];
+          let resolvedCount = 0;
+          let missedCount = 0;
+          for (const line of lines) {
+            const trimmed = line.trimStart();
+            const fm = trimmed.match(/^(```|~~~)/);
+            if (fm) {
+              if (!inFence) {
+                inFence = true;
+                fenceMarker = fm[1];
+              } else if (trimmed.startsWith(fenceMarker)) {
+                inFence = false;
+              }
+              out.push(line);
+              continue;
+            }
+            if (inFence) {
+              out.push(line);
+              continue;
+            }
+            const matches = [...line.matchAll(embedRe)];
+            if (matches.length === 0) {
+              out.push(line);
+              continue;
+            }
+            out.push(line);
+            for (const m of matches) {
+              const { file, heading, blockId } = splitEmbedTarget(m[1]);
+              const target = findVaultFile(s.vaultFiles, file);
+              if (!target) {
+                missedCount++;
+                continue;
+              }
+              try {
+                const loaded = await readFile(target.path);
+                const slice = sliceEmbed(loaded.content, heading, blockId);
+                if (slice === null) {
+                  missedCount++;
+                  continue;
+                }
+                // Blockquote-style insertion so it's visually distinct
+                // from the source line.
+                out.push("");
+                for (const inner of slice.split("\n")) out.push(`> ${inner}`);
+                out.push("");
+                resolvedCount++;
+              } catch {
+                missedCount++;
+              }
+            }
+          }
+          try {
+            await navigator.clipboard.writeText(out.join("\n"));
+            showToast(
+              tr("toast.embedsResolved", String(resolvedCount), String(missedCount)),
+            );
+          } catch {
+            showToast(tr("toast.copyFailed"));
+          }
         },
       },
       {
