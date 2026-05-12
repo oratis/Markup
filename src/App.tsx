@@ -7,6 +7,7 @@ import { FileTree } from "./components/FileTree";
 import { FindBar } from "./components/FindBar";
 import { Onboarding } from "./components/Onboarding";
 import { Outline } from "./components/Outline";
+import { PropertiesEditor } from "./components/PropertiesEditor";
 import { QuickOpen } from "./components/QuickOpen";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import { Resizer } from "./components/Resizer";
@@ -2811,6 +2812,7 @@ export function App() {
           ref={editorScrollRef as React.RefObject<HTMLElement>}
           spellCheck={spellcheck}
         >
+          {!sourceMode && <PropertiesEditor />}
           <MarkupEditor
             fileKey={fileKey}
             initialValue={initialValue}
