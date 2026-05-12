@@ -28,7 +28,19 @@ let tagToFiles = new Map<string, Set<string>>();
 let fileToTags = new Map<string, Set<string>>();
 const listeners = new Set<() => void>();
 
+// Cached sorted snapshot for useSyncExternalStore. React's snapshot
+// contract requires the SAME reference between renders when nothing
+// has changed; recomputed in invalidateSnapshot() on every mutation.
+let snapshot: { tag: string; count: number }[] = [];
+function invalidateSnapshot() {
+  const out: { tag: string; count: number }[] = [];
+  for (const [tag, files] of tagToFiles) out.push({ tag, count: files.size });
+  out.sort((a, b) => a.tag.localeCompare(b.tag));
+  snapshot = out;
+}
+
 function notify() {
+  invalidateSnapshot();
   for (const l of listeners) l();
 }
 
@@ -180,14 +192,11 @@ export function onFileRemoved(path: string): void {
   notify();
 }
 
-/** All tags currently in the vault, with file counts. Sorted alpha. */
+/** All tags currently in the vault, with file counts. Sorted alpha.
+ *  Returns the cached snapshot reference (stable across renders when
+ *  state hasn't changed) so useSyncExternalStore consumers don't loop. */
 export function allTagsWithCounts(): { tag: string; count: number }[] {
-  const out: { tag: string; count: number }[] = [];
-  for (const [tag, files] of tagToFiles) {
-    out.push({ tag, count: files.size });
-  }
-  out.sort((a, b) => a.tag.localeCompare(b.tag));
-  return out;
+  return snapshot;
 }
 
 /** Files carrying the given tag. */

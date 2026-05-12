@@ -15,6 +15,7 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { ShortcutsCheatsheet } from "./components/ShortcutsCheatsheet";
 import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
+import { TagsPane } from "./components/TagsPane";
 import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { WikilinkPicker } from "./components/WikilinkPicker";
@@ -542,6 +543,18 @@ export function App() {
     window.addEventListener("markup:wikilink-trigger", onTrigger);
     return () => window.removeEventListener("markup:wikilink-trigger", onTrigger);
   }, [showWikilinkPicker]);
+
+  // TagsPane (and future filter consumers) dispatch markup:open-search
+  // with a `query` to pre-fill the cross-vault SearchPanel.
+  useEffect(() => {
+    const onOpenSearch = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { query?: string } | undefined;
+      setSearchInitialQuery(detail?.query ?? "");
+      setShowSearch(true);
+    };
+    window.addEventListener("markup:open-search", onOpenSearch);
+    return () => window.removeEventListener("markup:open-search", onOpenSearch);
+  }, []);
 
   // BacklinksPanel + other consumers dispatch markup:jump-to-line when they
   // open a file and want the source editor to scroll to a specific line.
@@ -2763,7 +2776,12 @@ export function App() {
               <div className="flex-1 min-h-0 flex flex-col">
                 <Outline />
               </div>
-              <BacklinksPanel />
+              <div className="max-h-[30vh] flex flex-col">
+                <BacklinksPanel />
+              </div>
+              <div className="max-h-[30vh] flex flex-col">
+                <TagsPane />
+              </div>
             </aside>
           </>
         )}
