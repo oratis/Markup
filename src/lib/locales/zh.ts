@@ -131,6 +131,7 @@ export const zh: Strings = {
   "tags.title": "标签",
   "tags.filter": "筛选标签…",
   "tags.empty": "暂无标签。可执行「重建链接索引」扫描。",
+  "toast.dailyNoteCreated": "已创建今日日记",
   "prompt.tableSize": "表格尺寸：行 x 列（例如 3x4）：",
   "prompt.linkUrl": "链接 URL：",
   "prompt.linkText": "链接文本：",

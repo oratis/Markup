@@ -130,6 +130,7 @@ export const en = {
   "tags.title": "Tags",
   "tags.filter": "Filter tags…",
   "tags.empty": "No tags. Run Rebuild Link Index to scan.",
+  "toast.dailyNoteCreated": "Daily note created",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",

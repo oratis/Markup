@@ -28,6 +28,9 @@ export function SettingsDialog({ onClose }: Props) {
   const showToolbar = useAppStore((s) => s.showToolbar);
   const showTabBar = useAppStore((s) => s.showTabBar);
   const vaultSort = useAppStore((s) => s.vaultSort);
+  const dailyNotesFolder = useAppStore((s) => s.dailyNotesFolder);
+  const dailyNotesFormat = useAppStore((s) => s.dailyNotesFormat);
+  const dailyNotesTemplate = useAppStore((s) => s.dailyNotesTemplate);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
@@ -45,6 +48,9 @@ export function SettingsDialog({ onClose }: Props) {
     showToolbar,
     showTabBar,
     vaultSort,
+    dailyNotesFolder,
+    dailyNotesFormat,
+    dailyNotesTemplate,
   });
 
   function commit(patch: Partial<Settings>) {

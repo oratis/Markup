@@ -22,6 +22,9 @@ export function serializeSettings(s: Settings): string {
       showToolbar: s.showToolbar,
       showTabBar: s.showTabBar,
       vaultSort: s.vaultSort,
+      dailyNotesFolder: s.dailyNotesFolder,
+      dailyNotesFormat: s.dailyNotesFormat,
+      dailyNotesTemplate: s.dailyNotesTemplate,
     },
     null,
     2,
@@ -70,6 +73,9 @@ export function parseSettings(input: unknown): Partial<Settings> | null {
   bool("showToolbar");
   bool("showTabBar");
   enumVal("vaultSort", ["name", "mtime"] as const);
+  str("dailyNotesFolder");
+  str("dailyNotesFormat");
+  str("dailyNotesTemplate");
 
   return out;
 }

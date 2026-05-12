@@ -107,6 +107,7 @@ import {
   renderHtml,
   writeFile,
 } from "./lib/tauri";
+import { applyTemplate, dailyNotePath } from "./lib/template";
 import { buildToc } from "./lib/toc";
 import { checkForUpdates } from "./lib/updater";
 import { findVaultFile, wikilinkAtClick } from "./lib/wikilink";
@@ -2269,6 +2270,63 @@ export function App() {
           }
           updateActiveContent(next);
           showToast(tr("toast.collapsed"));
+        },
+      },
+      {
+        id: "open_daily_note",
+        label: "Open Today's Daily Note",
+        run: async () => {
+          const s = useAppStore.getState();
+          if (!s.vaultRoot) {
+            showToast(tr("toast.newFileNoVault"));
+            return;
+          }
+          const path = dailyNotePath(
+            s.vaultRoot,
+            s.dailyNotesFolder,
+            s.dailyNotesFormat,
+            new Date(),
+          );
+          try {
+            // Try to open an existing file first.
+            const loaded = await readFile(path);
+            openLoadedFile(loaded);
+            return;
+          } catch {
+            /* falls through to create */
+          }
+          // Build content from template (if configured) and create it.
+          let templateBody = "";
+          if (s.dailyNotesTemplate) {
+            const tplPath = s.dailyNotesTemplate.startsWith("/")
+              ? s.dailyNotesTemplate
+              : `${s.vaultRoot}/${s.dailyNotesTemplate}`;
+            try {
+              const tpl = await readFile(tplPath);
+              templateBody = tpl.content;
+            } catch {
+              /* missing template — fall through to empty */
+            }
+          }
+          const slash = path.lastIndexOf("/");
+          const filename = slash >= 0 ? path.slice(slash + 1) : path;
+          const title = filename.replace(/\.md$/i, "");
+          const { text } = applyTemplate(templateBody, { date: new Date(), title });
+          try {
+            const mtime = await writeFile(path, text, null);
+            openLoadedFile({ path, content: text, mtime_ms: mtime });
+            // Refresh vault file list so the sidebar shows the new note.
+            try {
+              const files = await listVaultFiles();
+              useAppStore.getState().setVaultFiles(files.map(toVaultFileTs));
+            } catch {
+              /* watcher will catch up */
+            }
+            showToast(tr("toast.dailyNoteCreated"));
+          } catch (e) {
+            console.error("open_daily_note write failed", e);
+            showToast(tr("toast.newFileFailed", String(e)));
+          }
         },
       },
       {

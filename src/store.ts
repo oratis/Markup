@@ -79,6 +79,12 @@ interface AppState {
   showTabBar: boolean;
   /** Sidebar file tree sort order. */
   vaultSort: "name" | "mtime";
+  /** Vault-relative folder where daily notes live. */
+  dailyNotesFolder: string;
+  /** Filename format string for daily notes (e.g. "YYYY-MM-DD"). */
+  dailyNotesFormat: string;
+  /** Vault-relative path to a markdown template applied to new daily notes. */
+  dailyNotesTemplate: string;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -153,6 +159,9 @@ export interface Settings {
   showToolbar: boolean;
   showTabBar: boolean;
   vaultSort: "name" | "mtime";
+  dailyNotesFolder: string;
+  dailyNotesFormat: string;
+  dailyNotesTemplate: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -172,6 +181,9 @@ export const DEFAULT_SETTINGS: Settings = {
   showToolbar: true,
   showTabBar: true,
   vaultSort: "name",
+  dailyNotesFolder: "journal",
+  dailyNotesFormat: "YYYY-MM-DD",
+  dailyNotesTemplate: "",
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -276,6 +288,9 @@ export const useAppStore = create<AppState>((set) => ({
   showToolbar: DEFAULT_SETTINGS.showToolbar,
   showTabBar: DEFAULT_SETTINGS.showTabBar,
   vaultSort: DEFAULT_SETTINGS.vaultSort,
+  dailyNotesFolder: DEFAULT_SETTINGS.dailyNotesFolder,
+  dailyNotesFormat: DEFAULT_SETTINGS.dailyNotesFormat,
+  dailyNotesTemplate: DEFAULT_SETTINGS.dailyNotesTemplate,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -589,6 +604,9 @@ export const useAppStore = create<AppState>((set) => ({
       const showToolbar = patch.showToolbar ?? state.showToolbar;
       const showTabBar = patch.showTabBar ?? state.showTabBar;
       const vaultSort = patch.vaultSort ?? state.vaultSort;
+      const dailyNotesFolder = (patch.dailyNotesFolder ?? state.dailyNotesFolder).trim();
+      const dailyNotesFormat = (patch.dailyNotesFormat ?? state.dailyNotesFormat).trim();
+      const dailyNotesTemplate = patch.dailyNotesTemplate ?? state.dailyNotesTemplate;
       return {
         fontSize,
         proseMaxWidth,
@@ -606,6 +624,9 @@ export const useAppStore = create<AppState>((set) => ({
         showToolbar,
         showTabBar,
         vaultSort,
+        dailyNotesFolder,
+        dailyNotesFormat: dailyNotesFormat || "YYYY-MM-DD",
+        dailyNotesTemplate,
       };
     }),
 
