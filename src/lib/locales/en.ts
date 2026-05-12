@@ -123,7 +123,7 @@ export const en = {
   "toast.collapsed": "Blank lines collapsed",
   "toast.nothingToCollapse": "No blank-line runs to collapse",
   "toast.indexBuilding": "Scanning vault for links…",
-  "toast.indexBuilt": "Indexed {0} links across {1} files",
+  "toast.indexBuilt": "Indexed {0} links across {1} files; {2} tags",
   "toast.indexFailed": "Failed to build link index",
   "backlinks.title": "Backlinks",
   "backlinks.empty": "No backlinks. Run Rebuild Link Index to scan the vault.",

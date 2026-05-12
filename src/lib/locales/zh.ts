@@ -124,7 +124,7 @@ export const zh: Strings = {
   "toast.collapsed": "已合并多余空行",
   "toast.nothingToCollapse": "没有需要合并的空行",
   "toast.indexBuilding": "正在扫描 Vault 中的链接…",
-  "toast.indexBuilt": "已索引 {0} 条链接，覆盖 {1} 个文件",
+  "toast.indexBuilt": "已索引 {0} 条链接，覆盖 {1} 个文件；{2} 个标签",
   "toast.indexFailed": "构建链接索引失败",
   "backlinks.title": "反向链接",
   "backlinks.empty": "暂无反向链接。可执行「重建链接索引」扫描 Vault。",

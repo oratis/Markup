@@ -84,6 +84,13 @@ import { installSmartPaste } from "./lib/smart-paste";
 import { stripMarkdown } from "./lib/strip-md";
 import { nextTheme, resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
 import {
+  onFileSaved as tagFileSaved,
+  rebuildFromFiles as tagRebuild,
+  setVaultPaths as tagSetVaultPaths,
+  setVaultRoot as tagSetVaultRoot,
+  tagStats,
+} from "./lib/tag-index-store";
+import {
   listRecentFilesNative,
   listVaultFiles,
   listenMenu,
@@ -192,10 +199,13 @@ export function App() {
   // command — touching every file at vault-open would freeze large vaults.
   useEffect(() => {
     indexSetVaultRoot(vaultRoot);
+    tagSetVaultRoot(vaultRoot);
   }, [vaultRoot]);
 
   useEffect(() => {
-    indexSetVaultPaths(vaultFiles.map((f) => f.path));
+    const paths = vaultFiles.map((f) => f.path);
+    indexSetVaultPaths(paths);
+    tagSetVaultPaths(paths);
   }, [vaultFiles]);
 
   // Restore prefs on mount
@@ -728,6 +738,7 @@ export function App() {
       const content = state.trimOnSave ? trimTrailingWhitespace(t.content) : t.content;
       const newMtime = await writeFile(t.path, content, t.mtimeMs);
       indexFileSaved(t.path, content);
+      tagFileSaved(t.path, content);
       if (state.trimOnSave && content !== t.content) {
         // Push the trimmed content back into the store so the editor reflects
         // the on-disk version; SourceEditor's reconcile effect picks it up.
@@ -2212,11 +2223,21 @@ export function App() {
                 }
               }),
             );
-            indexRebuild(
-              contents.filter((c): c is { path: string; content: string } => !!c),
+            const validFiles = contents.filter(
+              (c): c is { path: string; content: string } => !!c,
             );
-            const stats = indexStats();
-            showToast(tr("toast.indexBuilt", String(stats.refs), String(stats.targets)));
+            indexRebuild(validFiles);
+            tagRebuild(validFiles);
+            const linkS = indexStats();
+            const tagS = tagStats();
+            showToast(
+              tr(
+                "toast.indexBuilt",
+                String(linkS.refs),
+                String(linkS.targets),
+                String(tagS.tags),
+              ),
+            );
           } catch (e) {
             console.error("rebuild_link_index failed", e);
             showToast(tr("toast.indexFailed"));
