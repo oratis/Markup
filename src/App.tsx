@@ -62,6 +62,13 @@ import {
   transformSelection,
   wrapMarkdown,
 } from "./lib/insert-md";
+import {
+  onFileSaved as indexFileSaved,
+  rebuildFromFiles as indexRebuild,
+  setVaultPaths as indexSetVaultPaths,
+  setVaultRoot as indexSetVaultRoot,
+  indexStats,
+} from "./lib/link-index-store";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { getPinnedPaths, persistPinnedPath } from "./lib/pinned-paths";
 import { trimTrailingWhitespace } from "./lib/save-prep";
@@ -123,6 +130,8 @@ export function App() {
   const tr = useT();
   const tab = useAppStore(getActiveTab);
   const tabs = useAppStore((s) => s.tabs);
+  const vaultRoot = useAppStore((s) => s.vaultRoot);
+  const vaultFiles = useAppStore((s) => s.vaultFiles);
   const sourceMode = useAppStore((s) => s.sourceMode);
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
   const outlineOpen = useAppStore((s) => s.outlineOpen);
@@ -175,6 +184,18 @@ export function App() {
 
   const editorScrollRef = useRef<HTMLElement | null>(null);
   const saveTimerRef = useRef<number | null>(null);
+
+  // Keep the link-index store in sync with the active vault. Root change
+  // restores the persisted cache (instant), file-list change reconciles
+  // stale targets. The actual full rebuild is opt-in via the palette
+  // command — touching every file at vault-open would freeze large vaults.
+  useEffect(() => {
+    indexSetVaultRoot(vaultRoot);
+  }, [vaultRoot]);
+
+  useEffect(() => {
+    indexSetVaultPaths(vaultFiles.map((f) => f.path));
+  }, [vaultFiles]);
 
   // Restore prefs on mount
   useEffect(() => {
@@ -686,6 +707,7 @@ export function App() {
     try {
       const content = state.trimOnSave ? trimTrailingWhitespace(t.content) : t.content;
       const newMtime = await writeFile(t.path, content, t.mtimeMs);
+      indexFileSaved(t.path, content);
       if (state.trimOnSave && content !== t.content) {
         // Push the trimmed content back into the store so the editor reflects
         // the on-disk version; SourceEditor's reconcile effect picks it up.
@@ -2147,6 +2169,38 @@ export function App() {
           }
           updateActiveContent(next);
           showToast(tr("toast.trimmed"));
+        },
+      },
+      {
+        id: "rebuild_link_index",
+        label: "Rebuild Link Index",
+        run: async () => {
+          const s = useAppStore.getState();
+          if (!s.vaultRoot) {
+            showToast(tr("toast.newFileNoVault"));
+            return;
+          }
+          showToast(tr("toast.indexBuilding"));
+          try {
+            const contents = await Promise.all(
+              s.vaultFiles.map(async (f) => {
+                try {
+                  const loaded = await readFile(f.path);
+                  return { path: f.path, content: loaded.content };
+                } catch {
+                  return null;
+                }
+              }),
+            );
+            indexRebuild(
+              contents.filter((c): c is { path: string; content: string } => !!c),
+            );
+            const stats = indexStats();
+            showToast(tr("toast.indexBuilt", String(stats.refs), String(stats.targets)));
+          } catch (e) {
+            console.error("rebuild_link_index failed", e);
+            showToast(tr("toast.indexFailed"));
+          }
         },
       },
       {
