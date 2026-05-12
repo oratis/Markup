@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../lib/i18n";
+import { parseQuery, pathMatches } from "../lib/search-operators";
+import { filesForTag } from "../lib/tag-index-store";
 import { readFile, searchVault } from "../lib/tauri";
 import type { SearchHit } from "../lib/types";
 import { useAppStore } from "../store";
@@ -34,8 +36,36 @@ export function SearchPanel({ onClose, initialQuery = "" }: SearchPanelProps) {
       setBusy(true);
       setError(null);
       try {
-        const r = await searchVault(query, 50);
-        if (!cancelled) setHits(r);
+        const parsed = parseQuery(query);
+        // If only operators (no free text), evaluate locally via indices.
+        if (!parsed.text && (parsed.tags.length > 0 || parsed.paths.length > 0)) {
+          let paths: string[] = [];
+          if (parsed.tags.length > 0) {
+            const sets = parsed.tags.map((t) => new Set(filesForTag(t)));
+            // Intersection (AND) of all tag buckets.
+            const [first, ...rest] = sets;
+            paths = [...(first ?? new Set())].filter((p) => rest.every((s) => s.has(p)));
+          } else {
+            // Path-only — fall back to vault files list.
+            paths = useAppStore.getState().vaultFiles.map((f) => f.path);
+          }
+          paths = paths.filter((p) => pathMatches(p, parsed.paths));
+          const out: SearchHit[] = paths.slice(0, 200).map((p) => ({
+            path: p,
+            title: p.slice(p.lastIndexOf("/") + 1),
+            mtime_ms: 0,
+            score: 0,
+          }));
+          if (!cancelled) setHits(out);
+          return;
+        }
+        // Free-text (with optional path filter) goes through Rust.
+        const r = await searchVault(parsed.text || query, 50);
+        const filtered =
+          parsed.paths.length > 0
+            ? r.filter((h) => pathMatches(h.path, parsed.paths))
+            : r;
+        if (!cancelled) setHits(filtered);
       } catch (e) {
         if (!cancelled) setError(String(e));
       } finally {
