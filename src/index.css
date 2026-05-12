@@ -151,6 +151,27 @@ html.theme-sepia .milkdown .tag {
   color: #6b4523;
 }
 
+/* Embed marker — visual treatment for ![[xxx]] transclusions */
+.milkdown .embed {
+  background: rgba(34, 139, 230, 0.06);
+  color: #1971c2;
+  border: 1px dashed rgba(34, 139, 230, 0.45);
+  border-radius: 3px;
+  padding: 0 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+html.theme-dark .milkdown .embed {
+  background: rgba(88, 166, 255, 0.08);
+  color: #58a6ff;
+  border-color: rgba(88, 166, 255, 0.5);
+}
+html.theme-sepia .milkdown .embed {
+  background: rgba(139, 90, 43, 0.08);
+  color: #6b4523;
+  border-color: rgba(139, 90, 43, 0.45);
+}
+
 /* Focus mode: dim non-active blocks. Pure CSS via [data-active] attribute set
    by lib/focus-typewriter.ts on selectionchange. */
 .focus-mode .milkdown .editor > *,

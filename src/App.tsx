@@ -660,6 +660,55 @@ export function App() {
     return () => host.removeEventListener("click", onClick);
   }, [openLoadedFile]);
 
+  // Click on an `.embed` decoration (`![[target]]`) → open the target
+  // file in a new tab; if an `#heading` anchor is present, dispatch a
+  // jump-to-line. Block-id (`^id`) jumps are handled the same way once
+  // we surface block lines through the heading-index store.
+  useEffect(() => {
+    const host = editorScrollRef.current;
+    if (!host) return;
+    const onEmbedClick = async (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const el = target?.closest?.(".embed") as HTMLElement | null;
+      if (!el) return;
+      const raw = el.getAttribute("data-embed-target");
+      if (!raw) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const { splitEmbedTarget } = await import("./lib/embed-slice");
+      const { file, heading } = splitEmbedTarget(raw);
+      const files = useAppStore.getState().vaultFiles;
+      const hit = findVaultFile(files, file);
+      if (!hit) {
+        showToast(tr("toast.wikilinkMiss", file));
+        return;
+      }
+      try {
+        const loaded = await readFile(hit.path);
+        openLoadedFile(loaded);
+        if (heading) {
+          const lines = loaded.content.split("\n");
+          const idx = lines.findIndex((ln) => {
+            const m = ln.match(/^\s*#{1,6}\s+(.+?)\s*#*\s*$/);
+            return !!m && m[1].trim() === heading;
+          });
+          if (idx >= 0) {
+            window.requestAnimationFrame(() => {
+              window.dispatchEvent(
+                new CustomEvent("markup:jump-to-line", { detail: { line: idx } }),
+              );
+            });
+          }
+        }
+      } catch (err) {
+        console.error("embed open failed", err);
+        showToast(tr("toast.openFailed", hit.name));
+      }
+    };
+    host.addEventListener("click", onEmbedClick);
+    return () => host.removeEventListener("click", onEmbedClick);
+  }, [openLoadedFile, tr]);
+
   // Click on a tag chip (`.tag` decoration in WYSIWYG) → open
   // SearchPanel filtered by that tag. Mirrors the TagsPane behaviour.
   useEffect(() => {
