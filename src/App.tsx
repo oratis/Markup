@@ -1069,6 +1069,41 @@ export function App() {
     }
   }, []);
 
+  const newCanvasInVault = useCallback(async () => {
+    const root = useAppStore.getState().vaultRoot;
+    if (!root) {
+      showToast(tr("toast.newFileNoVault"));
+      return;
+    }
+    const name = window.prompt(tr("prompt.newFileName"), "untitled.canvas");
+    if (!name) return;
+    const cleanName = name.trim();
+    if (!cleanName || cleanName.includes("/")) {
+      showToast(tr("toast.renameBadName"));
+      return;
+    }
+    const finalName = cleanName.toLowerCase().endsWith(".canvas")
+      ? cleanName
+      : `${cleanName}.canvas`;
+    const sep = root.endsWith("/") ? "" : "/";
+    const newPath = `${root}${sep}${finalName}`;
+    // Obsidian writes a fresh canvas as `{}`; we follow that so the new
+    // file is interchangeable. parseCanvas treats `{}` as empty.
+    try {
+      const mtime = await writeFile(newPath, "{}", null);
+      openLoadedFile({ path: newPath, content: "{}", mtime_ms: mtime });
+      try {
+        const files = await listVaultFiles();
+        useAppStore.getState().setVaultFiles(files.map(toVaultFileTs));
+      } catch {
+        /*ignore — watcher will pick it up too*/
+      }
+    } catch (e) {
+      console.error("new_canvas_in_vault failed", e);
+      showToast(tr("toast.newFileFailed", String(e)));
+    }
+  }, [openLoadedFile, tr]);
+
   const newFileInVault = useCallback(async () => {
     const root = useAppStore.getState().vaultRoot;
     if (!root) {
@@ -1651,6 +1686,11 @@ export function App() {
         id: "new_file_in_vault",
         label: "New File in Vault…",
         run: newFileInVault,
+      },
+      {
+        id: "new_canvas_in_vault",
+        label: "New Canvas in Vault…",
+        run: newCanvasInVault,
       },
       {
         id: "close_all_tabs",
