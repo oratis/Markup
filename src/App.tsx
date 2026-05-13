@@ -62,6 +62,7 @@ import {
   parseHeadings,
   prevHeadingFrom,
 } from "./lib/headings";
+import { installHoverPreview } from "./lib/hover-preview";
 import { useT } from "./lib/i18n";
 import { installImageDrop } from "./lib/image-drop";
 import { installImagePaste } from "./lib/image-paste";
@@ -81,6 +82,7 @@ import {
   setVaultPaths as indexSetVaultPaths,
   setVaultRoot as indexSetVaultRoot,
   indexStats,
+  subscribe as subscribeIndex,
 } from "./lib/link-index-store";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { getPinnedPaths, persistPinnedPath } from "./lib/pinned-paths";
@@ -730,6 +732,24 @@ export function App() {
     };
     host.addEventListener("click", onTagClick);
     return () => host.removeEventListener("click", onTagClick);
+  }, []);
+
+  // Hover preview on `.wikilink` / `.embed` decorations — fetches the
+  // target file's first N chars (or slice for #/^ anchors) after a
+  // short dwell, mounts a floating tooltip until mouseout. Cache is
+  // invalidated on any link-index mutation.
+  useEffect(() => {
+    const host = editorScrollRef.current;
+    if (!host) return;
+    const handle = installHoverPreview(host, {
+      getVaultFiles: () => useAppStore.getState().vaultFiles,
+      readFile: async (path) => {
+        const loaded = await readFile(path);
+        return loaded.content;
+      },
+      subscribeInvalidate: subscribeIndex,
+    });
+    return () => handle.uninstall();
   }, []);
 
   function copyParagraphLink() {

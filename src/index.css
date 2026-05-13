@@ -172,6 +172,33 @@ html.theme-sepia .milkdown .embed {
   border-color: rgba(139, 90, 43, 0.45);
 }
 
+/* Hover preview tooltip — popped by lib/hover-preview.ts on dwell over
+   .wikilink or .embed decorated spans in the WYSIWYG editor. */
+.markup-hover-preview {
+  background: #ffffff;
+  color: #111;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: none;
+}
+html.theme-dark .markup-hover-preview {
+  background: #1f2228;
+  color: #e6edf3;
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+html.theme-sepia .markup-hover-preview {
+  background: #f4ecd8;
+  color: #4a3a23;
+  border-color: rgba(139, 90, 43, 0.25);
+}
+
 /* Focus mode: dim non-active blocks. Pure CSS via [data-active] attribute set
    by lib/focus-typewriter.ts on selectionchange. */
 .focus-mode .milkdown .editor > *,
