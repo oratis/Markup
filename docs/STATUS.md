@@ -1,21 +1,38 @@
-# Status — Last updated 2026-05-12 (131 batches landed)
+# Status — Last updated 2026-05-13 (135 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 145+ commits across **131 feature batches**, all CI-green.
-`main` is now protected (linear history, required CI, no force-push, no
+`main` branch has 150+ commits across **135 feature batches**, all CI-green.
+`main` is protected (linear history, required CI, no force-push, no
 deletion; admin can hotfix). `v0.1.2` is the latest released DMG (unsigned).
-The app compiles, type-checks, lint-clean, **610 React tests + 17 Rust
+The app compiles, type-checks, lint-clean, **625 React tests + 17 Rust
 unit + 9 integration**, double-Codecov coverage upload, runs cleanly in dev.
 
-**Obsidian roadmap closed for now:**
+**Obsidian roadmap effectively closed:**
 - Tier-1 (must-have to be an Obsidian alternative): ✅ **5/5 complete**
-- Tier-2 (nice-to-have power features): ✅ **5/6 complete** (Canvas explicitly deferred — XL scope)
+- Tier-2 (nice-to-have power features): ✅ **6/7 complete** (Canvas
+  explicitly deferred — XL scope; everything else shipped including
+  hover preview and QuickOpen `^block` mode)
 - Tier-3 (out of scope for v1): plugins, sync, mobile
 
-## What landed in batches 125–131 (newest) — Tier-2 + Visual polish
+## What landed in batches 132–135 (newest) — Polish + closing items
+
+- **#133** Hover preview on `.wikilink` / `.embed` — 320ms dwell pops
+  a tooltip with the target's first ~280 chars (or anchor-sliced
+  section for `#heading` / `^block`). Per-path content cache cleared
+  on link-index mutation; abort generation prevents stale tooltip
+  writes when a later hover races a slow readFile.
+- **#134** Tab bar star indicator — bookmarked tabs show `★` next to
+  filename; right-click → "Bookmark" / "Remove Bookmark" toggle.
+  Subscribed to bookmarks store via useSyncExternalStore.
+- **#135** QuickOpen `^block` mode — fourth reactive index store
+  (links / tags / headings / blocks) with identical lifecycle. Parses
+  `^blockid` markers (whitespace-bounded, fence-aware), fuzzy-matches
+  against id AND snippet so users can find blocks by content text.
+
+## What landed in batches 125–131 — Tier-2 + Visual polish
 
 - **#126** SearchPanel `tag:` / `path:` operators — Tier-2 #4. Client-side
   intersection over the tag index for operator-only queries; free-text
