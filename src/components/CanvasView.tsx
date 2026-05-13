@@ -96,16 +96,30 @@ function CanvasViewInner({
 
   // Spacebar held → pan cursor + click-drag pans. Released → normal cursor.
   // Delete / Backspace clears the current selection (canvas-wide).
+  // Mod+Z / Mod+Shift+Z drive the per-canvas history stack.
   // Mod+0 resets zoom.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (isEditableTarget(e.target)) return; // don't hijack overlay editor keys
+      const mod = e.metaKey || e.ctrlKey;
       if (e.code === "Space") {
         e.preventDefault();
         setSpaceHeld(true);
-      } else if (e.code === "Digit0" && (e.metaKey || e.ctrlKey)) {
+      } else if (mod && e.code === "Digit0") {
         e.preventDefault();
         setViewport(resetZoom);
+      } else if (mod && (e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          store.redo();
+        } else {
+          store.undo();
+        }
+      } else if (mod && (e.key === "y" || e.key === "Y")) {
+        // Ctrl+Y is the Windows-style redo shortcut; macOS users get
+        // Cmd+Shift+Z. Both are wired so muscle-memory works on either OS.
+        e.preventDefault();
+        store.redo();
       } else if (
         (e.key === "Delete" || e.key === "Backspace") &&
         store.getSnapshot().selection.size > 0
