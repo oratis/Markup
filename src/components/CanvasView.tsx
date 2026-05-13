@@ -17,12 +17,14 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { getOrCreateCanvasStore } from "../lib/canvas-registry";
+import { type Rect, nodesInRect, rectFromPoints } from "../lib/canvas-select";
 import {
   type Viewport,
   applyPan,
   applyWheelZoom,
   defaultViewport,
   resetZoom,
+  screenToWorld,
   toCssTransform,
   zoomAtPoint,
 } from "../lib/canvas-viewport";
@@ -60,7 +62,9 @@ function CanvasViewInner({
   const [viewport, setViewport] = useState<Viewport>(defaultViewport);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [selectRect, setSelectRect] = useState<Rect | null>(null);
   const panRef = useRef<{ startX: number; startY: number; v: Viewport } | null>(null);
+  const selectRef = useRef<{ startSX: number; startSY: number } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Resolve the editing node from the live doc — if the user undoes
@@ -76,16 +80,25 @@ function CanvasViewInner({
   }
 
   // Spacebar held → pan cursor + click-drag pans. Released → normal cursor.
+  // Delete / Backspace clears the current selection (canvas-wide).
+  // Mod+0 resets zoom.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.code === "Space" && !isEditableTarget(e.target)) {
-        // Only swallow the space if we're actually going to pan, so users
-        // can still type spaces inside text-node editors (B210).
+      if (isEditableTarget(e.target)) return; // don't hijack overlay editor keys
+      if (e.code === "Space") {
         e.preventDefault();
         setSpaceHeld(true);
       } else if (e.code === "Digit0" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setViewport(resetZoom);
+      } else if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        store.getSnapshot().selection.size > 0
+      ) {
+        e.preventDefault();
+        store.removeMany(Array.from(store.getSnapshot().selection));
+      } else if (e.key === "Escape") {
+        store.clearSelection();
       }
     }
     function onKeyUp(e: KeyboardEvent) {
@@ -97,7 +110,7 @@ function CanvasViewInner({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, []);
+  }, [store]);
 
   function onWheel(e: React.WheelEvent<HTMLDivElement>) {
     // Only intercept zoom when modifier or pinch — Obsidian uses
@@ -116,25 +129,78 @@ function CanvasViewInner({
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    // Pan triggers: space+left-click, OR middle-click anywhere.
     const isMiddle = e.button === 1;
     const isPanGesture = (spaceHeld && e.button === 0) || isMiddle;
-    if (!isPanGesture) return;
-    e.preventDefault();
-    (e.target as Element).setPointerCapture?.(e.pointerId);
-    panRef.current = { startX: e.clientX, startY: e.clientY, v: viewport };
+    if (isPanGesture) {
+      e.preventDefault();
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+      panRef.current = { startX: e.clientX, startY: e.clientY, v: viewport };
+      return;
+    }
+    // Plain left-click on empty area starts a drag-rect selection. The
+    // node components stop-propagation their own pointer-down so this
+    // only fires when the user actually clicked the canvas background.
+    if (e.button === 0) {
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+      selectRef.current = { startSX: e.clientX, startSY: e.clientY };
+      setSelectRect({ x: 0, y: 0, width: 0, height: 0 });
+      // Clear selection up-front; the drag-rect will fill it back in.
+      if (!e.shiftKey) store.clearSelection();
+    }
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const pan = panRef.current;
-    if (!pan) return;
-    setViewport(applyPan(pan.v, e.clientX - pan.startX, e.clientY - pan.startY));
+    if (pan) {
+      setViewport(applyPan(pan.v, e.clientX - pan.startX, e.clientY - pan.startY));
+      return;
+    }
+    const sel = selectRef.current;
+    if (sel) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const offX = rect?.left ?? 0;
+      const offY = rect?.top ?? 0;
+      setSelectRect(
+        rectFromPoints(
+          sel.startSX - offX,
+          sel.startSY - offY,
+          e.clientX - offX,
+          e.clientY - offY,
+        ),
+      );
+    }
   }
 
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    if (!panRef.current) return;
-    (e.target as Element).releasePointerCapture?.(e.pointerId);
-    panRef.current = null;
+    if (panRef.current) {
+      (e.target as Element).releasePointerCapture?.(e.pointerId);
+      panRef.current = null;
+      return;
+    }
+    if (selectRef.current && selectRect) {
+      (e.target as Element).releasePointerCapture?.(e.pointerId);
+      // Convert the screen-space rect to world space and compute the
+      // overlapping node ids.
+      const wTopLeft = screenToWorld(viewport, selectRect.x, selectRect.y);
+      const wBotRight = screenToWorld(
+        viewport,
+        selectRect.x + selectRect.width,
+        selectRect.y + selectRect.height,
+      );
+      const worldRect: Rect = {
+        x: wTopLeft.x,
+        y: wTopLeft.y,
+        width: wBotRight.x - wTopLeft.x,
+        height: wBotRight.y - wTopLeft.y,
+      };
+      // Tiny rect = click without drag → already cleared selection above.
+      if (worldRect.width > 2 && worldRect.height > 2) {
+        const ids = nodesInRect(store.getSnapshot().doc.nodes, worldRect);
+        store.setSelection(ids);
+      }
+      selectRef.current = null;
+      setSelectRect(null);
+    }
   }
 
   const cursor = panRef.current ? "grabbing" : spaceHeld ? "grab" : "default";
@@ -244,11 +310,26 @@ function CanvasViewInner({
         ) : null}
       </div>
 
+      {/* Drag-rect selection overlay — drawn in screen space so the
+          marquee stays cursor-aligned regardless of zoom. */}
+      {selectRect && selectRect.width > 0 && selectRect.height > 0 ? (
+        <div
+          data-testid="canvas-select-rect"
+          className="pointer-events-none absolute border border-blue-500/70 bg-blue-500/10"
+          style={{
+            left: selectRect.x,
+            top: selectRect.y,
+            width: selectRect.width,
+            height: selectRect.height,
+          }}
+        />
+      ) : null}
       {/* HUD: zoom % + node count. Pure decoration, won't intercept
           pointer events. */}
       <div className="pointer-events-none absolute bottom-2 left-2 text-[11px] opacity-60 font-mono select-none">
         {snapshot.doc.nodes.length} nodes · {snapshot.doc.edges.length} edges ·{" "}
         {Math.round(viewport.zoom * 100)}%
+        {snapshot.selection.size > 0 ? ` · ${snapshot.selection.size} selected` : ""}
       </div>
       <ZoomControls
         viewport={viewport}
