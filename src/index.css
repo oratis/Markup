@@ -232,3 +232,97 @@ html.theme-sepia .markup-hover-preview {
   display: block;
   height: 40vh;
 }
+
+/* Canvas text-node body — minimal Markdown styling. No Tailwind
+   typography plugin installed; this gives heading sizes, list bullets,
+   and code/link colors enough to read short cards in the canvas. */
+.canvas-node-body h1,
+.canvas-node-body h2,
+.canvas-node-body h3,
+.canvas-node-body h4,
+.canvas-node-body h5,
+.canvas-node-body h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0.4em 0 0.2em;
+}
+.canvas-node-body h1 {
+  font-size: 1.35em;
+}
+.canvas-node-body h2 {
+  font-size: 1.2em;
+}
+.canvas-node-body h3 {
+  font-size: 1.1em;
+}
+.canvas-node-body h4,
+.canvas-node-body h5,
+.canvas-node-body h6 {
+  font-size: 1em;
+}
+.canvas-node-body p {
+  margin: 0.3em 0;
+}
+.canvas-node-body ul,
+.canvas-node-body ol {
+  padding-left: 1.4em;
+  margin: 0.3em 0;
+}
+.canvas-node-body ul {
+  list-style: disc;
+}
+.canvas-node-body ol {
+  list-style: decimal;
+}
+.canvas-node-body li {
+  margin: 0.1em 0;
+}
+.canvas-node-body code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.theme-dark .canvas-node-body code {
+  background: rgba(255, 255, 255, 0.1);
+}
+.canvas-node-body pre {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 0.5em 0.7em;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0.3em 0;
+}
+.theme-dark .canvas-node-body pre {
+  background: rgba(255, 255, 255, 0.06);
+}
+.canvas-node-body pre code {
+  background: transparent;
+  padding: 0;
+}
+.canvas-node-body a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.theme-dark .canvas-node-body a {
+  color: #60a5fa;
+}
+.canvas-node-body blockquote {
+  border-left: 3px solid rgba(0, 0, 0, 0.15);
+  padding-left: 0.7em;
+  margin: 0.3em 0;
+  color: rgba(0, 0, 0, 0.7);
+}
+.theme-dark .canvas-node-body blockquote {
+  border-left-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+}
+.canvas-node-body hr {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin: 0.6em 0;
+}
+.theme-dark .canvas-node-body hr {
+  border-top-color: rgba(255, 255, 255, 0.15);
+}

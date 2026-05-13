@@ -101,6 +101,9 @@ importers:
       katex:
         specifier: ^0.16.11
         version: 0.16.45
+      marked:
+        specifier: ^16.4.2
+        version: 16.4.2
       mermaid:
         specifier: ^11.4.0
         version: 11.14.0

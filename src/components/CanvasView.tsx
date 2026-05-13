@@ -27,6 +27,7 @@ import {
   zoomAtPoint,
 } from "../lib/canvas-viewport";
 import { getActiveTab, useAppStore } from "../store";
+import { CanvasNodeText } from "./CanvasNodeText";
 
 export function CanvasView() {
   const tab = useAppStore(getActiveTab);
@@ -139,16 +140,36 @@ function CanvasViewInner({
         className="absolute inset-0 origin-top-left will-change-transform"
         style={{ transform: toCssTransform(viewport) }}
       >
-        {/* Node + edge layers will be filled in by later batches.
-            For now: render a tiny world-origin marker so empty canvases
-            aren't a confusing blank screen. */}
-        <div
-          aria-hidden="true"
-          className="absolute -translate-x-1/2 -translate-y-1/2 text-[10px] opacity-40 select-none"
-          style={{ left: 0, top: 0 }}
-        >
-          +
-        </div>
+        {snapshot.doc.nodes.map((node) => {
+          if (node.type === "text") {
+            return (
+              <CanvasNodeText
+                key={node.id}
+                node={node}
+                zoom={viewport.zoom}
+                store={store}
+                selected={snapshot.selection.has(node.id)}
+              />
+            );
+          }
+          // file / link / group land in B207–B208. Render an outlined
+          // placeholder so they're still visible.
+          return (
+            <div
+              key={node.id}
+              data-testid={`canvas-node-${node.id}`}
+              data-node-id={node.id}
+              className="absolute rounded-md border-2 border-dashed border-black/20 dark:border-white/20 bg-white/50 dark:bg-neutral-800/50 text-[11px] opacity-70 px-2 py-1"
+              style={{
+                transform: `translate3d(${node.x}px, ${node.y}px, 0)`,
+                width: node.width,
+                height: node.height,
+              }}
+            >
+              {node.type} — {node.file ?? node.url ?? node.label ?? node.id}
+            </div>
+          );
+        })}
       </div>
 
       {/* HUD: zoom % + node count. Pure decoration, won't intercept
