@@ -1,21 +1,115 @@
-# Status — Last updated 2026-05-13 (135 batches landed)
+# Status — Last updated 2026-05-13 (153 batches landed; v2 Canvas closed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 150+ commits across **135 feature batches**, all CI-green.
-`main` is protected (linear history, required CI, no force-push, no
-deletion; admin can hotfix). `v0.1.2` is the latest released DMG (unsigned).
-The app compiles, type-checks, lint-clean, **625 React tests + 17 Rust
-unit + 9 integration**, double-Codecov coverage upload, runs cleanly in dev.
+`main` branch has 170+ commits across **153 feature batches** (v1
+B001–B135, v2 B201–B218), all CI-green. `main` is protected (linear
+history, required CI, no force-push, no deletion; admin can hotfix).
+`v0.1.2` is the latest released DMG (unsigned). The app compiles,
+type-checks, lint-clean, **841 React tests + 26 Rust unit + 9 integration**,
+double-Codecov coverage upload, runs cleanly in dev.
 
-**Obsidian roadmap effectively closed:**
+**Obsidian roadmap closed end-to-end:**
 - Tier-1 (must-have to be an Obsidian alternative): ✅ **5/5 complete**
-- Tier-2 (nice-to-have power features): ✅ **6/7 complete** (Canvas
-  explicitly deferred — XL scope; everything else shipped including
-  hover preview and QuickOpen `^block` mode)
+- Tier-2 (nice-to-have power features): ✅ **7/7 complete** — Canvas
+  shipped in v2 (B201–B218); the other six landed earlier
 - Tier-3 (out of scope for v1): plugins, sync, mobile
+
+## v2 — Obsidian-compatible Canvas (B201–B218, all green)
+
+Single-goal sub-project: implement the .canvas whiteboard so Markup
+opens, edits, and saves Obsidian's JSON canvas format. 18 batches across
+4 phases, all merged to main with green CI.
+
+### Phase 1 — Data layer (B201–B204)
+- **B201** canvas-format.ts — parseCanvas / serializeCanvas / validateCanvas.
+  Round-trips text / file / link / group nodes + edges with optional
+  fromSide/toSide/label/color. Preserves unknown fields verbatim so
+  future Obsidian additions never silently drop. Tolerant on malformed
+  input — keeps good entries, skips bad ones.
+- **B202** canvas-store.ts + canvas-registry.ts — per-tab Zustand-shaped
+  reactive store with snapshot-based undo/redo (100-entry cap),
+  selection (not in history). Registry disposes on tab close so
+  re-opening a canvas reads fresh disk content.
+- **B203** Rust read_file gains a canvas-aware extension gate +
+  open_file dialog adds a Canvas filter. write_file already accepted
+  any extension. New ext_tests + tokio integration test on a real
+  .canvas round-trip.
+- **B204** Tab.kind discriminant + canvas-path.ts + openLoadedFile
+  routing + FileTree icon for .canvas. Render-branch in App.tsx routes
+  `tab.kind === "canvas"` to CanvasView, leaving Markdown tabs
+  untouched.
+
+### Phase 2 — Rendering (B205–B210)
+- **B205** CanvasView pan/zoom skeleton — viewport math in
+  canvas-viewport.ts (pure: applyWheelZoom keeps point under cursor
+  fixed, screen↔world round-trip, clampZoom). ctrl/cmd+wheel zooms,
+  plain wheel pans, space+drag pans, middle-drag pans, Mod+0 resets.
+- **B206** CanvasNodeText — static markdown rendered through marked +
+  stripDangerousAttrs. Drag-to-move with local in-flight state so
+  one moveNode commits on pointer up (single history entry).
+- **B207** CanvasNodeFile — loads vault file on mount, optional
+  #Section / ^block slicing via embed-slice, double-click opens as a
+  tab.
+- **B208** CanvasNodeLink + CanvasNodeGroup — emerald link card with
+  parsed host + double-click→window.open; amber dashed group frame
+  with label band that's the only pointer-active part (frame interior
+  is transparent so child nodes stay clickable).
+- **B209** CanvasEdgesLayer — single SVG with cubic Bezier per edge.
+  Anchors honour explicit fromSide/toSide or auto-pick via closestSide.
+  Obsidian colour scheme 1–6 maps to red/orange/yellow/green/cyan/
+  purple; raw hex passes through. Selection styling + dangling-ref
+  skip.
+- **B210** CanvasTextOverlay — single shared Milkdown editor mounted
+  on double-click, aligned to node coords. Esc / blur commits via
+  updateNode; commonmark+gfm+history+listener plugins only (light
+  variant for the in-canvas use).
+
+### Phase 3 — Interactions (B211–B215)
+- **B211** Drag-rectangle selection + Delete/Backspace removes selected
+  nodes + their dangling edges (one history entry) + Esc clears
+  selection. Editable-target check stops the editor swallowing canvas
+  keys.
+- **B212** Text-node creation — double-click empty canvas spawns a
+  200×100 node + opens the overlay; Shift+drag draws a sized node
+  (160×80 floor).
+- **B213** Anchor handles on selected nodes — 4 blue dots, 6/zoom
+  radius so they stay constant-pixel size. Drag from anchor →
+  nodeAtPoint hit-test → store.addEdge with computed toSide. Dashed
+  ghost path follows the cursor.
+- **B214** Mod+Z / Mod+Shift+Z / Ctrl+Y wired to store.undo/redo;
+  editor overlay's history isn't hijacked (editable-target check).
+- **B215** Autosave — useCanvasAutosave hook flows store mutations
+  through updateActiveContent + a debounced writeFile, mirroring the
+  markdown editor's save lifecycle (dirty → saving → saved / error).
+  First render skipped so opening a canvas doesn't churn its mtime.
+
+### Phase 4 — Integration (B216–B218)
+- **B216** "New Canvas in Vault…" palette command writes `{}` to a
+  fresh .canvas file and opens it. Existing "Open File…" already
+  shows canvas in the OS dialog (B203 added the filter).
+- **B217** Scanner gains is_canvas + scan_vault_files so .canvas files
+  show in FileTree and QuickOpen; Tantivy indexing keeps using
+  is_markdown so canvas JSON doesn't pollute body search. FileTree
+  + QuickOpen rows show an amber ◈ glyph for canvases.
+- **B218** This STATUS rewrite + V2_CANVAS.md flipped to shipped.
+
+### Canvas in numbers
+- 11 new pure helpers in src/lib/: canvas-format, canvas-store,
+  canvas-registry, canvas-path, canvas-viewport, canvas-md-render,
+  canvas-drag, canvas-file-resolve, canvas-edge-geom, canvas-select,
+  canvas-ids
+- 8 new components in src/components/: CanvasView, CanvasNodeText/
+  File/Link/Group, CanvasEdgesLayer, CanvasInteractionLayer +
+  CanvasAnchorHandles, CanvasTextOverlay
+- 216 React tests added (625 → 841) — every pure helper at near-100%
+  line coverage; component layer is render + smoke + drag/edit/undo
+  events
+- 9 Rust tests added (17 → 26) — ext gate + scanner extension
+- 1 new direct dep: `marked` (16.4.2) — promoted from transitive,
+  static rendering inside canvas text nodes
 
 ## What landed in batches 132–135 (newest) — Polish + closing items
 

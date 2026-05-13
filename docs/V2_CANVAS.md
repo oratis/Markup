@@ -1,7 +1,11 @@
-# V2 — Canvas (Obsidian-compatible whiteboard)
+# V2 — Canvas (Obsidian-compatible whiteboard) — ✅ SHIPPED
 
 **Single goal**: render + edit + persist `.canvas` JSON files in vault.
 Compatible with Obsidian 1.4+ official `.canvas` schema. No new file format.
+
+> Status: **All 18 batches green on `main`** (B201–B218). Markup now reads,
+> edits, and writes Obsidian-format canvases. See STATUS.md → "v2 —
+> Obsidian-compatible Canvas" for the per-batch landing log.
 
 ## File format (Obsidian-compatible)
 
@@ -101,68 +105,68 @@ Reuse existing `read_file` / `write_file` Tauri commands — verified
 they accept any extension. Save path: same autosave debounce (settings
 `autosaveMs`) → `serializeCanvas(store.doc)` → `write_file`.
 
-## Batch plan (continuing the established cadence)
+## Batch plan — final landing log
 
 Numbering: v1 stops at B135; v2 starts at **B201** (100-batch reserve
-for v1 hotfixes). Each batch: implement + tests → biome → tsc → vitest
-→ vite build → push → `gh run watch` green → next.
+for v1 hotfixes). Each batch landed: implement + tests → biome → tsc →
+vitest → vite build → push → `gh run watch` green → next. All 18
+batches followed the cadence without exception.
 
-### Phase 1 — Data layer (B201–B204)
-- **B201** `canvas-format.ts` — pure parse/serialize/validate +
-  unit tests (round-trip, unknown-field preservation, malformed JSON).
-- **B202** `canvas-store.ts` + `canvas-registry.ts` — factory store,
-  undo/redo via inverse-op stack, tests for every action.
-- **B203** Tab.kind discriminant + `openLoadedFile` extension routing
-  + canvas-tab tests in store.test.ts.
-- **B204** Read/write smoke test: verify Tauri commands handle
-  `.canvas` extension; add integration test on JSON round-trip.
+### Phase 1 — Data layer (B201–B204) ✅
+- ✅ **B201** `canvas-format.ts` — pure parse/serialize/validate
+  with unknown-field preservation; 32 tests
+- ✅ **B202** `canvas-store.ts` + `canvas-registry.ts` — factory
+  store + snapshot-based undo (100-cap); 45 tests
+- ✅ **B203** Rust `read_file` accepts `.canvas` + dialog filter;
+  6 new Rust tests including a tokio round-trip
+- ✅ **B204** `Tab.kind` discriminant + `canvas-path.ts` + FileTree
+  icon; 12 new tests
 
-### Phase 2 — Rendering (B205–B210)
-- **B205** `CanvasView.tsx` skeleton — pan (space+drag, middle-click),
-  zoom (wheel + pinch), viewport state. Empty doc renders.
-- **B206** `CanvasNodeText.tsx` — static Markdown-rendered HTML node,
-  drag-to-move (mouse events, store action), tests on geometry.
-- **B207** `CanvasNodeFile.tsx` — embeds vault file (readFile + slice),
-  click-to-open-as-tab.
-- **B208** `CanvasNodeLink.tsx` + `CanvasNodeGroup.tsx` — external link
-  preview placeholder + group frame with label.
-- **B209** `CanvasEdge.tsx` — Bezier path per edge, anchor by
-  fromSide/toSide, optional label centered on path midpoint.
-- **B210** Inline Milkdown overlay editor for text nodes (double-click
-  to edit, blur to commit).
+### Phase 2 — Rendering (B205–B210) ✅
+- ✅ **B205** `CanvasView.tsx` skeleton + `canvas-viewport.ts`
+  (pan/zoom math); viewport tests + view smoke tests
+- ✅ **B206** `CanvasNodeText.tsx` + `canvas-md-render.ts` + drag
+  helpers; promoted `marked` to a direct dep
+- ✅ **B207** `CanvasNodeFile.tsx` + `canvas-file-resolve.ts` +
+  click-to-open behaviour
+- ✅ **B208** `CanvasNodeLink.tsx` + `CanvasNodeGroup.tsx` —
+  emerald link card / amber group frame
+- ✅ **B209** `CanvasEdgesLayer.tsx` + `canvas-edge-geom.ts` —
+  Bezier paths + label rendering
+- ✅ **B210** `CanvasTextOverlay.tsx` — single shared Milkdown
+  editor mounted on double-click
 
-### Phase 3 — Interactions (B211–B215)
-- **B211** Selection: click, shift-click, drag-rectangle, Delete to remove.
-- **B212** Node creation: double-click empty canvas (text node),
-  Shift+Drag to draw a new node.
-- **B213** Edge creation: 4 anchor handles on hover, drag from one
-  anchor to another node's anchor.
-- **B214** Undo/redo: Mod+Z / Mod+Shift+Z command-stack wiring.
-- **B215** Autosave wiring: store change → debounced serializeCanvas →
-  writeFile + setActiveStatus.
+### Phase 3 — Interactions (B211–B215) ✅
+- ✅ **B211** Selection rect + Delete + Esc + `canvas-select.ts`
+- ✅ **B212** Double-click creates a text node; Shift+drag draws
+  one sized; `canvas-ids.ts` for short hex ids
+- ✅ **B213** Anchor handles + drag-to-create edges + draft path
+  ghost (`CanvasInteractionLayer` + `CanvasAnchorHandles`)
+- ✅ **B214** Mod+Z / Mod+Shift+Z / Ctrl+Y → store.undo/redo
+- ✅ **B215** `useCanvasAutosave` — debounced writeFile through the
+  existing tab save lifecycle
 
-### Phase 4 — Integration (B216–B218)
-- **B216** Command palette: "New Canvas", "Open Canvas" commands.
-- **B217** FileTree icon differentiation + QuickOpen recognition.
-- **B218** STATUS.md refresh + V2_CANVAS.md updated to "shipped" log.
+### Phase 4 — Integration (B216–B218) ✅
+- ✅ **B216** Palette command "New Canvas in Vault…"
+- ✅ **B217** Scanner picks up `.canvas` for FileTree / QuickOpen;
+  Tantivy still scoped to markdown so canvases don't pollute search
+- ✅ **B218** STATUS.md + this doc flipped to shipped
 
-## Open decisions for confirmation
+## Resolved decisions
 
-These choices touch the rest of v2, so locking them now avoids rework.
+These were locked before B201 via the decision matrix; the
+implementation matched the picks exactly.
 
-1. **Tab.kind discriminant** — add to existing Tab vs separate
-   CanvasTab array. (Recommend: discriminant.)
-2. **Render tech** — HTML+CSS nodes + SVG edges vs SVG-only vs canvas2d.
-   (Recommend: HTML+CSS nodes + SVG edges.)
-3. **Text-node editing** — single shared Milkdown overlay vs N
-   inline Milkdown instances vs textarea+preview. (Recommend: shared
-   overlay.)
-4. **Per-canvas store** — factory + registry vs singleton-with-Map vs
-   one-store-per-component-instance via React Context. (Recommend:
-   factory + registry, disposed on tab close.)
-5. **Undo/redo scope** — per-canvas command stack vs share with global
-   editor undo. (Recommend: per-canvas stack, isolated from MD editor.)
-6. **Phase 1 starts now or do you want Phase 0 spike first** — e.g. a
-   throwaway prototype of pan/zoom before committing to the structure.
-   (Recommend: skip spike; the architecture mirrors GraphView which
-   already proved the SVG approach.)
+1. **Tab.kind discriminant** — picked discriminant. Tab gained an
+   optional `kind: "markdown" | "canvas"` field; absent → markdown.
+2. **Render tech** — picked HTML+CSS nodes + SVG edges. Confirmed by
+   B209's SVG layer + per-node-type div components.
+3. **Text-node editing** — picked shared Milkdown overlay. One editor
+   instance regardless of node count (B210 `CanvasTextOverlay`).
+4. **Per-canvas store** — picked factory + registry. `canvas-registry`
+   keys per tab id; App.tsx disposes on tab close.
+5. **Undo/redo scope** — picked per-canvas stack. Mod+Z inside the
+   text-overlay editor is forwarded to Milkdown's own history; outside,
+   Mod+Z runs canvas-store undo.
+6. **Phase 0 spike** — skipped per recommendation. GraphView already
+   proved the SVG approach; no rework needed.
