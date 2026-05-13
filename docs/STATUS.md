@@ -1,16 +1,45 @@
-# Status — Last updated 2026-05-12 (124 batches landed)
+# Status — Last updated 2026-05-12 (131 batches landed)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 140+ commits across **124 feature batches**, all CI-green.
+`main` branch has 145+ commits across **131 feature batches**, all CI-green.
 `main` is now protected (linear history, required CI, no force-push, no
 deletion; admin can hotfix). `v0.1.2` is the latest released DMG (unsigned).
-The app compiles, type-checks, lint-clean, **572 React tests + 17 Rust
+The app compiles, type-checks, lint-clean, **610 React tests + 17 Rust
 unit + 9 integration**, double-Codecov coverage upload, runs cleanly in dev.
 
-## What landed in batches 114–124 (newest) — Obsidian Tier-1
+**Obsidian roadmap closed for now:**
+- Tier-1 (must-have to be an Obsidian alternative): ✅ **5/5 complete**
+- Tier-2 (nice-to-have power features): ✅ **5/6 complete** (Canvas explicitly deferred — XL scope)
+- Tier-3 (out of scope for v1): plugins, sync, mobile
+
+## What landed in batches 125–131 (newest) — Tier-2 + Visual polish
+
+- **#126** SearchPanel `tag:` / `path:` operators — Tier-2 #4. Client-side
+  intersection over the tag index for operator-only queries; free-text
+  still goes through Rust search. Filter combinable: `tag:#todo path:journal/`.
+- **#127** BookmarksPane — Tier-2 #5. Persisted-anywhere starred files
+  (independent of vault), shown at the bottom of the right aside.
+  "Toggle Bookmark for Active File" palette command.
+- **#128** Vault heading index + QuickOpen `#` mode — Tier-2 #3. Third
+  reactive store in the link-index pattern; built off parseHeadings;
+  fuzzy match across every heading in the vault, opens + jumps to line.
+- **#129** Milkdown tag chip decoration — `#tag` rendered as rounded
+  pills in WYSIWYG, click → SearchPanel filtered by tag. Skips code
+  spans / blocks / pure-numeric.
+- **#130** Milkdown embed decoration — `![[…]]` rendered with dashed
+  border to read as transclusion, click → open target + jump to
+  `#heading` anchor when present.
+- **#131** GraphView — Tier-2 A. Force-directed layout in pure SVG
+  (no D3): Coulomb repulsion + Hooke attraction along edges + centre
+  gravity, deterministic per seed (testable), 120 iters with linear
+  cooling. Node radius ∝ √degree, edges weighted by ref count, active
+  tab's node highlighted. NODE_LIMIT=300 with truncation banner.
+  Opens via "Open Vault Graph" palette command.
+
+## What landed in batches 114–124 — Obsidian Tier-1
 
 After researching Obsidian's defining features, set a Tier-1 list of
 five that turn Markup from "Markdown editor with wikilinks" into a
