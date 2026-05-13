@@ -23,6 +23,12 @@ import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { WikilinkPicker } from "./components/WikilinkPicker";
 import { getActiveSourceView } from "./lib/active-source-view";
+import {
+  onFileSaved as blockFileSaved,
+  rebuildFromFiles as blockRebuild,
+  setVaultPaths as blockSetVaultPaths,
+  setVaultRoot as blockSetVaultRoot,
+} from "./lib/block-index-store";
 import { toggleBookmark } from "./lib/bookmarks";
 import {
   cycleHeadingLevel,
@@ -217,6 +223,7 @@ export function App() {
     indexSetVaultRoot(vaultRoot);
     tagSetVaultRoot(vaultRoot);
     headingSetVaultRoot(vaultRoot);
+    blockSetVaultRoot(vaultRoot);
   }, [vaultRoot]);
 
   useEffect(() => {
@@ -224,6 +231,7 @@ export function App() {
     indexSetVaultPaths(paths);
     tagSetVaultPaths(paths);
     headingSetVaultPaths(paths);
+    blockSetVaultPaths(paths);
   }, [vaultFiles]);
 
   // Restore prefs on mount
@@ -858,6 +866,7 @@ export function App() {
       indexFileSaved(t.path, content);
       tagFileSaved(t.path, content);
       headingFileSaved(t.path, content);
+      blockFileSaved(t.path, content);
       if (state.trimOnSave && content !== t.content) {
         // Push the trimmed content back into the store so the editor reflects
         // the on-disk version; SourceEditor's reconcile effect picks it up.
@@ -2348,6 +2357,7 @@ export function App() {
             indexRebuild(validFiles);
             tagRebuild(validFiles);
             headingRebuild(validFiles);
+            blockRebuild(validFiles);
             const linkS = indexStats();
             const tagS = tagStats();
             showToast(

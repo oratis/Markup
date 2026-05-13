@@ -69,8 +69,9 @@ export const en = {
   // command palette / quick open
   "palette.placeholder": "Run a command…",
   "palette.empty": "No commands.",
-  "quickOpen.placeholder": "Open file in vault… (start with # to jump to a heading)",
+  "quickOpen.placeholder": "Open file in vault… (# heading, ^ block)",
   "quickOpen.headingPlaceholder": "Jump to heading in vault…",
+  "quickOpen.blockPlaceholder": "Jump to ^block in vault…",
   "quickOpen.empty": "No matches.",
   "wikilinkPicker.placeholder": "Insert wikilink to file…",
   "cmd.insertWikilink": "Insert Wikilink…",
