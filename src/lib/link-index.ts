@@ -88,7 +88,6 @@ export function extractLinks(content: string, sourcePath: string): LinkRef[] {
 
     const reLocal = new RegExp(WIKILINK_RE.source, "g");
     let m: RegExpExecArray | null;
-    // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic JS regex loop
     while ((m = reLocal.exec(scan)) !== null) {
       const isEmbed = m[1] === "!";
       const target = m[2].trim();

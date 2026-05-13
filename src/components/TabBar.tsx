@@ -1,4 +1,10 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import {
+  getBookmarks,
+  isBookmarked,
+  subscribe as subscribeBookmarks,
+  toggleBookmark,
+} from "../lib/bookmarks";
 import { useAppStore } from "../store";
 
 const DRAG_MIME = "application/x-markup-tab";
@@ -19,6 +25,11 @@ export function TabBar() {
   const closeAllTabs = useAppStore((s) => s.closeAllTabs);
   const toggleTabPinned = useAppStore((s) => s.toggleTabPinned);
   const reorderTab = useAppStore((s) => s.reorderTab);
+
+  // Subscribe so star indicators refresh on bookmark toggle. The
+  // returned array reference is stable as the bookmarks store mutates
+  // in place + replaces; subscribe re-emits to trigger a render.
+  useSyncExternalStore(subscribeBookmarks, getBookmarks);
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -90,6 +101,15 @@ export function TabBar() {
                 📌
               </span>
             )}
+            {tab.path && isBookmarked(tab.path) && (
+              <span
+                aria-label="Bookmarked"
+                title="Bookmarked"
+                className="text-[11px] text-amber-500"
+              >
+                ★
+              </span>
+            )}
             <span className="max-w-[180px] truncate">{tab.name}</span>
             <span className="text-[10px] opacity-70 w-2">{indicator}</span>
             {!tab.pinned && (
@@ -119,6 +139,18 @@ export function TabBar() {
             {
               label: tabs.find((t) => t.id === ctx.id)?.pinned ? "Unpin" : "Pin",
               run: () => toggleTabPinned(ctx.id),
+            },
+            {
+              label: (() => {
+                const p = tabs.find((t) => t.id === ctx.id)?.path;
+                if (!p) return "Bookmark";
+                return isBookmarked(p) ? "Remove Bookmark" : "Bookmark";
+              })(),
+              run: () => {
+                const p = tabs.find((t) => t.id === ctx.id)?.path;
+                if (p) toggleBookmark(p);
+              },
+              disabled: !tabs.find((t) => t.id === ctx.id)?.path,
             },
             {
               label: "Copy Path",

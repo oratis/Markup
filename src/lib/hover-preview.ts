@@ -48,7 +48,7 @@ export function installHoverPreview(
   let abortGen = 0;
 
   function hideTooltip() {
-    if (tooltip && tooltip.parentNode) tooltip.parentNode.removeChild(tooltip);
+    if (tooltip?.parentNode) tooltip.parentNode.removeChild(tooltip);
     tooltip = null;
   }
 

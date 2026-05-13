@@ -129,7 +129,6 @@ export function extractTags(content: string): Set<string> {
 
     const re = new RegExp(TAG_BODY_RE.source, "gu");
     let m: RegExpExecArray | null;
-    // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex loop
     while ((m = re.exec(masked)) !== null) {
       const tag = trimTrailingSep(m[1]);
       if (!tag) continue;
