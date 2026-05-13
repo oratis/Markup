@@ -27,6 +27,7 @@ import {
   zoomAtPoint,
 } from "../lib/canvas-viewport";
 import { getActiveTab, useAppStore } from "../store";
+import { CanvasNodeFile } from "./CanvasNodeFile";
 import { CanvasNodeText } from "./CanvasNodeText";
 
 export function CanvasView() {
@@ -152,8 +153,19 @@ function CanvasViewInner({
               />
             );
           }
-          // file / link / group land in B207–B208. Render an outlined
-          // placeholder so they're still visible.
+          if (node.type === "file") {
+            return (
+              <CanvasNodeFile
+                key={node.id}
+                node={node}
+                zoom={viewport.zoom}
+                store={store}
+                selected={snapshot.selection.has(node.id)}
+              />
+            );
+          }
+          // link / group land in B208. Render an outlined placeholder so
+          // they're still visible.
           return (
             <div
               key={node.id}
@@ -166,7 +178,7 @@ function CanvasViewInner({
                 height: node.height,
               }}
             >
-              {node.type} — {node.file ?? node.url ?? node.label ?? node.id}
+              {node.type} — {node.url ?? node.label ?? node.id}
             </div>
           );
         })}
