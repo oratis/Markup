@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { newCanvasId } from "../lib/canvas-ids";
 import { getOrCreateCanvasStore } from "../lib/canvas-registry";
 import { type Rect, nodesInRect, rectFromPoints } from "../lib/canvas-select";
 import {
@@ -63,8 +64,12 @@ function CanvasViewInner({
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [selectRect, setSelectRect] = useState<Rect | null>(null);
+  // Same shape as selectRect but rendered with a different style + a
+  // different commit action (createNode rather than setSelection).
+  const [newNodeRect, setNewNodeRect] = useState<Rect | null>(null);
   const panRef = useRef<{ startX: number; startY: number; v: Viewport } | null>(null);
   const selectRef = useRef<{ startSX: number; startSY: number } | null>(null);
+  const newNodeRef = useRef<{ startSX: number; startSY: number } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Resolve the editing node from the live doc — if the user undoes
@@ -137,16 +142,19 @@ function CanvasViewInner({
       panRef.current = { startX: e.clientX, startY: e.clientY, v: viewport };
       return;
     }
-    // Plain left-click on empty area starts a drag-rect selection. The
-    // node components stop-propagation their own pointer-down so this
-    // only fires when the user actually clicked the canvas background.
-    if (e.button === 0) {
-      (e.target as Element).setPointerCapture?.(e.pointerId);
-      selectRef.current = { startSX: e.clientX, startSY: e.clientY };
-      setSelectRect({ x: 0, y: 0, width: 0, height: 0 });
-      // Clear selection up-front; the drag-rect will fill it back in.
-      if (!e.shiftKey) store.clearSelection();
+    if (e.button !== 0) return;
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    if (e.shiftKey) {
+      // Shift+drag draws out a new text node. Tracked separately from
+      // the selection marquee so the visuals + commit action differ.
+      newNodeRef.current = { startSX: e.clientX, startSY: e.clientY };
+      setNewNodeRect({ x: 0, y: 0, width: 0, height: 0 });
+      return;
     }
+    // Plain left-click on empty area starts a drag-rect selection.
+    selectRef.current = { startSX: e.clientX, startSY: e.clientY };
+    setSelectRect({ x: 0, y: 0, width: 0, height: 0 });
+    store.clearSelection();
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
@@ -155,15 +163,27 @@ function CanvasViewInner({
       setViewport(applyPan(pan.v, e.clientX - pan.startX, e.clientY - pan.startY));
       return;
     }
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    const offX = containerRect?.left ?? 0;
+    const offY = containerRect?.top ?? 0;
     const sel = selectRef.current;
     if (sel) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      const offX = rect?.left ?? 0;
-      const offY = rect?.top ?? 0;
       setSelectRect(
         rectFromPoints(
           sel.startSX - offX,
           sel.startSY - offY,
+          e.clientX - offX,
+          e.clientY - offY,
+        ),
+      );
+      return;
+    }
+    const nn = newNodeRef.current;
+    if (nn) {
+      setNewNodeRect(
+        rectFromPoints(
+          nn.startSX - offX,
+          nn.startSY - offY,
           e.clientX - offX,
           e.clientY - offY,
         ),
@@ -179,28 +199,60 @@ function CanvasViewInner({
     }
     if (selectRef.current && selectRect) {
       (e.target as Element).releasePointerCapture?.(e.pointerId);
-      // Convert the screen-space rect to world space and compute the
-      // overlapping node ids.
-      const wTopLeft = screenToWorld(viewport, selectRect.x, selectRect.y);
-      const wBotRight = screenToWorld(
-        viewport,
-        selectRect.x + selectRect.width,
-        selectRect.y + selectRect.height,
-      );
-      const worldRect: Rect = {
-        x: wTopLeft.x,
-        y: wTopLeft.y,
-        width: wBotRight.x - wTopLeft.x,
-        height: wBotRight.y - wTopLeft.y,
-      };
-      // Tiny rect = click without drag → already cleared selection above.
+      const worldRect = toWorldRect(viewport, selectRect);
       if (worldRect.width > 2 && worldRect.height > 2) {
         const ids = nodesInRect(store.getSnapshot().doc.nodes, worldRect);
         store.setSelection(ids);
       }
       selectRef.current = null;
       setSelectRect(null);
+      return;
     }
+    if (newNodeRef.current && newNodeRect) {
+      (e.target as Element).releasePointerCapture?.(e.pointerId);
+      const worldRect = toWorldRect(viewport, newNodeRect);
+      // Tiny drag → fall back to a default-sized node at the start point
+      // so a stray click-and-release still produces something usable.
+      const w = Math.max(160, worldRect.width);
+      const h = Math.max(80, worldRect.height);
+      const id = newCanvasId();
+      store.addNode({
+        id,
+        type: "text",
+        x: worldRect.x,
+        y: worldRect.y,
+        width: w,
+        height: h,
+        text: "",
+      });
+      store.setSelection([id]);
+      setEditingNodeId(id);
+      newNodeRef.current = null;
+      setNewNodeRect(null);
+    }
+  }
+
+  function onBackgroundDoubleClick(e: React.MouseEvent<HTMLDivElement>) {
+    // Don't fire when the dblclick bubbles from a node; nodes
+    // stop-propagation their own dblclick handlers.
+    const rect = containerRef.current?.getBoundingClientRect();
+    const offX = rect?.left ?? 0;
+    const offY = rect?.top ?? 0;
+    const world = screenToWorld(viewport, e.clientX - offX, e.clientY - offY);
+    const id = newCanvasId();
+    const width = 200;
+    const height = 100;
+    store.addNode({
+      id,
+      type: "text",
+      x: world.x - width / 2,
+      y: world.y - height / 2,
+      width,
+      height,
+      text: "",
+    });
+    store.setSelection([id]);
+    setEditingNodeId(id);
   }
 
   const cursor = panRef.current ? "grabbing" : spaceHeld ? "grab" : "default";
@@ -216,6 +268,7 @@ function CanvasViewInner({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onDoubleClick={onBackgroundDoubleClick}
     >
       {/* world layer — children sit in canvas coords; outer transform
           handles pan/zoom together. */}
@@ -324,6 +377,19 @@ function CanvasViewInner({
           }}
         />
       ) : null}
+      {/* New-node ghost rect — same screen space, distinct dashed style. */}
+      {newNodeRect && newNodeRect.width > 0 && newNodeRect.height > 0 ? (
+        <div
+          data-testid="canvas-new-node-rect"
+          className="pointer-events-none absolute border-2 border-dashed border-emerald-500/80 bg-emerald-500/10"
+          style={{
+            left: newNodeRect.x,
+            top: newNodeRect.y,
+            width: newNodeRect.width,
+            height: newNodeRect.height,
+          }}
+        />
+      ) : null}
       {/* HUD: zoom % + node count. Pure decoration, won't intercept
           pointer events. */}
       <div className="pointer-events-none absolute bottom-2 left-2 text-[11px] opacity-60 font-mono select-none">
@@ -388,6 +454,12 @@ function ZoomControls({
       </button>
     </div>
   );
+}
+
+function toWorldRect(v: Viewport, screen: Rect): Rect {
+  const tl = screenToWorld(v, screen.x, screen.y);
+  const br = screenToWorld(v, screen.x + screen.width, screen.y + screen.height);
+  return { x: tl.x, y: tl.y, width: br.x - tl.x, height: br.y - tl.y };
 }
 
 function isEditableTarget(t: EventTarget | null): boolean {
