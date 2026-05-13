@@ -30,12 +30,31 @@ fn looks_like_markdown(path: &Path) -> bool {
     )
 }
 
+fn looks_like_canvas(path: &Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_ascii_lowercase()),
+        Some(ext) if ext == "canvas"
+    )
+}
+
+/// Return true for any file extension the editor knows how to load.
+/// Currently: Markdown variants (md / markdown / mdx / mkd) and
+/// Obsidian Canvas files (.canvas). Other extensions are rejected at
+/// the read boundary so a stray ".pdf" can't slip into a tab buffer
+/// where the editor would mis-render it.
+fn looks_like_editable(path: &Path) -> bool {
+    looks_like_markdown(path) || looks_like_canvas(path)
+}
+
 #[tauri::command]
 pub async fn open_file(app: tauri::AppHandle) -> AppResult<Option<LoadedFile>> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     app.dialog()
         .file()
         .add_filter("Markdown", &["md", "markdown", "mdx", "mkd"])
+        .add_filter("Canvas", &["canvas"])
         .pick_file(move |maybe_path| {
             let _ = tx.send(maybe_path);
         });
@@ -58,7 +77,7 @@ pub async fn read_file(path: String) -> AppResult<LoadedFile> {
 }
 
 async fn read_file_inner(path: &Path) -> AppResult<LoadedFile> {
-    if !looks_like_markdown(path) {
+    if !looks_like_editable(path) {
         return Err(AppError::NotMarkdown(path.display().to_string()));
     }
     let content = tokio::fs::read_to_string(path).await?;
@@ -281,6 +300,73 @@ fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
+}
+
+#[cfg(test)]
+mod ext_tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn markdown_extensions_are_accepted() {
+        for ext in ["md", "markdown", "mdx", "mkd"] {
+            let p = PathBuf::from(format!("foo.{ext}"));
+            assert!(looks_like_markdown(&p), ".{ext} should look like markdown");
+            assert!(looks_like_editable(&p), ".{ext} should be editable");
+        }
+    }
+
+    #[test]
+    fn canvas_extension_is_accepted_for_editable_only() {
+        let p = PathBuf::from("foo.canvas");
+        assert!(looks_like_canvas(&p));
+        assert!(looks_like_editable(&p));
+        // It's not a Markdown file though.
+        assert!(!looks_like_markdown(&p));
+    }
+
+    #[test]
+    fn extensions_are_case_insensitive() {
+        for ext in ["MD", "MarkDown", "Canvas", "CANVAS"] {
+            let p = PathBuf::from(format!("foo.{ext}"));
+            assert!(
+                looks_like_editable(&p),
+                ".{ext} should be editable (case-insensitive match)"
+            );
+        }
+    }
+
+    #[test]
+    fn unrelated_extensions_are_rejected() {
+        for path in ["foo.txt", "foo.pdf", "foo.docx", "foo", "canvas", ".canvas"] {
+            let p = PathBuf::from(path);
+            assert!(
+                !looks_like_editable(&p),
+                "{path} should not look editable"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn read_file_inner_reads_a_canvas_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("scratch.canvas");
+        let payload = r#"{"nodes":[],"edges":[]}"#;
+        tokio::fs::write(&path, payload).await.unwrap();
+        let loaded = read_file_inner(&path).await.expect("should read .canvas");
+        assert_eq!(loaded.content, payload);
+        assert!(loaded.path.ends_with("scratch.canvas"));
+        assert!(loaded.mtime_ms > 0);
+    }
+
+    #[tokio::test]
+    async fn read_file_inner_rejects_unsupported_extensions() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nope.txt");
+        tokio::fs::write(&path, "irrelevant").await.unwrap();
+        let result = read_file_inner(&path).await;
+        assert!(matches!(result, Err(AppError::NotMarkdown(_))));
+    }
 }
 
 #[cfg(test)]
