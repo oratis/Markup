@@ -33,6 +33,31 @@ export function rectsIntersect(a: Rect, b: Rect): boolean {
   );
 }
 
+/** Hit-test a world-space point against the node list. Iterates in
+ *  reverse order so the visually top-most node (last in the array) wins
+ *  ties — matches DOM stacking order. Returns null when the point is
+ *  in empty space. Group nodes are skipped so a click in a group's
+ *  interior falls through to whatever's drawn on top. */
+export function nodeAtPoint(
+  nodes: ReadonlyArray<CanvasNode>,
+  worldX: number,
+  worldY: number,
+): CanvasNode | null {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    if (n.type === "group") continue;
+    if (
+      worldX >= n.x &&
+      worldX <= n.x + n.width &&
+      worldY >= n.y &&
+      worldY <= n.y + n.height
+    ) {
+      return n;
+    }
+  }
+  return null;
+}
+
 /** Return the ids of nodes whose bounding box overlaps the given world-
  *  space rect. Order matches the input nodes array. */
 export function nodesInRect(nodes: ReadonlyArray<CanvasNode>, rect: Rect): string[] {

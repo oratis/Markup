@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { CanvasNode } from "./canvas-format";
-import { nodesInRect, rectFromPoints, rectsIntersect } from "./canvas-select";
+import {
+  nodeAtPoint,
+  nodesInRect,
+  rectFromPoints,
+  rectsIntersect,
+} from "./canvas-select";
 
 const node = (id: string, x: number, y: number, w = 50, h = 30): CanvasNode => ({
   id,
@@ -102,5 +107,32 @@ describe("nodesInRect", () => {
       "a",
       "m",
     ]);
+  });
+});
+
+describe("nodeAtPoint", () => {
+  const nodes = [node("a", 0, 0, 100, 100), node("b", 50, 50, 100, 100)];
+
+  it("returns the top-most (last) overlapping node", () => {
+    // Both nodes contain (75, 75); b was added last so wins.
+    expect(nodeAtPoint(nodes, 75, 75)?.id).toBe("b");
+  });
+
+  it("returns the only node when no overlap", () => {
+    expect(nodeAtPoint(nodes, 10, 10)?.id).toBe("a");
+    expect(nodeAtPoint(nodes, 140, 140)?.id).toBe("b");
+  });
+
+  it("returns null in empty space", () => {
+    expect(nodeAtPoint(nodes, 500, 500)).toBeNull();
+  });
+
+  it("skips group nodes (clicks fall through)", () => {
+    const withGroup = [
+      { ...node("g", 0, 0, 200, 200), type: "group" as const },
+      node("inner", 50, 50, 50, 50),
+    ];
+    expect(nodeAtPoint(withGroup, 75, 75)?.id).toBe("inner");
+    expect(nodeAtPoint(withGroup, 10, 10)).toBeNull(); // inside group only
   });
 });

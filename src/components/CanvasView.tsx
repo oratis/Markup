@@ -16,9 +16,16 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { closestSide } from "../lib/canvas-edge-geom";
+import type { CanvasSide } from "../lib/canvas-format";
 import { newCanvasId } from "../lib/canvas-ids";
 import { getOrCreateCanvasStore } from "../lib/canvas-registry";
-import { type Rect, nodesInRect, rectFromPoints } from "../lib/canvas-select";
+import {
+  type Rect,
+  nodeAtPoint,
+  nodesInRect,
+  rectFromPoints,
+} from "../lib/canvas-select";
 import {
   type Viewport,
   applyPan,
@@ -31,6 +38,7 @@ import {
 } from "../lib/canvas-viewport";
 import { getActiveTab, useAppStore } from "../store";
 import { CanvasEdgesLayer } from "./CanvasEdgesLayer";
+import { CanvasInteractionLayer, type EdgeDraft } from "./CanvasInteractionLayer";
 import { CanvasNodeFile } from "./CanvasNodeFile";
 import { CanvasNodeGroup } from "./CanvasNodeGroup";
 import { CanvasNodeLink } from "./CanvasNodeLink";
@@ -67,9 +75,11 @@ function CanvasViewInner({
   // Same shape as selectRect but rendered with a different style + a
   // different commit action (createNode rather than setSelection).
   const [newNodeRect, setNewNodeRect] = useState<Rect | null>(null);
+  const [edgeDraft, setEdgeDraft] = useState<EdgeDraft | null>(null);
   const panRef = useRef<{ startX: number; startY: number; v: Viewport } | null>(null);
   const selectRef = useRef<{ startSX: number; startSY: number } | null>(null);
   const newNodeRef = useRef<{ startSX: number; startSY: number } | null>(null);
+  const edgeDraftRef = useRef<EdgeDraft | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Resolve the editing node from the live doc — if the user undoes
@@ -166,6 +176,17 @@ function CanvasViewInner({
     const containerRect = containerRef.current?.getBoundingClientRect();
     const offX = containerRect?.left ?? 0;
     const offY = containerRect?.top ?? 0;
+    if (edgeDraftRef.current) {
+      const w = screenToWorld(viewport, e.clientX - offX, e.clientY - offY);
+      const next: EdgeDraft = {
+        ...edgeDraftRef.current,
+        pointerX: w.x,
+        pointerY: w.y,
+      };
+      edgeDraftRef.current = next;
+      setEdgeDraft(next);
+      return;
+    }
     const sel = selectRef.current;
     if (sel) {
       setSelectRect(
@@ -195,6 +216,29 @@ function CanvasViewInner({
     if (panRef.current) {
       (e.target as Element).releasePointerCapture?.(e.pointerId);
       panRef.current = null;
+      return;
+    }
+    if (edgeDraftRef.current) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const offX = rect?.left ?? 0;
+      const offY = rect?.top ?? 0;
+      const w = screenToWorld(viewport, e.clientX - offX, e.clientY - offY);
+      const target = nodeAtPoint(store.getSnapshot().doc.nodes, w.x, w.y);
+      if (target && target.id !== edgeDraftRef.current.fromNodeId) {
+        const from = store
+          .getSnapshot()
+          .doc.nodes.find((n) => n.id === edgeDraftRef.current?.fromNodeId);
+        const toSide = from ? closestSide(asBox(target), asBox(from)) : "left";
+        store.addEdge({
+          id: newCanvasId(),
+          fromNode: edgeDraftRef.current.fromNodeId,
+          toNode: target.id,
+          fromSide: edgeDraftRef.current.fromSide,
+          toSide,
+        });
+      }
+      edgeDraftRef.current = null;
+      setEdgeDraft(null);
       return;
     }
     if (selectRef.current && selectRect) {
@@ -230,6 +274,25 @@ function CanvasViewInner({
       newNodeRef.current = null;
       setNewNodeRect(null);
     }
+  }
+
+  function onAnchorPointerDown(
+    e: React.PointerEvent<SVGElement>,
+    nodeId: string,
+    side: CanvasSide,
+  ) {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const offX = rect?.left ?? 0;
+    const offY = rect?.top ?? 0;
+    const w = screenToWorld(viewport, e.clientX - offX, e.clientY - offY);
+    const draft: EdgeDraft = {
+      fromNodeId: nodeId,
+      fromSide: side,
+      pointerX: w.x,
+      pointerY: w.y,
+    };
+    edgeDraftRef.current = draft;
+    setEdgeDraft(draft);
   }
 
   function onBackgroundDoubleClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -280,6 +343,14 @@ function CanvasViewInner({
         {/* Edges between nodes. SVG overlay; pointer-events on the SVG
             itself are off — only the path strokes catch clicks (B211). */}
         <CanvasEdgesLayer doc={snapshot.doc} selection={snapshot.selection} />
+        {/* Anchor handles on selected nodes + edge-draft ghost. */}
+        <CanvasInteractionLayer
+          doc={snapshot.doc}
+          selection={snapshot.selection}
+          zoom={viewport.zoom}
+          edgeDraft={edgeDraft}
+          onAnchorPointerDown={onAnchorPointerDown}
+        />
         {/* Groups render first so they sit BEHIND every other node in
             DOM order — pointer-events on the frame interior fall through
             to the viewport, so nodes visually inside a group remain
@@ -454,6 +525,10 @@ function ZoomControls({
       </button>
     </div>
   );
+}
+
+function asBox(n: { x: number; y: number; width: number; height: number }) {
+  return { x: n.x, y: n.y, width: n.width, height: n.height };
 }
 
 function toWorldRect(v: Viewport, screen: Rect): Rect {
