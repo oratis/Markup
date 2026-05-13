@@ -27,6 +27,7 @@ import {
   zoomAtPoint,
 } from "../lib/canvas-viewport";
 import { getActiveTab, useAppStore } from "../store";
+import { CanvasEdgesLayer } from "./CanvasEdgesLayer";
 import { CanvasNodeFile } from "./CanvasNodeFile";
 import { CanvasNodeGroup } from "./CanvasNodeGroup";
 import { CanvasNodeLink } from "./CanvasNodeLink";
@@ -143,6 +144,9 @@ function CanvasViewInner({
         className="absolute inset-0 origin-top-left will-change-transform"
         style={{ transform: toCssTransform(viewport) }}
       >
+        {/* Edges between nodes. SVG overlay; pointer-events on the SVG
+            itself are off — only the path strokes catch clicks (B211). */}
+        <CanvasEdgesLayer doc={snapshot.doc} selection={snapshot.selection} />
         {/* Groups render first so they sit BEHIND every other node in
             DOM order — pointer-events on the frame interior fall through
             to the viewport, so nodes visually inside a group remain
