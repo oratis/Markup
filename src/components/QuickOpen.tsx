@@ -4,6 +4,7 @@ import {
   getAllBlocks,
   subscribe as subscribeBlocks,
 } from "../lib/block-index-store";
+import { isCanvasPath } from "../lib/canvas-path";
 import { scoreSubsequence } from "../lib/fuzzy";
 import {
   type HeadingEntry,
@@ -200,6 +201,7 @@ export function QuickOpen({ onClose }: QuickOpenProps) {
         />
         <div className="max-h-[40vh] overflow-auto no-scrollbar">
           {!isHeadingMode &&
+            !isBlockMode &&
             fileMatches.map((f, i) => (
               <button
                 key={f.path}
@@ -208,7 +210,20 @@ export function QuickOpen({ onClose }: QuickOpenProps) {
                 className={`w-full text-left px-4 py-1.5 text-[12px] flex items-center gap-2 ${
                   i === selected ? "bg-black/10 dark:bg-white/15" : ""
                 }`}
+                data-testid={
+                  isCanvasPath(f.path) ? "quickopen-canvas-row" : "quickopen-md-row"
+                }
               >
+                <span
+                  className={`shrink-0 w-3 text-center ${
+                    isCanvasPath(f.path)
+                      ? "text-amber-600 dark:text-amber-400 opacity-90"
+                      : "opacity-40"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {isCanvasPath(f.path) ? "◈" : "·"}
+                </span>
                 <span className="truncate flex-1">{f.relPath}</span>
                 <span className="opacity-40 text-[10px]">{f.name}</span>
               </button>

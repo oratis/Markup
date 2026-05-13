@@ -18,6 +18,25 @@ pub fn is_markdown(path: &Path) -> bool {
     )
 }
 
+/// Obsidian-compatible whiteboard files.
+#[inline]
+pub fn is_canvas(path: &Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_ascii_lowercase()),
+        Some(ext) if ext == "canvas"
+    )
+}
+
+/// Files the vault sidebar / QuickOpen should surface. Wider than
+/// `is_markdown` (which gates the Tantivy text index) — canvases are
+/// listable as files but their JSON isn't body-indexed.
+#[inline]
+pub fn is_listable(path: &Path) -> bool {
+    is_markdown(path) || is_canvas(path)
+}
+
 /// Should this directory entry be skipped during a vault walk?
 fn skip_dir(name: &str) -> bool {
     matches!(
@@ -29,6 +48,17 @@ fn skip_dir(name: &str) -> bool {
 /// Walk `root` recursively and return absolute paths to every markdown file.
 /// Skips common build/VCS directories. Caller decides what to do with result.
 pub fn scan_markdown_files(root: &Path) -> AppResult<Vec<PathBuf>> {
+    scan_filtered(root, is_markdown)
+}
+
+/// Walk `root` and return every file the vault sidebar should show
+/// (markdown + canvas). Tantivy indexing still uses `scan_markdown_files`
+/// so canvas JSON doesn't pollute body search.
+pub fn scan_vault_files(root: &Path) -> AppResult<Vec<PathBuf>> {
+    scan_filtered(root, is_listable)
+}
+
+fn scan_filtered(root: &Path, accept: fn(&Path) -> bool) -> AppResult<Vec<PathBuf>> {
     let mut out = Vec::new();
     for entry in WalkDir::new(root)
         .follow_links(false)
@@ -45,7 +75,7 @@ pub fn scan_markdown_files(root: &Path) -> AppResult<Vec<PathBuf>> {
             Ok(e) => e,
             Err(_) => continue, // skip unreadable entries; don't fail the whole walk
         };
-        if entry.file_type().is_file() && is_markdown(entry.path()) {
+        if entry.file_type().is_file() && accept(entry.path()) {
             out.push(entry.path().to_owned());
         }
     }
@@ -66,6 +96,31 @@ mod tests {
         assert!(is_markdown(Path::new("a.mdx")));
         assert!(!is_markdown(Path::new("a.txt")));
         assert!(!is_markdown(Path::new("a")));
+    }
+
+    #[test]
+    fn detects_canvas_files_separately_from_markdown() {
+        assert!(is_canvas(Path::new("a.canvas")));
+        assert!(is_canvas(Path::new("A.Canvas")));
+        assert!(!is_canvas(Path::new("a.md")));
+        // is_listable accepts both kinds.
+        assert!(is_listable(Path::new("a.md")));
+        assert!(is_listable(Path::new("a.canvas")));
+        assert!(!is_listable(Path::new("a.txt")));
+    }
+
+    #[test]
+    fn scan_vault_files_surfaces_canvas_alongside_markdown() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(root.join("note.md"), "").unwrap();
+        fs::write(root.join("board.canvas"), "{}").unwrap();
+        fs::write(root.join("ignored.txt"), "").unwrap();
+        let mut found = scan_vault_files(root).unwrap();
+        found.sort();
+        let mut expected = vec![root.join("board.canvas"), root.join("note.md")];
+        expected.sort();
+        assert_eq!(found, expected);
     }
 
     #[test]

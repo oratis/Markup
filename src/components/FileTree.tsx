@@ -179,13 +179,18 @@ export function FileTree() {
                 }}
               >
                 <span
-                  className="opacity-50 shrink-0"
+                  className={`shrink-0 w-3 text-center ${
+                    isCanvasPath(file.path)
+                      ? "text-amber-600 dark:text-amber-400 opacity-90"
+                      : "opacity-50"
+                  }`}
                   aria-hidden="true"
                   data-testid={
                     isCanvasPath(file.path) ? "filetree-canvas-icon" : "filetree-md-icon"
                   }
+                  title={isCanvasPath(file.path) ? "Canvas" : "Markdown"}
                 >
-                  {isCanvasPath(file.path) ? "◇" : "·"}
+                  {isCanvasPath(file.path) ? "◈" : "·"}
                 </span>
                 {isRenaming ? (
                   <input

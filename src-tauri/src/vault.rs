@@ -97,10 +97,12 @@ impl VaultState {
         Ok(count)
     }
 
-    /// List all markdown files currently in the vault. Re-scans disk.
+    /// List every file the sidebar should surface — markdown + canvas.
+    /// Re-scans disk. Tantivy indexing still uses scan_markdown_files
+    /// so canvas JSON doesn't pollute body search.
     pub fn list_files(&self) -> AppResult<Vec<VaultFileEntry>> {
         let root = self.root().ok_or(AppError::NoVault)?;
-        let paths = scanner::scan_markdown_files(&root)?;
+        let paths = scanner::scan_vault_files(&root)?;
         Ok(paths
             .into_iter()
             .map(|p| {
