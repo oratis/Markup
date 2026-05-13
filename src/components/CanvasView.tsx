@@ -28,6 +28,8 @@ import {
 } from "../lib/canvas-viewport";
 import { getActiveTab, useAppStore } from "../store";
 import { CanvasNodeFile } from "./CanvasNodeFile";
+import { CanvasNodeGroup } from "./CanvasNodeGroup";
+import { CanvasNodeLink } from "./CanvasNodeLink";
 import { CanvasNodeText } from "./CanvasNodeText";
 
 export function CanvasView() {
@@ -141,47 +143,75 @@ function CanvasViewInner({
         className="absolute inset-0 origin-top-left will-change-transform"
         style={{ transform: toCssTransform(viewport) }}
       >
-        {snapshot.doc.nodes.map((node) => {
-          if (node.type === "text") {
-            return (
-              <CanvasNodeText
-                key={node.id}
-                node={node}
-                zoom={viewport.zoom}
-                store={store}
-                selected={snapshot.selection.has(node.id)}
-              />
-            );
-          }
-          if (node.type === "file") {
-            return (
-              <CanvasNodeFile
-                key={node.id}
-                node={node}
-                zoom={viewport.zoom}
-                store={store}
-                selected={snapshot.selection.has(node.id)}
-              />
-            );
-          }
-          // link / group land in B208. Render an outlined placeholder so
-          // they're still visible.
-          return (
-            <div
+        {/* Groups render first so they sit BEHIND every other node in
+            DOM order — pointer-events on the frame interior fall through
+            to the viewport, so nodes visually inside a group remain
+            clickable. */}
+        {snapshot.doc.nodes
+          .filter((n) => n.type === "group")
+          .map((node) => (
+            <CanvasNodeGroup
               key={node.id}
-              data-testid={`canvas-node-${node.id}`}
-              data-node-id={node.id}
-              className="absolute rounded-md border-2 border-dashed border-black/20 dark:border-white/20 bg-white/50 dark:bg-neutral-800/50 text-[11px] opacity-70 px-2 py-1"
-              style={{
-                transform: `translate3d(${node.x}px, ${node.y}px, 0)`,
-                width: node.width,
-                height: node.height,
-              }}
-            >
-              {node.type} — {node.url ?? node.label ?? node.id}
-            </div>
-          );
-        })}
+              node={node}
+              zoom={viewport.zoom}
+              store={store}
+              selected={snapshot.selection.has(node.id)}
+            />
+          ))}
+        {snapshot.doc.nodes
+          .filter((n) => n.type !== "group")
+          .map((node) => {
+            if (node.type === "text") {
+              return (
+                <CanvasNodeText
+                  key={node.id}
+                  node={node}
+                  zoom={viewport.zoom}
+                  store={store}
+                  selected={snapshot.selection.has(node.id)}
+                />
+              );
+            }
+            if (node.type === "file") {
+              return (
+                <CanvasNodeFile
+                  key={node.id}
+                  node={node}
+                  zoom={viewport.zoom}
+                  store={store}
+                  selected={snapshot.selection.has(node.id)}
+                />
+              );
+            }
+            if (node.type === "link") {
+              return (
+                <CanvasNodeLink
+                  key={node.id}
+                  node={node}
+                  zoom={viewport.zoom}
+                  store={store}
+                  selected={snapshot.selection.has(node.id)}
+                />
+              );
+            }
+            // Unknown future node type (forwards-compat): render a
+            // labelled placeholder so the data isn't invisible.
+            return (
+              <div
+                key={node.id}
+                data-testid={`canvas-node-${node.id}`}
+                data-node-id={node.id}
+                className="absolute rounded-md border-2 border-dashed border-black/20 dark:border-white/20 bg-white/50 dark:bg-neutral-800/50 text-[11px] opacity-70 px-2 py-1"
+                style={{
+                  transform: `translate3d(${node.x}px, ${node.y}px, 0)`,
+                  width: node.width,
+                  height: node.height,
+                }}
+              >
+                {node.type} — {node.id}
+              </div>
+            );
+          })}
       </div>
 
       {/* HUD: zoom % + node count. Pure decoration, won't intercept
