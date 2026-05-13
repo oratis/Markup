@@ -1,5 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { isCanvasPath } from "../lib/canvas-path";
 import { useT } from "../lib/i18n";
 import { listVaultFiles, readFile, renameFile, trashFile } from "../lib/tauri";
 import { type VaultFile, useAppStore } from "../store";
@@ -177,7 +178,15 @@ export function FileTree() {
                   setCtx({ file, x: e.clientX, y: e.clientY });
                 }}
               >
-                <span className="opacity-50 shrink-0">·</span>
+                <span
+                  className="opacity-50 shrink-0"
+                  aria-hidden="true"
+                  data-testid={
+                    isCanvasPath(file.path) ? "filetree-canvas-icon" : "filetree-md-icon"
+                  }
+                >
+                  {isCanvasPath(file.path) ? "◇" : "·"}
+                </span>
                 {isRenaming ? (
                   <input
                     value={renaming.value}

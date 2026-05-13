@@ -366,4 +366,43 @@ describe("app store", () => {
     expect(t?.mtimeMs).toBe(12345);
     expect(t?.status).toBe("saved");
   });
+
+  describe("tab kind discriminant", () => {
+    it("marks a .canvas tab with kind=canvas on open", () => {
+      const { openLoadedFile } = useAppStore.getState();
+      openLoadedFile({
+        path: "/notes/board.canvas",
+        content: "{}",
+        mtime_ms: 100,
+      });
+      const tab = useAppStore
+        .getState()
+        .tabs.find((x) => x.path === "/notes/board.canvas");
+      expect(tab?.kind).toBe("canvas");
+    });
+
+    it("marks a .md tab with kind=markdown on open", () => {
+      const { openLoadedFile } = useAppStore.getState();
+      openLoadedFile({
+        path: "/notes/foo.md",
+        content: "# Hi",
+        mtime_ms: 100,
+      });
+      const tab = useAppStore.getState().tabs.find((x) => x.path === "/notes/foo.md");
+      expect(tab?.kind).toBe("markdown");
+    });
+
+    it("matches the .canvas extension case-insensitively", () => {
+      const { openLoadedFile } = useAppStore.getState();
+      openLoadedFile({
+        path: "/notes/Mixed.Canvas",
+        content: "{}",
+        mtime_ms: 100,
+      });
+      const tab = useAppStore
+        .getState()
+        .tabs.find((x) => x.path === "/notes/Mixed.Canvas");
+      expect(tab?.kind).toBe("canvas");
+    });
+  });
 });

@@ -1,6 +1,14 @@
 import { create } from "zustand";
+import { isCanvasPath } from "./lib/canvas-path";
 import { t } from "./lib/i18n";
 import type { LoadedFile } from "./lib/types";
+
+/** Discriminant for what kind of file a tab represents. `"markdown"`
+ *  is the default — it routes to the Milkdown / CodeMirror stack.
+ *  `"canvas"` routes to the Canvas whiteboard (see CanvasView, Phase 2).
+ *  Optional in the type so existing code that constructs Tab objects
+ *  without specifying a kind keeps working with the markdown default. */
+export type TabKind = "markdown" | "canvas";
 
 export type SaveStatus = "saved" | "dirty" | "saving" | "error";
 /** "auto" resolves to light or dark via prefers-color-scheme. */
@@ -23,6 +31,9 @@ export interface Tab {
   /** Pinned tabs render before unpinned ones, survive Close All / Close
    * Others / Close to the Right unless explicitly unpinned. */
   pinned?: boolean;
+  /** What kind of editor renders this tab. Defaults to `"markdown"` when
+   * absent (back-compat with code that constructs Tabs without a kind). */
+  kind?: TabKind;
 }
 
 export interface VaultFile {
@@ -297,6 +308,7 @@ export const useAppStore = create<AppState>((set) => ({
       const id = loaded.path;
       const existing = state.tabs.find((t) => t.id === id);
       if (existing) return { activeTabId: id };
+      const kind: TabKind = isCanvasPath(loaded.path) ? "canvas" : "markdown";
       const tab: Tab = {
         id,
         path: loaded.path,
@@ -305,6 +317,7 @@ export const useAppStore = create<AppState>((set) => ({
         mtimeMs: loaded.mtime_ms,
         status: "saved",
         errorMessage: null,
+        kind,
       };
       // Drop the welcome scratch tab if it's still untouched & only tab
       const keep = state.tabs.filter(
