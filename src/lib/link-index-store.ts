@@ -178,6 +178,17 @@ export function subscribe(cb: () => void): () => void {
   };
 }
 
+/** Read-only access to the raw index + path list. Used by the GraphView
+ *  which needs the full {sourcePath → target} map at once instead of
+ *  one target lookup at a time. The returned object references the
+ *  live internals — do not mutate. */
+export function __dangerousReadIndexSnapshot(): {
+  index: LinkIndex;
+  allPaths: string[];
+} {
+  return { index, allPaths };
+}
+
 /** Reset everything — for tests. */
 export function _resetLinkIndexStore(): void {
   vaultRoot = null;

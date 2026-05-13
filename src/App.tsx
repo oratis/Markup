@@ -6,6 +6,7 @@ import { type Command, CommandPalette } from "./components/CommandPalette";
 import { MarkupEditor } from "./components/Editor";
 import { FileTree } from "./components/FileTree";
 import { FindBar } from "./components/FindBar";
+import { GraphView } from "./components/GraphView";
 import { Onboarding } from "./components/Onboarding";
 import { Outline } from "./components/Outline";
 import { PropertiesEditor } from "./components/PropertiesEditor";
@@ -187,6 +188,7 @@ export function App() {
   const [showRecentOpen, setShowRecentOpen] = useState(false);
   const [showFindBar, setShowFindBar] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
   const [showCheatsheet, setShowCheatsheet] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -2788,6 +2790,11 @@ export function App() {
       },
       { id: "about", label: "About Markup", run: () => setShowAbout(true) },
       {
+        id: "open_graph_view",
+        label: "Open Vault Graph",
+        run: () => setShowGraph(true),
+      },
+      {
         id: "shortcuts_cheatsheet",
         label: "Shortcuts Cheatsheet",
         shortcut: "⌘⇧/",
@@ -3049,6 +3056,7 @@ export function App() {
         />
       )}
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
+      {showGraph && <GraphView onClose={() => setShowGraph(false)} />}
       {showCheatsheet && <ShortcutsCheatsheet onClose={() => setShowCheatsheet(false)} />}
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
       {showOnboarding && (

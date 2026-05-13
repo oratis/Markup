@@ -141,6 +141,12 @@ export const en = {
   "toast.bookmarkRemoved": "Bookmark removed",
   "bookmarks.title": "Bookmarks",
   "bookmarks.remove": "Remove bookmark",
+  "graph.title": "Vault Graph",
+  "graph.nodes": "nodes",
+  "graph.edges": "edges",
+  "graph.truncated": "graph capped at {0} nodes",
+  "graph.help":
+    "Click a node to open its file. Run Rebuild Link Index for a fresh graph.",
   "prompt.tableSize": "Table size as rows x cols (e.g. 3x4):",
   "prompt.linkUrl": "Link URL:",
   "prompt.linkText": "Link text:",
