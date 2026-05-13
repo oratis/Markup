@@ -35,7 +35,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Markdown parser (Rust-side, for indexing snippets and exports)
-comrak = { version = "0.40", default-features = false }
+comrak = { version = "0.52", default-features = false }
 
 [dev-dependencies]
 tempfile = "3"
