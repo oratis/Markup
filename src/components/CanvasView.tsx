@@ -32,6 +32,7 @@ import { CanvasNodeFile } from "./CanvasNodeFile";
 import { CanvasNodeGroup } from "./CanvasNodeGroup";
 import { CanvasNodeLink } from "./CanvasNodeLink";
 import { CanvasNodeText } from "./CanvasNodeText";
+import { CanvasTextOverlay } from "./CanvasTextOverlay";
 
 export function CanvasView() {
   const tab = useAppStore(getActiveTab);
@@ -58,8 +59,21 @@ function CanvasViewInner({
 
   const [viewport, setViewport] = useState<Viewport>(defaultViewport);
   const [spaceHeld, setSpaceHeld] = useState(false);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const panRef = useRef<{ startX: number; startY: number; v: Viewport } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Resolve the editing node from the live doc — if the user undoes
+  // their way past the node's creation, drop the overlay.
+  const editingNode = editingNodeId
+    ? (snapshot.doc.nodes.find((n) => n.id === editingNodeId && n.type === "text") ??
+      null)
+    : null;
+  if (editingNodeId && !editingNode) {
+    // Defer the state update — running it during render is a React anti-
+    // pattern. queueMicrotask hands it to the next tick.
+    queueMicrotask(() => setEditingNodeId(null));
+  }
 
   // Spacebar held → pan cursor + click-drag pans. Released → normal cursor.
   useEffect(() => {
@@ -166,6 +180,9 @@ function CanvasViewInner({
           .filter((n) => n.type !== "group")
           .map((node) => {
             if (node.type === "text") {
+              // Hide the underlying read-only node while it's being
+              // edited — the overlay sits in the same spot.
+              if (editingNodeId === node.id) return null;
               return (
                 <CanvasNodeText
                   key={node.id}
@@ -173,6 +190,7 @@ function CanvasViewInner({
                   zoom={viewport.zoom}
                   store={store}
                   selected={snapshot.selection.has(node.id)}
+                  onEdit={setEditingNodeId}
                 />
               );
             }
@@ -216,6 +234,14 @@ function CanvasViewInner({
               </div>
             );
           })}
+        {editingNode ? (
+          <CanvasTextOverlay
+            key={`overlay-${editingNode.id}`}
+            node={editingNode}
+            store={store}
+            onClose={() => setEditingNodeId(null)}
+          />
+        ) : null}
       </div>
 
       {/* HUD: zoom % + node count. Pure decoration, won't intercept

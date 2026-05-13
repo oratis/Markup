@@ -18,9 +18,10 @@ interface Props {
   zoom: number;
   store: CanvasStore;
   selected?: boolean;
+  onEdit?: (nodeId: string) => void;
 }
 
-export function CanvasNodeText({ node, zoom, store, selected }: Props) {
+export function CanvasNodeText({ node, zoom, store, selected, onEdit }: Props) {
   const dragRef = useRef<DragStart | null>(null);
   // While dragging, this overrides the doc's persisted x/y so the node
   // tracks the cursor without flooding history.
@@ -83,6 +84,10 @@ export function CanvasNodeText({ node, zoom, store, selected }: Props) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onEdit?.(node.id);
+      }}
     >
       <div
         className="canvas-node-body px-3 py-2 h-full overflow-auto text-[13px] pointer-events-none"
