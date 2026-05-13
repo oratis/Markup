@@ -97,8 +97,17 @@ export function createCanvasStore(initialJson: string): CanvasStore {
   let past: CanvasDoc[] = [];
   let future: CanvasDoc[] = [];
   const listeners = new Set<() => void>();
+  // Cached snapshot so useSyncExternalStore sees a stable reference
+  // between mutations — fresh objects on every call would trigger
+  // React's "Maximum update depth exceeded" guard.
+  let cachedSnapshot: CanvasStoreSnapshot | null = null;
+
+  function invalidate() {
+    cachedSnapshot = null;
+  }
 
   function notify() {
+    invalidate();
     for (const l of listeners) l();
   }
 
@@ -115,12 +124,14 @@ export function createCanvasStore(initialJson: string): CanvasStore {
   }
 
   function snapshot(): CanvasStoreSnapshot {
-    return {
+    if (cachedSnapshot) return cachedSnapshot;
+    cachedSnapshot = {
       doc,
       selection,
       canUndo: past.length > 0,
       canRedo: future.length > 0,
     };
+    return cachedSnapshot;
   }
 
   return {

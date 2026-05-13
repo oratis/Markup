@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AboutDialog } from "./components/AboutDialog";
 import { BacklinksPanel } from "./components/BacklinksPanel";
 import { BookmarksPane } from "./components/BookmarksPane";
+import { CanvasView } from "./components/CanvasView";
 import { type Command, CommandPalette } from "./components/CommandPalette";
 import { MarkupEditor } from "./components/Editor";
 import { FileTree } from "./components/FileTree";
@@ -30,6 +31,7 @@ import {
   setVaultRoot as blockSetVaultRoot,
 } from "./lib/block-index-store";
 import { toggleBookmark } from "./lib/bookmarks";
+import { disposeCanvasStore } from "./lib/canvas-registry";
 import {
   cycleHeadingLevel,
   dedupLines,
@@ -233,6 +235,19 @@ export function App() {
     headingSetVaultPaths(paths);
     blockSetVaultPaths(paths);
   }, [vaultFiles]);
+
+  // Dispose per-canvas stores when their tabs close. The registry would
+  // otherwise leak one store per opened-then-closed canvas for the
+  // lifetime of the session, and a re-opened tab would silently inherit
+  // the stale in-memory state instead of the fresh disk content.
+  const prevCanvasTabIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const current = new Set(tabs.filter((t) => t.kind === "canvas").map((t) => t.id));
+    for (const id of prevCanvasTabIdsRef.current) {
+      if (!current.has(id)) disposeCanvasStore(id);
+    }
+    prevCanvasTabIdsRef.current = current;
+  }, [tabs]);
 
   // Restore prefs on mount
   useEffect(() => {
@@ -3022,14 +3037,20 @@ export function App() {
           ref={editorScrollRef as React.RefObject<HTMLElement>}
           spellCheck={spellcheck}
         >
-          {!sourceMode && <PropertiesEditor />}
-          <MarkupEditor
-            fileKey={fileKey}
-            initialValue={initialValue}
-            sourceMode={sourceMode}
-            isDark={isDark}
-            onChange={handleEditorChange}
-          />
+          {tab?.kind === "canvas" ? (
+            <CanvasView />
+          ) : (
+            <>
+              {!sourceMode && <PropertiesEditor />}
+              <MarkupEditor
+                fileKey={fileKey}
+                initialValue={initialValue}
+                sourceMode={sourceMode}
+                isDark={isDark}
+                onChange={handleEditorChange}
+              />
+            </>
+          )}
         </section>
         {outlineOpen && (
           <>
