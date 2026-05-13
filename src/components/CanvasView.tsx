@@ -36,6 +36,7 @@ import {
   toCssTransform,
   zoomAtPoint,
 } from "../lib/canvas-viewport";
+import { writeFile } from "../lib/tauri";
 import { getActiveTab, useAppStore } from "../store";
 import { CanvasEdgesLayer } from "./CanvasEdgesLayer";
 import { CanvasInteractionLayer, type EdgeDraft } from "./CanvasInteractionLayer";
@@ -67,6 +68,11 @@ function CanvasViewInner({
     [tabId, initialJson],
   );
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
+
+  // Wire the store's mutations into the app's tab-level save lifecycle.
+  // Without this, edits would never reach disk and the tab status pill
+  // would stay "saved" even after the user moves a node.
+  useCanvasAutosave(tabId, store, snapshot.doc);
 
   const [viewport, setViewport] = useState<Viewport>(defaultViewport);
   const [spaceHeld, setSpaceHeld] = useState(false);
@@ -543,6 +549,59 @@ function ZoomControls({
 
 function asBox(n: { x: number; y: number; width: number; height: number }) {
   return { x: n.x, y: n.y, width: n.width, height: n.height };
+}
+
+/** Schedule a debounced write of the canvas doc whenever it mutates.
+ *  Cancels any pending write when the doc changes again so we only
+ *  hit disk once after a burst of edits. Mirrors how the markdown
+ *  editor handles its autosave path. */
+function useCanvasAutosave(
+  tabId: string,
+  store: ReturnType<typeof getOrCreateCanvasStore>,
+  doc: import("../lib/canvas-format").CanvasDoc,
+) {
+  const autosaveMs = useAppStore((s) => s.autosaveMs);
+  const updateActiveContent = useAppStore((s) => s.updateActiveContent);
+  const setActiveStatus = useAppStore((s) => s.setActiveStatus);
+  const setActiveMtime = useAppStore((s) => s.setActiveMtime);
+  // The very first render shouldn't trigger a save — the doc came from
+  // disk via parseCanvas, so writing it back would just touch the file's
+  // mtime for no reason.
+  const firstRenderRef = useRef(true);
+
+  useEffect(() => {
+    if (firstRenderRef.current) {
+      firstRenderRef.current = false;
+      return;
+    }
+    const tab = useAppStore.getState().tabs.find((t) => t.id === tabId);
+    if (!tab?.path) return;
+    const json = store.toJson();
+    if (json === tab.content) return; // doc identical to what's already cached
+    updateActiveContent(json);
+    if (autosaveMs <= 0) return;
+    const handle = window.setTimeout(async () => {
+      const fresh = useAppStore.getState().tabs.find((t) => t.id === tabId);
+      if (!fresh?.path) return;
+      setActiveStatus("saving");
+      try {
+        const newMtime = await writeFile(fresh.path, json, fresh.mtimeMs);
+        setActiveMtime(newMtime);
+        setActiveStatus("saved");
+      } catch (err) {
+        setActiveStatus("error", String(err));
+      }
+    }, autosaveMs);
+    return () => window.clearTimeout(handle);
+  }, [
+    doc,
+    tabId,
+    store,
+    autosaveMs,
+    updateActiveContent,
+    setActiveStatus,
+    setActiveMtime,
+  ]);
 }
 
 function toWorldRect(v: Viewport, screen: Rect): Rect {
