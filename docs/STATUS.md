@@ -687,11 +687,15 @@ This handles: build release → re-sign with hardened runtime → submit to
 notarytool → wait → staple. Output: signed + notarized DMG ready to share.
 
 ### 5. App icon (✅ shipped on v0.2.0, 2026-05-14)
-Real icon now in `src-tauri/icons/icon-source.png` (1024×1024,
-generated via Doubao's image API: black hole + retro train bursting
-out, cinematic deep blue). Full icon set generated via
-`pnpm tauri icon icon-source.png` — .icns, all .png sizes, iOS +
-Android assets. DMG window also got a custom gradient background
+Real icon now in `src-tauri/icons/icon-source.png` (1024×1024).
+Design: pixel-art classic Macintosh on an indigo squircle, CRT
+screen displaying the `> / <` glyph trio in phosphor-white. Built
+hybrid-resolution — smooth-antialiased squircle + gradient bg at full
+1024, then crisp pixel-art Mac drawn on a 64×64 grid and upscaled
+16× with NEAREST resampling so interior pixels stay sharp while the
+outer edge stays smooth. Full icon set regenerated via
+`pnpm tauri icon icon-source.png` (.icns + every .png size + iOS +
+Android assets). DMG window also got a custom gradient background
 (`icons/dmg-background.png`) plus drag-to-Applications layout
 configured in `tauri.conf.json` → `bundle.macOS.dmg`.
 
