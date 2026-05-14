@@ -462,7 +462,10 @@ What's still on you:
 - **Auto-updater** key-pair generation — `lib/updater.ts` documents the
   3-step setup; release.yml reads `TAURI_SIGNING_PRIVATE_KEY` secrets
   if present and emits `latest.json`.
-- Replace placeholder app icons.
+- **CI signing secrets** — release.yml is ready to sign + notarize
+  automatically on tag push when the six APPLE_* secrets are set, but
+  they aren't yet (export .p12 from local keychain → base64 → six
+  secrets in GitHub repo settings).
 - Decide if you want to merge any of the open Dependabot PRs (most are
   major bumps — risk-managed by you, not me).
 
@@ -683,10 +686,14 @@ Then:
 This handles: build release → re-sign with hardened runtime → submit to
 notarytool → wait → staple. Output: signed + notarized DMG ready to share.
 
-### 5. Replace placeholder icons
-Current icons are a solid blue square (RGBA placeholder).
-Drop a 1024×1024 PNG at `src-tauri/icons/icon-source.png` and run a real
-icon-generation flow (e.g. `pnpm tauri icon`) before public release.
+### 5. App icon (✅ shipped on v0.2.0, 2026-05-14)
+Real icon now in `src-tauri/icons/icon-source.png` (1024×1024,
+generated via Doubao's image API: black hole + retro train bursting
+out, cinematic deep blue). Full icon set generated via
+`pnpm tauri icon icon-source.png` — .icns, all .png sizes, iOS +
+Android assets. DMG window also got a custom gradient background
+(`icons/dmg-background.png`) plus drag-to-Applications layout
+configured in `tauri.conf.json` → `bundle.macOS.dmg`.
 
 ## What's NOT done (intentionally deferred)
 
