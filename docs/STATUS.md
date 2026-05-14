@@ -459,8 +459,6 @@ shipped.**
 What's still on you:
 - **Spike 0.2** quantitative numbers — instrumentation is wired; you open
   `test-fixtures/big.md` and read `~/Library/Logs/markup/perf.log`.
-- **Spike 0.4** signing+notarization — `scripts/sign-and-notarize.sh` is
-  ready; needs your Apple ID app-specific password.
 - **Auto-updater** key-pair generation — `lib/updater.ts` documents the
   3-step setup; release.yml reads `TAURI_SIGNING_PRIVATE_KEY` secrets
   if present and emits `latest.json`.
@@ -575,9 +573,32 @@ What's still on you:
 - File watcher → "vault-changed" event → UI re-syncs file tree
 - Save: 300ms debounce + ⌘S override, mtime stale-check, atomic temp+rename
 
-### Spike 0.4 — Signing/notarization (script ready, not run)
-- `scripts/sign-and-notarize.sh` (executable)
-- `src-tauri/Entitlements.plist` (hardened runtime + JIT + file/network access)
+### Spike 0.4 — Signing/notarization + dual-arch (✅ shipped on v0.2.0, 2026-05-14)
+- Developer ID Application certificate issued (Team ID `9LH9NBX7P4`,
+  Bihao Wang); private key in login keychain
+- `xcrun notarytool` AC_PASSWORD profile stored in keychain (one-time
+  setup against wangharp@gmail.com + app-specific password)
+- `scripts/sign-and-notarize.sh` produces a signed + notarized DMG;
+  v0.2.0 was the first release to ship through this pipeline. Two
+  notary submissions for that release: `7aae5f5c...` for x64 and
+  `0abd888a...` for arm64 — both `Accepted` after ~5 minutes each
+- Dual-architecture release: v0.2.0 ships both
+  `Markup_0.2.0_x64.dmg` (Intel) and `Markup_0.2.0_arm64.dmg` (Apple
+  Silicon native) so the DMG works without Rosetta on M-series Macs.
+  SHA256SUMS in the release lists both
+- Release workflow `.github/workflows/release.yml` builds both
+  architectures via a matrix and auto-signs + notarises each on tag
+  push when the secrets are present (APPLE_CERTIFICATE_BASE64,
+  APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID,
+  APPLE_PASSWORD, APPLE_TEAM_ID); falls back gracefully to unsigned
+  DMGs when secrets are missing
+- Build prerequisites: `rustup target add aarch64-apple-darwin` is
+  needed for the arm64 cross-compile. Local Intel-Mac builds also need
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` so cc-rs
+  picks up the full SDK (the CommandLineTools SDK is missing arm64
+  headers).
+- `src-tauri/Entitlements.plist` — hardened runtime + JIT + file/network
+  access — unchanged
 
 ## What you need to do when you wake up
 

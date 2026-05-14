@@ -11,15 +11,39 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
-# This workflow produces an UNSIGNED bundle and attaches it to the GitHub
-# Release for the pushed tag. Code signing + notarization require Apple
-# Developer ID secrets and aren't done here yet — to enable later, add the
-# secrets and call scripts/sign-and-notarize.sh after the bundle step.
+# Tag-triggered build. For each tag push, this workflow produces TWO
+# DMGs — one for Intel (x86_64) and one for Apple Silicon (arm64) —
+# signed + notarized when the Developer ID secrets are populated,
+# unsigned when they're missing.
+#
+# Required secrets for signing (all six must be set, gated on
+# APPLE_TEAM_ID since it's the last to provision):
+#   APPLE_CERTIFICATE_BASE64    .p12 with the Developer ID Application
+#                               cert + private key, base64-encoded
+#                               (`base64 -i cert.p12 | pbcopy` on macOS)
+#   APPLE_CERTIFICATE_PASSWORD  passphrase set when exporting the .p12
+#   APPLE_SIGNING_IDENTITY      e.g. "Developer ID Application: Foo
+#                               (TEAMID)" — the codesign --sign value
+#   APPLE_ID                    the developer's Apple ID (email)
+#   APPLE_PASSWORD              app-specific password from appleid.apple.com
+#   APPLE_TEAM_ID               10-char team id from developer.apple.com
+#
+# Optional, for the auto-updater:
+#   TAURI_SIGNING_PRIVATE_KEY            the Tauri updater private key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD   its passphrase
 
 jobs:
-  bundle:
+  build:
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            suffix: x64
+          - target: aarch64-apple-darwin
+            suffix: arm64
     steps:
       - uses: actions/checkout@v5
 
@@ -34,77 +58,143 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-apple-darwin
+          targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          key: ${{ matrix.target }}
 
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Build (Tauri bundle, x86_64-apple-darwin)
-        # Tauri's bundle_dmg.sh hangs on osascript Finder Automation in CI;
-        # build .app + binary, then make a plain DMG with hdiutil.
+      - name: Import Apple Developer ID certificate
+        # Creates a short-lived keychain on the runner, imports the .p12,
+        # and sets ACLs so codesign can use the private key non-interactively.
+        # Gated on APPLE_TEAM_ID — when secrets are missing, the workflow
+        # falls through to an unsigned DMG.
+        if: ${{ secrets.APPLE_TEAM_ID != '' }}
         env:
-          # Optional updater signing keys — present only when secrets are set.
-          # Without these, `tauri build` skips emitting the updater .sig file
-          # but the .app + DMG still build fine.
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/markup-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_PATH"
+          rm -f "$RUNNER_TEMP/cert.p12"
+          echo "MARKUP_KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+      - name: Build (Tauri bundle, ${{ matrix.target }})
+        env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          pnpm tauri build --target x86_64-apple-darwin --bundles app || true
-          BUNDLE_DIR=src-tauri/target/x86_64-apple-darwin/release/bundle
-          if [ ! -d "$BUNDLE_DIR/macos/Markup.app" ]; then
-            echo "::error ::Markup.app missing — bundle step failed"; exit 1
+          set -euo pipefail
+          pnpm tauri build --target ${{ matrix.target }} --bundles app
+          APP="src-tauri/target/${{ matrix.target }}/release/bundle/macos/Markup.app"
+          if [ ! -d "$APP" ]; then
+            echo "::error ::$APP missing — bundle step failed"; exit 1
           fi
+
+      - name: Sign Markup.app (hardened runtime + entitlements)
+        if: ${{ secrets.APPLE_TEAM_ID != '' }}
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+          APP="src-tauri/target/${{ matrix.target }}/release/bundle/macos/Markup.app"
+          codesign --force --deep --options runtime \
+            --entitlements src-tauri/Entitlements.plist \
+            --sign "$APPLE_SIGNING_IDENTITY" \
+            --timestamp \
+            "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Assemble DMG
+        run: |
+          set -euo pipefail
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
           mkdir -p "$BUNDLE_DIR/dmg"
+          DMG="$BUNDLE_DIR/dmg/Markup_${GITHUB_REF_NAME#v}_${{ matrix.suffix }}.dmg"
           hdiutil create -volname Markup \
             -srcfolder "$BUNDLE_DIR/macos/Markup.app" \
             -ov -format UDZO -fs HFS+ \
-            "$BUNDLE_DIR/dmg/Markup_${GITHUB_REF_NAME#v}_x64.dmg"
-          ls -lh "$BUNDLE_DIR/dmg" "$BUNDLE_DIR/macos"
+            "$DMG"
+          ls -lh "$DMG"
 
-      - name: Generate latest.json (only when updater is signed)
-        if: ${{ env.TAURI_SIGNING_PRIVATE_KEY != '' }}
+      - name: Notarize DMG with Apple notary
+        if: ${{ secrets.APPLE_TEAM_ID != '' }}
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          BUNDLE_DIR=src-tauri/target/x86_64-apple-darwin/release/bundle
-          DMG="$(ls "$BUNDLE_DIR/dmg/"Markup_*.dmg | head -1)"
-          if [ -z "$DMG" ]; then echo "no DMG"; exit 0; fi
-          # Look for a .sig produced by `tauri build` next to the app or DMG;
-          # tauri 2 places it at <bundle>/Markup_<ver>_*.app.tar.gz.sig when
-          # available. If no signature exists, skip.
-          SIG=$(find "$BUNDLE_DIR" -name '*.sig' | head -1 || true)
-          if [ -z "$SIG" ]; then
-            echo "no .sig produced — updater config likely active=false"; exit 0
-          fi
-          VERSION="${GITHUB_REF_NAME#v}"
-          DMG_NAME="$(basename "$DMG")"
-          DMG_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${DMG_NAME}"
-          SIGNATURE="$(cat "$SIG")"
-          cat > "$BUNDLE_DIR/dmg/latest.json" <<EOF
-          {
-            "version": "$VERSION",
-            "notes": "See release notes",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platforms": {
-              "darwin-x86_64": {
-                "signature": "$SIGNATURE",
-                "url": "$DMG_URL"
-              }
-            }
-          }
-          EOF
-          echo "Generated latest.json"
-          cat "$BUNDLE_DIR/dmg/latest.json"
+          set -euo pipefail
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          DMG="$(ls "$BUNDLE_DIR/dmg/"Markup_*_${{ matrix.suffix }}.dmg | head -1)"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$DMG"
+          xcrun stapler staple "$BUNDLE_DIR/macos/Markup.app"
+          spctl --assess --type execute --verbose=2 "$BUNDLE_DIR/macos/Markup.app"
 
-      - name: Compute checksums
+      - name: Clean up signing keychain
+        if: always() && env.MARKUP_KEYCHAIN_PATH != ''
         run: |
-          BUNDLE_DIR=src-tauri/target/x86_64-apple-darwin/release/bundle
-          ( cd "$BUNDLE_DIR/dmg" && shasum -a 256 *.dmg > SHA256SUMS )
-          cat "$BUNDLE_DIR/dmg/SHA256SUMS"
+          security delete-keychain "$MARKUP_KEYCHAIN_PATH" || true
+          rm -f "$MARKUP_KEYCHAIN_PATH" || true
+
+      - name: Stage DMG for release job
+        run: |
+          set -euo pipefail
+          mkdir -p staged
+          cp "src-tauri/target/${{ matrix.target }}/release/bundle/dmg/"*.dmg staged/
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg-${{ matrix.suffix }}
+          path: staged/*.dmg
+          retention-days: 7
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download both DMG artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dmg-*
+          path: dmg-staging
+          merge-multiple: true
+
+      - name: Compute SHA256SUMS over all DMGs
+        run: |
+          set -euo pipefail
+          cd dmg-staging
+          ls -lh
+          shasum -a 256 *.dmg > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Create / update GitHub Release
         uses: softprops/action-gh-release@v2
@@ -112,10 +202,7 @@ jobs:
           name: ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
-          # latest.json only appears when updater is signed; tolerate its
-          # absence so unsigned releases still publish.
           fail_on_unmatched_files: false
           files: |
-            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/SHA256SUMS
-            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/latest.json
+            dmg-staging/*.dmg
+            dmg-staging/SHA256SUMS
