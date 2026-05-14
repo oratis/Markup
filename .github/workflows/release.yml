@@ -44,6 +44,12 @@ jobs:
             suffix: x64
           - target: aarch64-apple-darwin
             suffix: arm64
+    env:
+      # GitHub Actions forbids `secrets.*` in step-level `if:` conditionals,
+      # so we promote the gate to a job-level env var and check that
+      # downstream. "true" iff all six Apple Developer ID secrets are
+      # wired (we gate on APPLE_TEAM_ID since it's set last).
+      HAS_APPLE_SIGNING: ${{ secrets.APPLE_TEAM_ID != '' }}
     steps:
       - uses: actions/checkout@v5
 
@@ -73,7 +79,7 @@ jobs:
         # and sets ACLs so codesign can use the private key non-interactively.
         # Gated on APPLE_TEAM_ID — when secrets are missing, the workflow
         # falls through to an unsigned DMG.
-        if: ${{ secrets.APPLE_TEAM_ID != '' }}
+        if: ${{ env.HAS_APPLE_SIGNING == 'true' }}
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -110,7 +116,7 @@ jobs:
           fi
 
       - name: Sign Markup.app (hardened runtime + entitlements)
-        if: ${{ secrets.APPLE_TEAM_ID != '' }}
+        if: ${{ env.HAS_APPLE_SIGNING == 'true' }}
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
@@ -136,7 +142,7 @@ jobs:
           ls -lh "$DMG"
 
       - name: Notarize DMG with Apple notary
-        if: ${{ secrets.APPLE_TEAM_ID != '' }}
+        if: ${{ env.HAS_APPLE_SIGNING == 'true' }}
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
