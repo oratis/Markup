@@ -51,7 +51,7 @@ jobs:
       # wired (we gate on APPLE_TEAM_ID since it's set last).
       HAS_APPLE_SIGNING: ${{ secrets.APPLE_TEAM_ID != '' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v5
         with:
@@ -185,7 +185,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Download both DMG artifacts
         uses: actions/download-artifact@v4
