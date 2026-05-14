@@ -44,7 +44,6 @@
       "frameworks": [],
       "exceptionDomain": "",
       "dmg": {
-        "background": "icons/dmg-background.png",
         "windowSize": { "width": 660, "height": 400 },
         "appPosition": { "x": 180, "y": 200 },
         "applicationFolderPosition": { "x": 480, "y": 200 }
