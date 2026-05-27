@@ -671,6 +671,115 @@ html, body, #root {
   color: var(--mk-fg-strong);
 }
 
+/* Preview-as-HTML button — sits next to the mode pill */
+.mk-preview-btn {
+  color: var(--mk-fg-muted);
+  background: transparent;
+  border: 1px solid var(--mk-border);
+  cursor: pointer;
+  transition: all 100ms;
+}
+.mk-preview-btn:hover {
+  color: var(--mk-accent);
+  background: var(--mk-accent-soft);
+  border-color: var(--mk-accent-soft);
+}
+
+/* Update banner — bottom-left passive pill */
+.mk-update-banner {
+  position: fixed;
+  bottom: 32px; /* above the status bar */
+  left: 12px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 999px;
+  background: var(--mk-bg-elevated);
+  border: 1px solid var(--mk-border-strong);
+  box-shadow: var(--mk-shadow, 0 6px 18px rgba(0, 0, 0, 0.12));
+  color: var(--mk-fg-default);
+  font-family: var(--mk-font-ui);
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  text-align: left;
+  max-width: 320px;
+  animation: mk-update-in 240ms ease-out;
+}
+@keyframes mk-update-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.mk-update-banner:hover {
+  border-color: var(--mk-accent);
+}
+.mk-update-banner:focus-visible {
+  outline: 2px solid var(--mk-accent);
+  outline-offset: 2px;
+}
+.mk-update-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mk-accent);
+  flex: none;
+  box-shadow: 0 0 0 3px var(--mk-accent-soft);
+  animation: mk-update-pulse 2.4s ease-in-out infinite;
+}
+@keyframes mk-update-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px var(--mk-accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 6px var(--mk-accent-soft);
+  }
+}
+.mk-update-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.mk-update-title {
+  color: var(--mk-fg-strong);
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mk-update-sub {
+  color: var(--mk-fg-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.mk-update-close {
+  margin-left: 4px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--mk-fg-muted);
+  cursor: pointer;
+  flex: none;
+  font-size: 14px;
+  line-height: 1;
+}
+.mk-update-close:hover {
+  background: var(--mk-bg-selected);
+  color: var(--mk-fg-strong);
+}
+
 /* Inline keyboard hint chip used in toolbar hints */
 .mk-kbd {
   display: inline-block;

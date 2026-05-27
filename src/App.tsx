@@ -20,6 +20,7 @@ import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
 import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { WikilinkPicker } from "./components/WikilinkPicker";
 import { getActiveSourceView } from "./lib/active-source-view";
 import {
@@ -3223,6 +3224,7 @@ export function App() {
         />
       )}
       <ToastHost />
+      <UpdateBanner />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { insertMarkdown, toggleWrap, wrapMarkdown } from "../lib/insert-md";
+import { previewInBrowser } from "../lib/preview-html";
 import { getActiveTab, useAppStore } from "../store";
+import { showToast } from "./Toast";
 
 interface ToolbarProps {
   /** Optional handler invoked when the user clicks the link icon. The
@@ -128,6 +130,30 @@ export function Toolbar({ onInsertLink }: ToolbarProps) {
           </div>
         )}
         <span className="flex-1" />
+        <button
+          type="button"
+          title="Preview as HTML in browser"
+          aria-label="Preview as HTML in browser"
+          onClick={async () => {
+            const tab = useAppStore.getState();
+            const active = tab.tabs.find((t) => t.id === tab.activeTabId);
+            if (!active) return;
+            try {
+              await previewInBrowser(active.content, active.name || "untitled");
+            } catch (e) {
+              console.error("previewInBrowser failed", e);
+              showToast(`Preview failed: ${e instanceof Error ? e.message : String(e)}`);
+            }
+          }}
+          className="mk-preview-btn flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          <span>Preview</span>
+        </button>
         <button
           type="button"
           title={
