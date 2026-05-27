@@ -40,10 +40,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Filename suffixes spell out the chip family — "x64" and
+          # "arm64" leave non-technical users guessing which DMG
+          # matches their Mac. Apple uses these exact terms on
+          # https://support.apple.com/en-us/HT211814.
           - target: x86_64-apple-darwin
-            suffix: x64
+            suffix: intel
           - target: aarch64-apple-darwin
-            suffix: arm64
+            suffix: apple-silicon
     env:
       # GitHub Actions forbids `secrets.*` in step-level `if:` conditionals,
       # so we promote the gate to a job-level env var and check that

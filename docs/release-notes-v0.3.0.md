@@ -58,8 +58,8 @@ The B / I / `<>` / 🔗 / — buttons used to fall back to `window.getSelection(
 
 ## 📦 Files
 
-- `Markup_0.3.0_aarch64.dmg` — Apple Silicon (M1+, native)
-- `Markup_0.3.0_x64.dmg` — Intel
+- `Markup_0.3.0_apple-silicon.dmg` — Apple Silicon Macs (M1 / M2 / M3 / M4)
+- `Markup_0.3.0_intel.dmg` — Intel Macs
 - `SHA256SUMS`
 
 Both DMGs remain **unsigned** (signing pipeline requires Apple Developer credentials — see [ADR-002](https://github.com/oratis/Markup/blob/main/docs/decisions/ADR-002-distribution.md)). On first launch macOS Gatekeeper will block; open *System Settings → Privacy & Security → Open Anyway*.

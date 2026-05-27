@@ -40,8 +40,8 @@ If we ever turn on Tauri's signed auto-updater (would require provisioning the E
 
 ## 📦 Files
 
-- `Markup_0.4.0_arm64.dmg` — Apple Silicon (M-series, native)
-- `Markup_0.4.0_x64.dmg` — Intel
+- `Markup_0.4.0_apple-silicon.dmg` — Apple Silicon Macs (M1 / M2 / M3 / M4)
+- `Markup_0.4.0_intel.dmg` — Intel Macs
 - `SHA256SUMS`
 
 Both DMGs unsigned (same as 0.3.0 — Apple Developer credentials still pending). First open: `System Settings → Privacy & Security → Open Anyway`.
