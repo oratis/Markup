@@ -125,7 +125,7 @@ export function TabBar() {
               </button>
             )}
             {isActive && (
-              <span className="absolute left-0 right-0 bottom-0 h-[2px] bg-blue-500" />
+              <span className="mk-tab-indicator absolute left-0 right-0 top-0 h-[2px]" />
             )}
           </div>
         );

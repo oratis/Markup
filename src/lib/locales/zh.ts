@@ -192,15 +192,15 @@ export const zh: Strings = {
   "tab.confirmClose": "「{0}」有未保存的修改，关闭后会丢失。确认关闭吗？",
 
   // onboarding
-  "onboard.title": "欢迎使用 Markup",
-  "onboard.subtitle": "面向 macOS 的高性能 Markdown 编辑器。",
+  "onboard.title": "Markup",
+  "onboard.subtitle": "用 HTML 的形态来看 Markdown。",
   "onboard.shortcuts": "几个常用快捷键",
   "onboard.openVault": "打开 Vault",
   "onboard.openFile": "打开文件",
   "onboard.skip": "跳过",
   "onboard.kb.openFile": "打开文件",
   "onboard.kb.openVault": "打开 Vault",
-  "onboard.kb.toggleMode": "切换源码 / WYSIWYG",
+  "onboard.kb.toggleMode": "编辑 ↔ 源码（Esc 回到 Read）",
   "onboard.kb.quickOpen": "快速打开文件",
   "onboard.kb.searchVault": "搜索 Vault",
   "onboard.kb.commandPalette": "命令面板",

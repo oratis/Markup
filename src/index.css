@@ -5,30 +5,73 @@
 @import "@milkdown/theme-nord/style.css";
 @import "katex/dist/katex.min.css";
 
+/* ============================================================
+   Design tokens — see docs/design/04-obsidian-redesign-plan.md
+   `--mk-*` is the new system; `--markup-*` kept as alias for
+   backwards compat (M0). All new code should use `--mk-*`.
+   ============================================================ */
 :root {
-  --markup-prose-max-width: 720px;
-  /* default: light theme */
-  --markup-bg: #fdfdfd;
-  --markup-fg: #1f2328;
-  --markup-muted: rgba(0, 0, 0, 0.5);
-  --markup-border: rgba(0, 0, 0, 0.06);
-  --markup-accent: #0969da;
+  --markup-prose-max-width: 760px;
+
+  /* Light — default */
+  --mk-bg-app:        #ffffff;
+  --mk-bg-sidebar:    #f7f7f5;
+  --mk-bg-elevated:   #ececea;
+  --mk-bg-selected:   rgba(0, 0, 0, 0.06);
+  --mk-bg-hover:      rgba(0, 0, 0, 0.04);
+  --mk-fg-default:    #2e2e2e;
+  --mk-fg-strong:     #111111;
+  --mk-fg-muted:      #6a6a6a;
+  --mk-fg-faint:      #aaaaaa;
+  --mk-border:        rgba(0, 0, 0, 0.07);
+  --mk-border-strong: rgba(0, 0, 0, 0.13);
+  --mk-accent:        #0969da;
+  --mk-accent-soft:   rgba(9, 105, 218, 0.12);
+  --mk-code-bg:       #f1f0ed;
+  --mk-shadow:        0 6px 18px rgba(0, 0, 0, 0.10);
+
+  /* alias — old code */
+  --markup-bg:     var(--mk-bg-app);
+  --markup-fg:     var(--mk-fg-default);
+  --markup-muted:  var(--mk-fg-muted);
+  --markup-border: var(--mk-border);
+  --markup-accent: var(--mk-accent);
 }
 
 html.theme-dark {
-  --markup-bg: #1a1a1a;
-  --markup-fg: #e6edf3;
-  --markup-muted: rgba(255, 255, 255, 0.55);
-  --markup-border: rgba(255, 255, 255, 0.08);
-  --markup-accent: #58a6ff;
+  --mk-bg-app:        #1e1e1e;
+  --mk-bg-sidebar:    #1a1a1a;
+  --mk-bg-elevated:   #242424;
+  --mk-bg-selected:   rgba(255, 255, 255, 0.08);
+  --mk-bg-hover:      rgba(255, 255, 255, 0.05);
+  --mk-fg-default:    #dcddde;
+  --mk-fg-strong:     #e6e6e6;
+  --mk-fg-muted:      #808080;
+  --mk-fg-faint:      #5a5a5a;
+  --mk-border:        rgba(255, 255, 255, 0.06);
+  --mk-border-strong: rgba(255, 255, 255, 0.12);
+  --mk-accent:        #58a6ff;
+  --mk-accent-soft:   rgba(88, 166, 255, 0.18);
+  --mk-code-bg:       #2a2a2a;
+  --mk-shadow:        0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 html.theme-sepia {
-  --markup-bg: #f7efde;
-  --markup-fg: #3a2e25;
-  --markup-muted: rgba(58, 46, 37, 0.55);
-  --markup-border: rgba(58, 46, 37, 0.12);
-  --markup-accent: #8b5a2b;
+  --mk-bg-app:        #f7efde;
+  --mk-bg-sidebar:    #efe4cb;
+  --mk-bg-elevated:   #e8ddc0;
+  --mk-bg-selected:   rgba(58, 46, 37, 0.08);
+  --mk-bg-hover:      rgba(58, 46, 37, 0.05);
+  --mk-fg-default:    #3a2e25;
+  --mk-fg-strong:     #2a1e15;
+  --mk-fg-muted:      rgba(58, 46, 37, 0.6);
+  --mk-fg-faint:      rgba(58, 46, 37, 0.35);
+  --mk-border:        rgba(58, 46, 37, 0.12);
+  --mk-border-strong: rgba(58, 46, 37, 0.22);
+  --mk-accent:        #8b5a2b;
+  --mk-accent-soft:   rgba(139, 90, 43, 0.18);
+  --mk-code-bg:       #ebdfc5;
+  --mk-shadow:        0 6px 18px rgba(58, 46, 37, 0.15);
 }
 
 html,
@@ -325,4 +368,459 @@ html.theme-sepia .markup-hover-preview {
 }
 .theme-dark .canvas-node-body hr {
   border-top-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================================
+   M0 PoC · Obsidian-style visual enhancement layer
+   Applied via DOM selectors over existing Tailwind classes — no
+   React changes. Safe to remove by deleting this section.
+   Mockup reference: docs/design/mockup-obsidian-redesign.html
+   ============================================================ */
+
+/* --- Sidebar (file tree aside) — give it a one-shade-darker bg --- */
+main > aside.shrink-0 {
+  background: var(--mk-bg-sidebar);
+}
+
+/* --- Tab bar — match sidebar bg, refine hover --- */
+.titlebar-no-drag.relative.flex.items-center.gap-2 {
+  transition: background 80ms, color 80ms;
+}
+div.flex.items-stretch.border-b.overflow-x-auto {
+  background: var(--mk-bg-sidebar) !important;
+}
+div.flex.items-stretch.border-b > .titlebar-no-drag:hover {
+  background: var(--mk-bg-hover);
+}
+/* Active tab: solid app bg + bolder text */
+div.flex.items-stretch.border-b > .titlebar-no-drag:has(> span.absolute.bottom-0) {
+  background: var(--mk-bg-app);
+  color: var(--mk-fg-strong);
+  font-weight: 500;
+}
+
+/* --- Toolbar — match sidebar bg --- */
+.titlebar-drag.flex.items-center.h-9 {
+  background: var(--mk-bg-sidebar) !important;
+}
+
+/* --- File tree rows — softer hover/selected --- */
+div[class*="hover:bg-black/5"][class*="dark:hover:bg-white/10"]:hover {
+  background: var(--mk-bg-hover) !important;
+}
+
+/* --- Status bar — slightly recessed --- */
+.statusbar {
+  background: var(--mk-bg-sidebar);
+  font-size: 11px;
+}
+
+/* --- Reader / Editor prose — bigger, airier, more deliberate typography --- */
+.milkdown .editor {
+  font-size: var(--markup-font-size, 16px);
+  line-height: 1.75;
+  color: var(--mk-fg-default);
+}
+.milkdown .editor h1 {
+  font-size: 1.9em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--mk-fg-strong);
+  margin: 0.2em 0 0.6em;
+}
+.milkdown .editor h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: var(--mk-fg-strong);
+  margin: 1.6em 0 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--mk-border);
+}
+.milkdown .editor h3 {
+  font-size: 1.22em;
+  font-weight: 600;
+  color: var(--mk-fg-strong);
+  margin: 1.4em 0 0.4em;
+}
+.milkdown .editor h4 {
+  font-size: 1.08em;
+  font-weight: 600;
+  color: var(--mk-fg-strong);
+}
+.milkdown .editor p {
+  margin: 0.9em 0;
+}
+.milkdown .editor a {
+  color: var(--mk-accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 80ms;
+}
+.milkdown .editor a:hover {
+  border-bottom-color: var(--mk-accent);
+}
+
+/* Inline code */
+.milkdown .editor code:not(pre code) {
+  background: var(--mk-code-bg);
+  padding: 0.12em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: var(--mk-fg-strong);
+  border: 1px solid var(--mk-border);
+}
+
+/* Code block */
+.milkdown .editor pre {
+  background: var(--mk-code-bg) !important;
+  border-left: 3px solid var(--mk-accent);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin: 1.2em 0;
+  overflow-x: auto;
+  font-size: 0.92em;
+  line-height: 1.6;
+}
+.milkdown .editor pre code {
+  background: transparent !important;
+  border: 0;
+  padding: 0;
+  color: var(--mk-fg-default);
+}
+
+/* Blockquote */
+.milkdown .editor blockquote {
+  border-left: 3px solid var(--mk-accent);
+  background: var(--mk-accent-soft);
+  margin: 1em 0;
+  padding: 0.6em 1em;
+  border-radius: 0 4px 4px 0;
+  color: var(--mk-fg-default);
+}
+.milkdown .editor blockquote > * {
+  margin: 0.3em 0;
+}
+
+/* Tables */
+.milkdown .editor table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2em 0;
+  font-size: 0.95em;
+}
+.milkdown .editor th,
+.milkdown .editor td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mk-border);
+}
+.milkdown .editor th {
+  background: var(--mk-bg-elevated);
+  color: var(--mk-fg-strong);
+  font-weight: 600;
+  border-bottom: 1px solid var(--mk-border-strong);
+}
+.milkdown .editor tr:hover td {
+  background: var(--mk-bg-hover);
+}
+
+/* Lists */
+.milkdown .editor ul,
+.milkdown .editor ol {
+  padding-left: 1.6em;
+  margin: 0.9em 0;
+}
+.milkdown .editor li {
+  margin: 0.25em 0;
+}
+.milkdown .editor li::marker {
+  color: var(--mk-fg-faint);
+}
+
+/* hr */
+.milkdown .editor hr {
+  border: 0;
+  height: 1px;
+  background: var(--mk-border);
+  margin: 2em 0;
+}
+
+/* Strong/em */
+.milkdown .editor strong {
+  color: var(--mk-fg-strong);
+  font-weight: 700;
+}
+
+/* Wikilink — already had styles, restate to use new tokens */
+.milkdown .wikilink {
+  background: var(--mk-accent-soft);
+  color: var(--mk-accent);
+  border-radius: 3px;
+  padding: 1px 4px;
+  cursor: pointer;
+  border-bottom: 0;
+}
+.milkdown .wikilink:hover {
+  background: var(--mk-accent);
+  color: white;
+}
+
+/* Source mode (CodeMirror) — match prose padding so switching mode doesn't jolt */
+.cm-editor .cm-content {
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Body bg / global app bg drive from token */
+html, body, #root {
+  background: var(--mk-bg-app);
+  color: var(--mk-fg-default);
+}
+
+/* ============================================================
+   Title bar (2-row) — added in PoC iteration 2
+   ============================================================ */
+
+.mk-titlebar-wrap {
+  flex-shrink: 0;
+}
+
+.mk-titlebar {
+  background: var(--mk-bg-sidebar) !important;
+  border-bottom-color: var(--mk-border) !important;
+}
+
+.mk-icon-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--mk-fg-muted);
+  transition: background 80ms, color 80ms;
+}
+.mk-icon-btn:hover {
+  background: var(--mk-bg-hover);
+  color: var(--mk-fg-strong);
+}
+
+.mk-breadcrumb {
+  font-size: 13px;
+  color: var(--mk-fg-muted);
+  letter-spacing: -0.005em;
+  font-weight: 400;
+}
+
+.mk-app-mark {
+  color: var(--mk-accent);
+  font-size: 14px;
+  margin-right: 2px;
+  line-height: 1;
+}
+
+.mk-app-name {
+  color: var(--mk-fg-default);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mk-sep {
+  color: var(--mk-fg-faint);
+  padding: 0 2px;
+  user-select: none;
+}
+
+.mk-vault-name {
+  color: var(--mk-fg-muted);
+  font-weight: 500;
+  max-width: 200px;
+}
+
+.mk-file-name {
+  color: var(--mk-fg-strong);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.mk-dirty {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mk-accent);
+  display: inline-block;
+  flex: none;
+}
+
+/* Format toolbar row */
+.mk-toolbar {
+  background: var(--mk-bg-app) !important;
+  border-bottom-color: var(--mk-border) !important;
+}
+
+.mk-format-btn {
+  color: var(--mk-fg-muted);
+  transition: background 80ms, color 80ms;
+}
+.mk-format-btn:hover {
+  background: var(--mk-bg-hover);
+  color: var(--mk-fg-strong);
+}
+
+/* Inline keyboard hint chip used in toolbar hints */
+.mk-kbd {
+  display: inline-block;
+  font-family: var(--mk-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 10px;
+  padding: 0 4px;
+  margin: 0 2px;
+  border-radius: 3px;
+  background: var(--mk-bg-elevated);
+  border: 1px solid var(--mk-border);
+  color: var(--mk-fg-default);
+  line-height: 14px;
+}
+
+/* Mode pill (WYSIWYG / Source) */
+.mk-mode-pill {
+  color: var(--mk-fg-default);
+  background: var(--mk-bg-elevated);
+  border: 1px solid var(--mk-border);
+  transition: all 100ms;
+  cursor: pointer;
+  font-size: 10px;
+}
+.mk-mode-pill:hover {
+  color: var(--mk-fg-strong);
+  border-color: var(--mk-border-strong);
+  background: var(--mk-bg-selected);
+}
+.mk-mode-pill.is-read {
+  color: var(--mk-fg-default);
+  background: var(--mk-bg-elevated);
+  border-color: var(--mk-border);
+}
+.mk-mode-pill.is-edit {
+  color: var(--mk-accent);
+  background: var(--mk-accent-soft);
+  border-color: transparent;
+}
+.mk-mode-pill.is-source {
+  color: var(--mk-fg-strong);
+  background: var(--mk-fg-faint);
+  border-color: transparent;
+}
+
+/* Read mode visual quieting — hide the editing caret + Milkdown slash-menu
+   chrome so the surface reads as a static HTML document. */
+.milkdown [contenteditable="false"] {
+  cursor: default;
+}
+.milkdown [contenteditable="false"] *::selection {
+  background: var(--mk-accent-soft);
+}
+
+/* ============================================================
+   Ribbon — vertical primary nav (added in PoC iteration 3)
+   ============================================================ */
+.mk-ribbon {
+  width: 44px;
+  flex-shrink: 0;
+  background: var(--mk-bg-sidebar);
+  border-right: 1px solid var(--mk-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 2px;
+}
+
+.mk-ribbon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--mk-fg-muted);
+  position: relative;
+  cursor: pointer;
+  transition: background 80ms, color 80ms;
+}
+.mk-ribbon-btn:hover {
+  background: var(--mk-bg-hover);
+  color: var(--mk-fg-strong);
+}
+.mk-ribbon-btn.is-active {
+  color: var(--mk-fg-strong);
+  background: var(--mk-bg-selected);
+}
+.mk-ribbon-btn.is-active::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--mk-accent);
+  border-radius: 0 2px 2px 0;
+}
+
+.mk-ribbon-spacer {
+  flex: 1;
+}
+
+/* ============================================================
+   Right rail — segmented control + body
+   ============================================================ */
+.mk-rail {
+  background: var(--mk-bg-sidebar);
+}
+
+.mk-rail-tabs {
+  border-bottom-color: var(--mk-border) !important;
+  background: var(--mk-bg-sidebar);
+}
+
+.mk-rail-tab {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--mk-fg-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 80ms, color 80ms;
+}
+.mk-rail-tab:hover {
+  background: var(--mk-bg-hover);
+  color: var(--mk-fg-default);
+}
+.mk-rail-tab.is-active {
+  color: var(--mk-fg-strong);
+  background: var(--mk-bg-selected);
+  font-weight: 500;
+}
+
+/* ============================================================
+   Tab bar refinements
+   ============================================================ */
+.mk-tab-indicator {
+  background: var(--mk-accent);
+}
+
+/* Active tab — solid app bg + slight bolden + 2px top accent
+   (the accent comes from .mk-tab-indicator above) */
+div.flex.items-stretch.border-b > .titlebar-no-drag.relative {
+  position: relative;
+  transition: background 80ms, color 80ms;
+}
+div.flex.items-stretch.border-b > .titlebar-no-drag.relative:hover {
+  background: var(--mk-bg-hover);
 }

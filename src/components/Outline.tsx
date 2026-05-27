@@ -143,8 +143,11 @@ export function Outline() {
               H{lvl}
             </button>
           ))}
-          <span className="opacity-30 ml-1 text-[10px]">
-            {maxLevel < 6 ? t("outline.levelCap", maxLevel) : t("outline.levelAll")}
+          <span
+            className="opacity-30 ml-1 text-[10px] truncate"
+            title={maxLevel < 6 ? t("outline.levelCap", maxLevel) : t("outline.levelAll")}
+          >
+            {maxLevel < 6 ? `≤H${maxLevel}` : "all"}
           </span>
         </div>
       </div>

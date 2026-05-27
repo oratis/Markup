@@ -2,6 +2,7 @@ import {
   Editor,
   defaultValueCtx,
   editorViewCtx,
+  editorViewOptionsCtx,
   parserCtx,
   rootCtx,
 } from "@milkdown/core";
@@ -28,6 +29,9 @@ interface MarkupEditorProps {
   initialValue: string;
   fileKey: string;
   sourceMode: boolean;
+  /** Read-only viewing surface. When true the Milkdown editor disables
+   * contenteditable so the page reads as a static HTML document. */
+  readMode?: boolean;
   isDark: boolean;
   onChange: (markdown: string) => void;
 }
@@ -35,11 +39,27 @@ interface MarkupEditorProps {
 function WysiwygEditor({
   initialValue,
   fileKey,
+  readMode,
   onChange,
 }: Omit<MarkupEditorProps, "sourceMode" | "isDark">) {
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  // Track the last markdown we emitted out. When `initialValue` prop
+  // updates to that same value (because the parent stored what we just
+  // emitted), we must NOT replay it into the editor — that would
+  // dispatch a REPLACE transaction and jump the cursor to the end of
+  // the document.
+  const lastEmittedRef = useRef(initialValue);
+  const onChangeRef = useRef((md: string) => {
+    lastEmittedRef.current = md;
+    onChange(md);
+  });
+  onChangeRef.current = (md: string) => {
+    lastEmittedRef.current = md;
+    onChange(md);
+  };
+  const readModeRef = useRef(!!readMode);
+  readModeRef.current = !!readMode;
   const initialRef = useRef(initialValue);
+  const loadedKeyRef = useRef<string | null>(null);
 
   const { get } = useEditor((root) =>
     Editor.make()
@@ -47,6 +67,13 @@ function WysiwygEditor({
       .config((ctx) => {
         ctx.set(rootCtx, root);
         ctx.set(defaultValueCtx, initialRef.current);
+        // editable is a closure that reads the ref on every PM
+        // re-evaluation, so flipping `readMode` is picked up without a
+        // remount or `view.setProps` (which would reset cursor state).
+        ctx.update(editorViewOptionsCtx, (prev) => ({
+          ...prev,
+          editable: () => !readModeRef.current,
+        }));
         ctx.get(listenerCtx).markdownUpdated((_, markdown, prevMarkdown) => {
           if (markdown !== prevMarkdown) onChangeRef.current(markdown);
         });
@@ -65,9 +92,18 @@ function WysiwygEditor({
       .use(embedDecorate),
   );
 
+  // Load content into the editor ONLY when the file changes (tab
+  // switch). Within the same file the editor is the source of truth —
+  // dispatching a REPLACE on every keystroke (because tab.content
+  // round-trips through the store) would jump the cursor to the end of
+  // the document. External reloads bump `fileKey` via the parent's
+  // ReloadPrompt → setActiveContent flow; not this effect's job.
   useEffect(() => {
     const editor = get();
     if (!editor) return;
+    if (loadedKeyRef.current === fileKey) return;
+    loadedKeyRef.current = fileKey;
+    lastEmittedRef.current = initialValue;
     const t0 = performance.now();
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx);
@@ -80,7 +116,24 @@ function WysiwygEditor({
       );
     });
     perfLog(`wysiwyg-load[${initialValue.length}b]`, performance.now() - t0);
-  }, [fileKey, initialValue, get]);
+    // We deliberately exclude `initialValue` from deps so user-driven
+    // edits never trigger a reload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileKey, get]);
+
+  // Nudge PM to re-evaluate `editable()` when readMode toggles. A no-op
+  // transaction is enough; we don't touch `view.setProps`.
+  useEffect(() => {
+    const editor = get();
+    if (!editor) return;
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      view.dispatch(view.state.tr);
+    });
+    // get is stable from useEditor; keeping it out of deps avoids
+    // firing this effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readMode]);
 
   return <Milkdown />;
 }
@@ -107,6 +160,7 @@ export function MarkupEditor(props: MarkupEditorProps) {
       <WysiwygEditor
         initialValue={props.initialValue}
         fileKey={props.fileKey}
+        readMode={props.readMode}
         onChange={props.onChange}
       />
     </MilkdownProvider>

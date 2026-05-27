@@ -50,6 +50,10 @@ interface AppState {
   vaultRoot: string | null;
   vaultFiles: VaultFile[];
   sourceMode: boolean;
+  /** Read-only viewing mode. When true the WYSIWYG surface disables
+   * editing (caret hidden, contenteditable off). Read first, edit on
+   * demand. See docs/design/04-obsidian-redesign-plan.md §6. */
+  readMode: boolean;
   theme: Theme;
   sidebarOpen: boolean;
   outlineOpen: boolean;
@@ -137,6 +141,8 @@ interface AppState {
   // view
   toggleSourceMode: () => void;
   setSourceMode: (b: boolean) => void;
+  toggleReadMode: () => void;
+  setReadMode: (b: boolean) => void;
   setTheme: (t: Theme) => void;
   toggleSidebar: () => void;
   toggleOutline: () => void;
@@ -184,7 +190,7 @@ export const DEFAULT_SETTINGS: Settings = {
   spellcheck: false,
   lineWrap: true,
   sidebarWidth: 260,
-  outlineWidth: 220,
+  outlineWidth: 320,
   saveOnBlur: false,
   trimOnSave: false,
   showLineNumbers: true,
@@ -274,6 +280,7 @@ export const useAppStore = create<AppState>((set) => ({
   vaultRoot: null,
   vaultFiles: [],
   sourceMode: false,
+  readMode: true,
   theme: "light",
   sidebarOpen: false,
   outlineOpen: false,
@@ -593,6 +600,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   toggleSourceMode: () => set((s) => ({ sourceMode: !s.sourceMode })),
   setSourceMode: (b) => set({ sourceMode: b }),
+  toggleReadMode: () => set((s) => ({ readMode: !s.readMode })),
+  setReadMode: (b) => set({ readMode: b }),
   setTheme: (t) => set({ theme: t }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   toggleOutline: () => set((s) => ({ outlineOpen: !s.outlineOpen })),
@@ -609,7 +618,7 @@ export const useAppStore = create<AppState>((set) => ({
       const spellcheck = patch.spellcheck ?? state.spellcheck;
       const lineWrap = patch.lineWrap ?? state.lineWrap;
       const sidebarWidth = clamp(patch.sidebarWidth ?? state.sidebarWidth, 160, 600);
-      const outlineWidth = clamp(patch.outlineWidth ?? state.outlineWidth, 160, 600);
+      const outlineWidth = clamp(patch.outlineWidth ?? state.outlineWidth, 240, 600);
       const saveOnBlur = patch.saveOnBlur ?? state.saveOnBlur;
       const trimOnSave = patch.trimOnSave ?? state.trimOnSave;
       const showLineNumbers = patch.showLineNumbers ?? state.showLineNumbers;

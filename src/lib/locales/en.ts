@@ -193,15 +193,15 @@ export const en = {
   "tab.confirmClose": '"{0}" has unsaved changes that will be lost. Close anyway?',
 
   // onboarding
-  "onboard.title": "Welcome to Markup",
-  "onboard.subtitle": "A high-performance Markdown editor for macOS.",
+  "onboard.title": "Markup",
+  "onboard.subtitle": "The nicest way to read a Markdown vault.",
   "onboard.shortcuts": "A few shortcuts to know",
   "onboard.openVault": "Open a Vault",
   "onboard.openFile": "Open a File",
   "onboard.skip": "Skip",
   "onboard.kb.openFile": "Open file",
   "onboard.kb.openVault": "Open vault",
-  "onboard.kb.toggleMode": "Toggle source / WYSIWYG",
+  "onboard.kb.toggleMode": "Edit ↔ Source (Esc returns to Read)",
   "onboard.kb.quickOpen": "Quick open file",
   "onboard.kb.searchVault": "Search vault",
   "onboard.kb.commandPalette": "Command palette",

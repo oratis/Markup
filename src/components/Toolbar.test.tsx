@@ -6,6 +6,7 @@ import { Toolbar } from "./Toolbar";
 beforeEach(() => {
   useAppStore.setState({
     sourceMode: false,
+    readMode: true,
     sidebarOpen: false,
   });
 });
@@ -30,7 +31,7 @@ describe("Toolbar", () => {
     expect(screen.getByText("n.md")).toBeInTheDocument();
   });
 
-  it("shows a leading dot when the active tab is dirty", () => {
+  it("shows a dirty indicator when the active tab is dirty", () => {
     useAppStore.setState({
       tabs: [
         {
@@ -45,26 +46,38 @@ describe("Toolbar", () => {
       ],
       activeTabId: "/d.md",
     });
-    render(<Toolbar />);
-    // The dirty indicator + filename render in a single span; just match
-    // the substring via regex on the textContent.
-    expect(screen.getByText(/●\s*d\.md/)).toBeInTheDocument();
+    const { container } = render(<Toolbar />);
+    expect(screen.getByText("d.md")).toBeInTheDocument();
+    // The dirty dot is rendered as a span inside .mk-file-name.
+    expect(container.querySelector(".mk-dirty")).not.toBeNull();
   });
 
-  it("clicking the source-mode toggle flips store.sourceMode", () => {
-    render(<Toolbar />);
-    fireEvent.click(screen.getByText(/wysiwyg/i));
+  it("clicking the mode pill from Read enters Edit mode", () => {
+    const { container } = render(<Toolbar />);
+    // The pill carries .mk-mode-pill; the hint span also contains
+    // "Read", so we target by class to avoid an ambiguous match.
+    const pill = container.querySelector(".mk-mode-pill");
+    expect(pill).not.toBeNull();
+    fireEvent.click(pill!);
+    expect(useAppStore.getState().readMode).toBe(false);
+    expect(useAppStore.getState().sourceMode).toBe(false);
+  });
+
+  it("clicking the mode pill from Edit flips into Source", () => {
+    useAppStore.setState({ readMode: false, sourceMode: false });
+    const { container } = render(<Toolbar />);
+    fireEvent.click(container.querySelector(".mk-mode-pill")!);
     expect(useAppStore.getState().sourceMode).toBe(true);
   });
 
-  it("clicking the sidebar toggle flips store.sidebarOpen", () => {
+  it("hides the format cluster in Read mode", () => {
     render(<Toolbar />);
-    const btn = screen.getByTitle(/show sidebar/i);
-    fireEvent.click(btn);
-    expect(useAppStore.getState().sidebarOpen).toBe(true);
+    expect(screen.queryByLabelText(/bold/i)).toBeNull();
+    expect(screen.queryByLabelText(/italic/i)).toBeNull();
   });
 
-  it("renders the inline formatting cluster (B / I / Code / Link / HR)", () => {
+  it("renders the inline formatting cluster (B / I / Code / Link / HR) in Edit mode", () => {
+    useAppStore.setState({ readMode: false, sourceMode: false });
     render(<Toolbar />);
     expect(screen.getByLabelText(/bold/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/italic/i)).toBeInTheDocument();
@@ -74,6 +87,7 @@ describe("Toolbar", () => {
   });
 
   it("link button calls the supplied onInsertLink prop", () => {
+    useAppStore.setState({ readMode: false, sourceMode: false });
     const onInsertLink = vi.fn();
     render(<Toolbar onInsertLink={onInsertLink} />);
     fireEvent.click(screen.getByLabelText(/insert link/i));

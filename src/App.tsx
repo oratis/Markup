@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AboutDialog } from "./components/AboutDialog";
-import { BacklinksPanel } from "./components/BacklinksPanel";
-import { BookmarksPane } from "./components/BookmarksPane";
 import { CanvasView } from "./components/CanvasView";
 import { type Command, CommandPalette } from "./components/CommandPalette";
 import { MarkupEditor } from "./components/Editor";
@@ -9,17 +7,17 @@ import { FileTree } from "./components/FileTree";
 import { FindBar } from "./components/FindBar";
 import { GraphView } from "./components/GraphView";
 import { Onboarding } from "./components/Onboarding";
-import { Outline } from "./components/Outline";
 import { PropertiesEditor } from "./components/PropertiesEditor";
 import { QuickOpen } from "./components/QuickOpen";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import { Resizer } from "./components/Resizer";
+import { Ribbon } from "./components/Ribbon";
+import { RightRail } from "./components/RightRail";
 import { SearchPanel } from "./components/SearchPanel";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { ShortcutsCheatsheet } from "./components/ShortcutsCheatsheet";
 import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
-import { TagsPane } from "./components/TagsPane";
 import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { WikilinkPicker } from "./components/WikilinkPicker";
@@ -164,6 +162,8 @@ export function App() {
   const vaultRoot = useAppStore((s) => s.vaultRoot);
   const vaultFiles = useAppStore((s) => s.vaultFiles);
   const sourceMode = useAppStore((s) => s.sourceMode);
+  const readMode = useAppStore((s) => s.readMode);
+  const setReadMode = useAppStore((s) => s.setReadMode);
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
   const outlineOpen = useAppStore((s) => s.outlineOpen);
   const focusMode = useAppStore((s) => s.focusMode);
@@ -289,7 +289,17 @@ export function App() {
       if (settingsRaw) {
         try {
           const s = JSON.parse(settingsRaw);
-          if (s && typeof s === "object") setSettings(s);
+          if (s && typeof s === "object") {
+            // Migration: the right-rail redesign needs ≥ 280px to fit
+            // the 4-tab segmented control. Bump old stored values.
+            if (
+              typeof s.outlineWidth === "number" &&
+              s.outlineWidth < 280
+            ) {
+              s.outlineWidth = 320;
+            }
+            setSettings(s);
+          }
         } catch {
           /*ignore*/
         }
@@ -1491,6 +1501,41 @@ export function App() {
         toggleSourceMode();
         return;
       }
+      // M4: Read mode toggles. `E` enters Edit, `Esc` returns to Read.
+      // Only fire when not inside any editable / input surface to avoid
+      // hijacking real typing.
+      {
+        const target = e.target as HTMLElement | null;
+        const isEditableTarget =
+          !!target &&
+          (target.isContentEditable ||
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA");
+        if (
+          e.key === "e" &&
+          !e.metaKey &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.shiftKey &&
+          readMode &&
+          !sourceMode &&
+          !isEditableTarget
+        ) {
+          e.preventDefault();
+          setReadMode(false);
+          return;
+        }
+        if (
+          e.key === "Escape" &&
+          !readMode &&
+          !sourceMode &&
+          !isEditableTarget
+        ) {
+          e.preventDefault();
+          setReadMode(true);
+          return;
+        }
+      }
       if (matchesShortcut(e, "toggleSidebar")) {
         e.preventDefault();
         toggleSidebar();
@@ -1672,7 +1717,7 @@ export function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [performSave, saveAll, sourceMode]);
+  }, [performSave, saveAll, sourceMode, readMode, setReadMode]);
 
   const fileKey = tab?.id ?? "__none__";
   const initialValue = tab?.content ?? "";
@@ -3043,7 +3088,7 @@ export function App() {
     externalMtime !== null && tab?.path != null && tab.path !== reloadPromptDismissed;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {showToolbar && <Toolbar onInsertLink={promptInsertLink} />}
       {showTabBar && <TabBar />}
       {showReload && (
@@ -3055,11 +3100,18 @@ export function App() {
           onDismiss={() => setReloadPromptDismissed(tab?.path ?? null)}
         />
       )}
-      <main className="flex-1 min-h-0 flex">
+      <main className="flex-1 min-h-0 flex overflow-hidden">
+        <Ribbon
+          onSearch={() => setShowSearch(true)}
+          onCommandPalette={() => setShowCommandPalette(true)}
+          onQuickOpen={() => setShowQuickOpen(true)}
+          onGraph={() => setShowGraph(true)}
+          onSettings={() => setShowSettings(true)}
+        />
         {sidebarOpen && (
           <>
             <aside
-              className="shrink-0 border-r border-black/5 dark:border-white/10 flex flex-col"
+              className="shrink-0 border-r border-black/5 dark:border-white/10 flex flex-col min-h-0 overflow-hidden"
               style={{ width: sidebarWidth }}
             >
               <FileTree />
@@ -3086,6 +3138,7 @@ export function App() {
                 fileKey={fileKey}
                 initialValue={initialValue}
                 sourceMode={sourceMode}
+                readMode={readMode && !sourceMode}
                 isDark={isDark}
                 onChange={handleEditorChange}
               />
@@ -3101,21 +3154,10 @@ export function App() {
               label="Resize outline"
             />
             <aside
-              className="shrink-0 border-l border-black/5 dark:border-white/10 flex flex-col"
+              className="shrink-0 border-l border-black/5 dark:border-white/10 flex flex-col min-h-0 overflow-hidden"
               style={{ width: outlineWidth }}
             >
-              <div className="flex-1 min-h-0 flex flex-col">
-                <Outline />
-              </div>
-              <div className="max-h-[30vh] flex flex-col">
-                <BacklinksPanel />
-              </div>
-              <div className="max-h-[30vh] flex flex-col">
-                <TagsPane />
-              </div>
-              <div className="max-h-[30vh] flex flex-col">
-                <BookmarksPane />
-              </div>
+              <RightRail />
             </aside>
           </>
         )}

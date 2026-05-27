@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Markup — Obsidian-style Redesign Mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/* ============================================================
+   DESIGN TOKENS — see docs/design/04-obsidian-redesign-plan.md §3
+   ============================================================ */
+:root[data-theme="dark"] {
+  --mk-bg-app:        #1e1e1e;
+  --mk-bg-sidebar:    #1a1a1a;
+  --mk-bg-elevated:   #242424;
+  --mk-bg-selected:   rgba(255,255,255,0.08);
+  --mk-bg-hover:      rgba(255,255,255,0.05);
+  --mk-fg-default:    #dcddde;
+  --mk-fg-strong:     #e6e6e6;
+  --mk-fg-muted:      #808080;
+  --mk-fg-faint:      #5a5a5a;
+  --mk-border:        rgba(255,255,255,0.06);
+  --mk-border-strong: rgba(255,255,255,0.12);
+  --mk-accent:        #58a6ff;
+  --mk-accent-soft:   rgba(88,166,255,0.18);
+  --mk-highlight:     #fcd34d;
+  --mk-highlight-fg:  #1f1300;
+  --mk-danger:        #ef4444;
+  --mk-success:       #34d399;
+  --mk-code-bg:       #2a2a2a;
+  --mk-shadow:        0 8px 24px rgba(0,0,0,0.45);
+}
+:root[data-theme="light"] {
+  --mk-bg-app:        #ffffff;
+  --mk-bg-sidebar:    #f7f7f5;
+  --mk-bg-elevated:   #ececea;
+  --mk-bg-selected:   rgba(0,0,0,0.06);
+  --mk-bg-hover:      rgba(0,0,0,0.04);
+  --mk-fg-default:    #2e2e2e;
+  --mk-fg-strong:     #111111;
+  --mk-fg-muted:      #6a6a6a;
+  --mk-fg-faint:      #aaaaaa;
+  --mk-border:        rgba(0,0,0,0.07);
+  --mk-border-strong: rgba(0,0,0,0.13);
+  --mk-accent:        #0969da;
+  --mk-accent-soft:   rgba(9,105,218,0.12);
+  --mk-highlight:     #fde68a;
+  --mk-highlight-fg:  #1f1300;
+  --mk-danger:        #dc2626;
+  --mk-success:       #059669;
+  --mk-code-bg:       #f1f0ed;
+  --mk-shadow:        0 6px 18px rgba(0,0,0,0.10);
+}
+
+:root {
+  --mk-font-ui:    -apple-system, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", Inter, system-ui, sans-serif;
+  --mk-font-prose: "SF Pro Text", "PingFang SC", "Hiragino Sans GB", Inter, system-ui, sans-serif;
+  --mk-font-mono:  ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --mk-prose-width: 760px;
+  --mk-radius-sm: 4px;
+  --mk-radius-md: 6px;
+  --mk-radius-lg: 10px;
+}
+
+/* ============================================================ */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: var(--mk-font-ui);
+  font-size: 13px;
+  color: var(--mk-fg-default);
+  background: var(--mk-bg-app);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+button:focus-visible { outline: 2px solid var(--mk-accent); outline-offset: 1px; border-radius: var(--mk-radius-sm); }
+
+.icon-btn {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--mk-fg-muted);
+  border-radius: var(--mk-radius-sm);
+  transition: background 80ms, color 80ms;
+}
+.icon-btn:hover { background: var(--mk-bg-hover); color: var(--mk-fg-strong); }
+.icon-btn.is-active { color: var(--mk-fg-strong); background: var(--mk-bg-selected); }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* ============================================================
+   APP SHELL — title bar / ribbon / sidebar / main / right / status
+   ============================================================ */
+.app {
+  display: grid;
+  grid-template-columns: 44px 260px 1fr 300px;
+  grid-template-rows: 36px 1fr 22px;
+  grid-template-areas:
+    "titlebar titlebar titlebar titlebar"
+    "ribbon   sidebar  main     right"
+    "status   status   status   status";
+  height: 100vh;
+  background: var(--mk-bg-app);
+}
+
+/* ---------- Title bar ---------- */
+.titlebar {
+  grid-area: titlebar;
+  display: flex; align-items: center;
+  background: var(--mk-bg-sidebar);
+  border-bottom: 1px solid var(--mk-border);
+  padding: 0 8px 0 0;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.traffic-lights {
+  display: flex; gap: 8px;
+  padding: 0 12px;
+  -webkit-app-region: no-drag;
+}
+.traffic-lights span { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.tl-close   { background: #ff5f57; }
+.tl-min     { background: #febc2e; }
+.tl-max     { background: #28c840; }
+
+.tb-nav {
+  display: flex; gap: 2px; padding-left: 18px;
+  -webkit-app-region: no-drag;
+}
+
+.tb-spacer { flex: 1; -webkit-app-region: drag; }
+
+.tb-utility {
+  display: flex; gap: 2px; padding-right: 4px;
+  -webkit-app-region: no-drag;
+}
+
+/* ---------- Ribbon ---------- */
+.ribbon {
+  grid-area: ribbon;
+  background: var(--mk-bg-sidebar);
+  border-right: 1px solid var(--mk-border);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 0;
+  gap: 2px;
+}
+.ribbon .icon-btn { width: 32px; height: 32px; position: relative; }
+.ribbon .icon-btn.is-active::before {
+  content: ""; position: absolute; left: -8px; top: 6px; bottom: 6px;
+  width: 2px; background: var(--mk-accent); border-radius: 0 2px 2px 0;
+}
+.ribbon-spacer { flex: 1; }
+
+/* ---------- Sidebar (file tree) ---------- */
+.sidebar {
+  grid-area: sidebar;
+  background: var(--mk-bg-sidebar);
+  border-right: 1px solid var(--mk-border);
+  display: flex; flex-direction: column;
+  min-width: 0;
+}
+.sidebar-tools {
+  display: flex; gap: 2px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mk-border);
+}
+.sidebar-tools-spacer { flex: 1; }
+
+.tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.tree::-webkit-scrollbar { width: 8px; }
+.tree::-webkit-scrollbar-thumb { background: var(--mk-border-strong); border-radius: 4px; }
+
+.tree-node {
+  display: flex; align-items: center;
+  height: 24px;
+  padding-right: 8px;
+  cursor: pointer;
+  color: var(--mk-fg-default);
+  gap: 4px;
+  user-select: none;
+  position: relative;
+}
+.tree-node:hover { background: var(--mk-bg-hover); }
+.tree-node.is-selected { background: var(--mk-bg-selected); color: var(--mk-fg-strong); }
+.tree-node.is-active { background: var(--mk-accent-soft); color: var(--mk-fg-strong); }
+
+.tree-chevron {
+  width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--mk-fg-faint);
+  transition: transform 120ms;
+}
+.tree-node.is-open .tree-chevron { transform: rotate(90deg); }
+.tree-icon {
+  width: 14px; height: 14px;
+  color: var(--mk-fg-muted);
+  flex: none;
+}
+.tree-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-children { display: none; }
+.tree-node.is-open + .tree-children { display: block; }
+
+/* indent levels */
+.lvl-0 { padding-left: 8px; }
+.lvl-1 { padding-left: 22px; }
+.lvl-2 { padding-left: 36px; }
+.lvl-3 { padding-left: 50px; }
+
+.sidebar-footer {
+  display: flex; align-items: center;
+  padding: 6px 8px;
+  border-top: 1px solid var(--mk-border);
+  color: var(--mk-fg-muted);
+  font-size: 12px;
+  gap: 4px;
+}
+.sidebar-footer-label { flex: 1; }
+
+/* ---------- Tab bar + Main ---------- */
+.main {
+  grid-area: main;
+  display: flex; flex-direction: column;
+  background: var(--mk-bg-app);
+  min-width: 0;
+}
+
+.tabs {
+  display: flex; align-items: stretch;
+  height: 32px;
+  border-bottom: 1px solid var(--mk-border);
+  background: var(--mk-bg-sidebar);
+  overflow-x: auto;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 10px 0 12px;
+  font-size: 12px;
+  color: var(--mk-fg-muted);
+  border-right: 1px solid var(--mk-border);
+  background: var(--mk-bg-sidebar);
+  cursor: pointer;
+  min-width: 0;
+  max-width: 220px;
+  position: relative;
+  white-space: nowrap;
+}
+.tab .tab-title { overflow: hidden; text-overflow: ellipsis; }
+.tab:hover { background: var(--mk-bg-elevated); color: var(--mk-fg-default); }
+.tab.is-active {
+  background: var(--mk-bg-app);
+  color: var(--mk-fg-strong);
+  border-bottom: 1px solid var(--mk-bg-app);
+  margin-bottom: -1px;
+}
+.tab.is-active::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: var(--mk-accent);
+}
+.tab-close {
+  width: 16px; height: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 3px;
+  color: var(--mk-fg-faint);
+  opacity: 0;
+}
+.tab:hover .tab-close, .tab.is-active .tab-close { opacity: 1; }
+.tab-close:hover { background: var(--mk-border-strong); color: var(--mk-fg-strong); }
+.tab-new {
+  width: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--mk-fg-muted);
+}
+.tab-new:hover { background: var(--mk-bg-hover); color: var(--mk-fg-strong); }
+
+/* ---------- Reader pane ---------- */
+.reader-shell {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+.reader-shell::-webkit-scrollbar { width: 10px; }
+.reader-shell::-webkit-scrollbar-thumb { background: var(--mk-border-strong); border-radius: 5px; }
+
+.reader-toolbar {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center;
+  padding: 8px max(24px, calc((100% - var(--mk-prose-width)) / 2));
+  background: linear-gradient(to bottom, var(--mk-bg-app) 75%, transparent);
+  gap: 8px;
+}
+.breadcrumb {
+  flex: 1;
+  color: var(--mk-fg-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.breadcrumb b { color: var(--mk-fg-default); font-weight: 500; }
+.breadcrumb .sep { padding: 0 6px; color: var(--mk-fg-faint); }
+
+.mode-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mk-accent);
+  background: var(--mk-accent-soft);
+  border-radius: 999px;
+}
+.mode-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mk-accent); }
+
+/* Prose */
+.prose {
+  max-width: var(--mk-prose-width);
+  margin: 0 auto;
+  padding: 8px max(24px, calc((100vw - var(--mk-prose-width)) / 2 - 344px)) 96px;
+  font-family: var(--mk-font-prose);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--mk-fg-default);
+}
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  color: var(--mk-fg-strong);
+  font-weight: 700;
+  line-height: 1.25;
+  position: relative;
+}
+.prose h1 { font-size: 1.85em; margin: 0 0 0.5em; }
+.prose h2 {
+  font-size: 1.45em;
+  margin: 1.8em 0 0.6em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--mk-border);
+}
+.prose h3 { font-size: 1.2em; margin: 1.4em 0 0.4em; }
+.prose p { margin: 0.9em 0; }
+.prose a { color: var(--mk-accent); text-decoration: none; border-bottom: 1px solid transparent; }
+.prose a:hover { border-bottom-color: var(--mk-accent); }
+
+.prose .anchor {
+  position: absolute;
+  left: -1.2em;
+  color: var(--mk-fg-faint);
+  opacity: 0;
+  transition: opacity 80ms;
+  text-decoration: none;
+  font-weight: 400;
+}
+.prose h1:hover .anchor, .prose h2:hover .anchor, .prose h3:hover .anchor { opacity: 1; }
+
+.prose code {
+  font-family: var(--mk-font-mono);
+  font-size: 0.92em;
+  padding: 2px 5px;
+  background: var(--mk-code-bg);
+  border-radius: 3px;
+  color: var(--mk-fg-strong);
+}
+.prose pre {
+  background: var(--mk-code-bg);
+  border-left: 3px solid var(--mk-accent);
+  border-radius: 6px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 1.2em 0;
+  position: relative;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.prose pre code { background: none; padding: 0; color: var(--mk-fg-default); }
+.prose pre .copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  font-size: 11px;
+  color: var(--mk-fg-muted);
+  padding: 2px 8px;
+  background: var(--mk-bg-elevated);
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 100ms;
+}
+.prose pre:hover .copy-btn { opacity: 1; }
+
+.prose blockquote {
+  border-left: 3px solid var(--mk-accent);
+  background: var(--mk-accent-soft);
+  margin: 1em 0;
+  padding: 0.6em 1em;
+  border-radius: 0 4px 4px 0;
+  color: var(--mk-fg-default);
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2em 0;
+  font-size: 0.95em;
+}
+.prose th, .prose td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mk-border);
+}
+.prose th { color: var(--mk-fg-strong); background: var(--mk-bg-elevated); font-weight: 600; }
+.prose tr:hover td { background: var(--mk-bg-hover); }
+
+.prose ul, .prose ol { padding-left: 1.6em; margin: 0.9em 0; }
+.prose li { margin: 0.25em 0; }
+.prose li::marker { color: var(--mk-fg-faint); }
+
+.prose mark {
+  background: var(--mk-highlight);
+  color: var(--mk-highlight-fg);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.prose .wikilink {
+  color: var(--mk-accent);
+  background: var(--mk-accent-soft);
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-decoration: none;
+}
+.prose .wikilink:hover { background: var(--mk-accent); color: white; }
+
+.prose .tag {
+  display: inline-block;
+  background: var(--mk-bg-elevated);
+  color: var(--mk-fg-muted);
+  font-size: 0.88em;
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin: 0 2px;
+}
+.prose hr {
+  border: 0; height: 1px; background: var(--mk-border);
+  margin: 2em 0;
+}
+
+.prose .callout {
+  border-left: 3px solid var(--mk-accent);
+  background: var(--mk-bg-elevated);
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 1.2em 0;
+}
+.prose .callout-title {
+  font-weight: 600;
+  color: var(--mk-fg-strong);
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 6px;
+  font-size: 0.95em;
+}
+
+/* ---------- Right rail (Backlinks) ---------- */
+.right-rail {
+  grid-area: right;
+  background: var(--mk-bg-sidebar);
+  border-left: 1px solid var(--mk-border);
+  display: flex; flex-direction: column;
+  min-width: 0;
+}
+
+.rr-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--mk-border);
+  padding: 4px 8px;
+  gap: 2px;
+}
+.rr-tab {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--mk-fg-muted);
+  border-radius: var(--mk-radius-sm);
+}
+.rr-tab:hover { background: var(--mk-bg-hover); color: var(--mk-fg-default); }
+.rr-tab.is-active { color: var(--mk-fg-strong); background: var(--mk-bg-selected); }
+.rr-tab .count {
+  display: inline-block;
+  margin-left: 5px;
+  font-size: 10px;
+  background: var(--mk-bg-elevated);
+  border-radius: 999px;
+  padding: 0 5px;
+  color: var(--mk-fg-muted);
+}
+.rr-tab.is-active .count { background: var(--mk-accent); color: white; }
+.rr-tools {
+  margin-left: auto;
+  display: flex; gap: 2px;
+}
+
+.rr-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.rr-body::-webkit-scrollbar { width: 8px; }
+.rr-body::-webkit-scrollbar-thumb { background: var(--mk-border-strong); border-radius: 4px; }
+
+.backlink-group {
+  margin-bottom: 8px;
+  border-radius: var(--mk-radius-md);
+  overflow: hidden;
+  background: var(--mk-bg-elevated);
+}
+.backlink-head {
+  display: flex; align-items: center;
+  padding: 6px 8px;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--mk-fg-strong);
+  cursor: pointer;
+  user-select: none;
+}
+.backlink-head:hover { background: var(--mk-bg-hover); }
+.backlink-head .chevron { width: 14px; height: 14px; color: var(--mk-fg-faint); transition: transform 120ms; }
+.backlink-group.is-open .chevron { transform: rotate(90deg); }
+.backlink-head .count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--mk-fg-muted);
+  background: var(--mk-bg-app);
+  padding: 0 5px; border-radius: 999px;
+}
+.backlink-items {
+  display: none;
+  padding: 0 8px 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--mk-fg-muted);
+}
+.backlink-group.is-open .backlink-items { display: block; }
+.backlink-snippet {
+  padding: 6px 0;
+  border-top: 1px solid var(--mk-border);
+  cursor: pointer;
+}
+.backlink-snippet:hover { color: var(--mk-fg-default); }
+.backlink-snippet mark { background: var(--mk-highlight); color: var(--mk-highlight-fg); padding: 0 2px; border-radius: 2px; }
+.backlink-snippet .link {
+  color: var(--mk-accent);
+  background: var(--mk-accent-soft);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+.rr-section-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mk-fg-faint);
+  padding: 12px 4px 6px;
+}
+
+/* ---------- Status bar ---------- */
+.status {
+  grid-area: status;
+  background: var(--mk-bg-sidebar);
+  border-top: 1px solid var(--mk-border);
+  display: flex; align-items: center;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--mk-fg-muted);
+  font-variant-numeric: tabular-nums;
+  gap: 16px;
+}
+.status-divider { width: 1px; height: 12px; background: var(--mk-border-strong); }
+.status-spacer { flex: 1; }
+.status-btn {
+  padding: 0 6px; height: 18px;
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 3px;
+  color: var(--mk-fg-muted);
+}
+.status-btn:hover { background: var(--mk-bg-hover); color: var(--mk-fg-strong); }
+.status-btn svg { width: 12px; height: 12px; }
+
+.status-mode {
+  color: var(--mk-accent);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* ---------- Annotation overlay (mockup-only) ---------- */
+.annotate {
+  position: fixed;
+  top: 8px; right: 8px;
+  z-index: 100;
+  background: var(--mk-bg-elevated);
+  border: 1px solid var(--mk-border-strong);
+  border-radius: var(--mk-radius-md);
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--mk-fg-muted);
+  box-shadow: var(--mk-shadow);
+  display: flex; align-items: center; gap: 8px;
+}
+.annotate button {
+  padding: 4px 10px;
+  background: var(--mk-accent);
+  color: white;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+</style>
+</head>
+<body>
+
+<!-- Mockup-only theme toggle -->
+<div class="annotate">
+  <span>Markup · Obsidian-style mockup</span>
+  <button id="theme-toggle">Toggle theme</button>
+</div>
+
+<div class="app">
+
+  <!-- ============== TITLE BAR ============== -->
+  <header class="titlebar">
+    <div class="traffic-lights">
+      <span class="tl-close"></span>
+      <span class="tl-min"></span>
+      <span class="tl-max"></span>
+    </div>
+    <div class="tb-nav">
+      <button class="icon-btn" title="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="icon-btn" title="Forward">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="tb-utility">
+      <button class="icon-btn" title="Toggle left sidebar (⌘B)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+      </button>
+      <button class="icon-btn" title="Toggle right sidebar (⌘⌥B)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============== RIBBON ============== -->
+  <nav class="ribbon">
+    <button class="icon-btn is-active" title="Files">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </button>
+    <button class="icon-btn" title="Search (⌘⇧F)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <button class="icon-btn" title="Bookmarks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    </button>
+    <button class="icon-btn" title="Graph view">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><line x1="7" y1="7" x2="11" y2="17"/><line x1="17" y1="7" x2="13" y2="17"/><line x1="7" y1="6" x2="17" y2="6"/></svg>
+    </button>
+    <button class="icon-btn" title="Canvas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </button>
+    <button class="icon-btn" title="Tags">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+    </button>
+    <div class="ribbon-spacer"></div>
+    <button class="icon-btn" title="Help">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </button>
+    <button class="icon-btn" title="Settings (⌘,)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </nav>
+
+  <!-- ============== SIDEBAR (file tree) ============== -->
+  <aside class="sidebar">
+    <div class="sidebar-tools">
+      <button class="icon-btn" title="New note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      </button>
+      <button class="icon-btn" title="New folder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      </button>
+      <button class="icon-btn" title="Sort">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+      </button>
+      <div class="sidebar-tools-spacer"></div>
+      <button class="icon-btn" title="Collapse all">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+    </div>
+    <div class="tree" id="tree">
+      <!-- folders -->
+      <div class="tree-node lvl-0" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">analytic</span>
+      </div>
+      <div class="tree-node lvl-0" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">app_update</span>
+      </div>
+      <div class="tree-node lvl-0" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">architecture</span>
+      </div>
+      <div class="tree-node lvl-0" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">archive</span>
+      </div>
+      <div class="tree-node lvl-0" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">design-previews</span>
+      </div>
+      <div class="tree-node lvl-0 is-open" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">plans-active</span>
+      </div>
+      <div class="tree-children" style="display:block">
+        <div class="tree-node lvl-1 is-active">
+          <span class="tree-chevron" style="opacity:0"></span>
+          <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="tree-label">ad-spend-direct-ingestion-2026-05-22</span>
+        </div>
+        <div class="tree-node lvl-1">
+          <span class="tree-chevron" style="opacity:0"></span>
+          <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="tree-label">adjust-console-analytics-2026-05-19</span>
+        </div>
+        <div class="tree-node lvl-1">
+          <span class="tree-chevron" style="opacity:0"></span>
+          <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="tree-label">audio-library-quality-2026-05-15</span>
+        </div>
+        <div class="tree-node lvl-1">
+          <span class="tree-chevron" style="opacity:0"></span>
+          <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="tree-label">cloud-trace-otel-design-2026-05-13</span>
+        </div>
+        <div class="tree-node lvl-1">
+          <span class="tree-chevron" style="opacity:0"></span>
+          <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="tree-label">designer-v3-plan-2026-04-26</span>
+        </div>
+      </div>
+      <div class="tree-node lvl-0" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">marketing</span>
+      </div>
+      <div class="tree-node lvl-0" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">models</span>
+      </div>
+      <div class="tree-node lvl-0" data-folder>
+        <span class="tree-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></span>
+        <span class="tree-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tree-label">monitoring</span>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span class="sidebar-footer-label">docs</span>
+      <span style="color:var(--mk-fg-faint); font-variant-numeric:tabular-nums;">312 files</span>
+    </div>
+  </aside>
+
+  <!-- ============== MAIN ============== -->
+  <main class="main">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab is-active">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+        <span class="tab-title">ad-spend-direct-ingestion-2026-05-22</span>
+        <button class="tab-close" title="Close">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="tab">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+        <span class="tab-title">designer-v3-plan</span>
+        <button class="tab-close" title="Close">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="tab">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+        <span class="tab-title">cloud-trace-otel-design</span>
+        <button class="tab-close" title="Close">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <button class="tab-new" title="New tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+
+    <!-- Reader -->
+    <div class="reader-shell">
+      <div class="reader-toolbar">
+        <div class="breadcrumb">
+          <span>plans-active</span><span class="sep">/</span><b>ad-spend-direct-ingestion-2026-05-22</b>
+        </div>
+        <span class="mode-pill"><span class="dot"></span>READ</span>
+        <button class="icon-btn" title="Edit (E)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" title="Source (⌘/)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </button>
+        <button class="icon-btn" title="Find in file (⌘F)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <button class="icon-btn" title="More">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+      </div>
+
+      <article class="prose">
+        <h1>
+          <a href="#title" class="anchor">#</a>
+          广告投放数据直拉计划 — 绕过 Adjust, Luddi DB 成 SSoT
+        </h1>
+
+        <blockquote>
+          <strong>触发：</strong>2026-05-22 排查 <code>/console/analytics</code> Tab 1 / Tab 2 cost 数据时发现 Adjust → Luddi cost 通道全断。TikTok <mark>100% spend 缺失</mark>（$0），Google Ads 通但混了其他 HakkoAI 账号（虚高 ~30%）。
+        </blockquote>
+
+        <p><strong>决策：</strong>彻底绕过 Adjust 拉 cost，直接调 Google Ads API + TikTok Marketing API。Adjust 保留做 cross-network install attribution（不能丢），但所有 cost 数据改由我们自己存的 <code>AdSpendDaily</code> 表为准。</p>
+
+        <p><strong>状态（2026-05-22）：</strong>Auth + 数据探索完成。PR 1-4 待执行。</p>
+
+        <hr>
+
+        <h2><a href="#bg" class="anchor">#</a> 1. 背景与现状</h2>
+        <h3>1.1 Adjust ReportSnapshot 当前数据状态（直连 prod DB 实测）</h3>
+
+        <pre><button class="copy-btn">Copy</button><code>TikTok SAN     | 1148 rows | 218 installs | $0.00    | 0 rows with cost  ✗
+Google Ads ACI | 228 rows  | 273 installs | $1,070.94 | 119 rows with cost ⚠ 混了其他 HakkoAI 账号
+Organic        | 123 rows  | 317 installs | $0.00    | (by definition)</code></pre>
+
+        <h3>1.2 同期直拉 API 实测对照</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th>数据源</th>
+              <th>TikTok (5/14-5/22)</th>
+              <th>Google Ads (5/14-5/21)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Adjust ReportSnapshot（Luddi 现状）</td>
+              <td><span style="color:var(--mk-danger)">$0 ✗</span></td>
+              <td>$1,019.83 (含 Hakko 其他账号)</td>
+            </tr>
+            <tr>
+              <td>直拉 Marketing API（本计划）</td>
+              <td><span style="color:var(--mk-success)">$1,301.35 ✓</span> 4 advertiser</td>
+              <td><span style="color:var(--mk-success)">$786.66 ✓</span> 3 customer, Luddi-only</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2><a href="#design" class="anchor">#</a> 2. 设计</h2>
+
+        <p>新建表 <a href="#" class="wikilink">[[AdSpendDaily]]</a>，每天通过 Cron job 把 Google Ads + TikTok 数据归一化写入；console analytics 查询时直接 join 此表，不再调用 Adjust ReportSnapshot 的 cost 字段。</p>
+
+        <div class="callout">
+          <div class="callout-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--mk-accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Note
+          </div>
+          <div>Adjust 的 attribution data 仍然保留 — 我们只切断 cost 通路。详见 <a href="#" class="wikilink">[[database-schema]]</a> 第 §3 节。</div>
+        </div>
+
+        <p>相关标签：<span class="tag">#adspend</span> <span class="tag">#luddi</span> <span class="tag">#2026-q2</span></p>
+
+        <h3>2.1 PR 划分</h3>
+        <ol>
+          <li><strong>PR 1</strong> — <code>AdSpendDaily</code> 表结构 + migration（owner: @backend）</li>
+          <li><strong>PR 2</strong> — Google Ads API client + 每日 cron（owner: @data）</li>
+          <li><strong>PR 3</strong> — TikTok Marketing API client + 每日 cron（owner: @data）</li>
+          <li><strong>PR 4</strong> — console analytics 查询切换 + feature flag（owner: @frontend）</li>
+        </ol>
+
+        <p>详见配套 <a href="#" class="wikilink">[[schema-changelog]]</a> 与 <a href="#" class="wikilink">[[ad-spend-sync]]</a>。</p>
+      </article>
+    </div>
+  </main>
+
+  <!-- ============== RIGHT RAIL ============== -->
+  <aside class="right-rail">
+    <div class="rr-tabs">
+      <button class="rr-tab is-active">Backlinks<span class="count">6</span></button>
+      <button class="rr-tab">Outline</button>
+      <button class="rr-tab">Props</button>
+      <div class="rr-tools">
+        <button class="icon-btn" title="Sort">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        </button>
+        <button class="icon-btn" title="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="rr-body">
+      <div class="rr-section-header">Linked mentions · 6</div>
+
+      <div class="backlink-group is-open">
+        <div class="backlink-head">
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+          ad-spend-sync
+          <span class="count">1</span>
+        </div>
+        <div class="backlink-items">
+          <div class="backlink-snippet">
+            > <strong>Plan doc:</strong> <span class="link">[ad-spend-direct-ingestion-2026-05-22]</span> — 完整动机 + 验证。
+          </div>
+        </div>
+      </div>
+
+      <div class="backlink-group is-open">
+        <div class="backlink-head">
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+          CHANGELOG
+          <span class="count">1</span>
+        </div>
+        <div class="backlink-items">
+          <div class="backlink-snippet">
+            - Plan: <span class="link">[plans-active/ad-spend-direct-ingestion-2026-05-22]</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="backlink-group is-open">
+        <div class="backlink-head">
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+          database-schema
+          <span class="count">2</span>
+        </div>
+        <div class="backlink-items">
+          <div class="backlink-snippet">
+            …Google Ads API gives per-customer breakdown (<mark>$786</mark> over 8 days for 1 of 3 Luddi accounts). See <span class="link">[ad-spend-direct-ingestion-2026-05-22]</span> for full motivation + verification.
+          </div>
+          <div class="backlink-snippet">
+            - Plan: <span class="link">[ad-spend-direct-ingestion-2026-05-22]</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="backlink-group">
+        <div class="backlink-head">
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+          INDEX
+          <span class="count">1</span>
+        </div>
+      </div>
+
+      <div class="backlink-group">
+        <div class="backlink-head">
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+          schema-changelog
+          <span class="count">1</span>
+        </div>
+      </div>
+
+      <div class="rr-section-header">Unlinked mentions</div>
+      <div style="padding:8px 4px;font-size:12px;color:var(--mk-fg-faint)">No unlinked mentions in vault</div>
+    </div>
+  </aside>
+
+  <!-- ============== STATUS BAR ============== -->
+  <footer class="status">
+    <button class="status-btn" title="Backlinks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      6 backlinks
+    </button>
+    <div class="status-divider"></div>
+    <span>4,047 words</span>
+    <span>21,792 chars</span>
+    <span>Ln 142, Col 18</span>
+    <div class="status-spacer"></div>
+    <button class="status-btn" title="Vault sync (idle)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Saved 2s ago
+    </button>
+    <div class="status-divider"></div>
+    <span class="status-mode">READ</span>
+    <div class="status-divider"></div>
+    <button class="status-btn" id="theme-status" title="Toggle theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      Dark
+    </button>
+  </footer>
+
+</div>
+
+<script>
+  // Theme toggle
+  const root = document.documentElement;
+  const tt = document.getElementById("theme-toggle");
+  const ts = document.getElementById("theme-status");
+  function toggleTheme() {
+    const next = root.dataset.theme === "dark" ? "light" : "dark";
+    root.dataset.theme = next;
+    ts.lastChild.textContent = next === "dark" ? " Dark" : " Light";
+  }
+  tt.addEventListener("click", toggleTheme);
+  ts.addEventListener("click", toggleTheme);
+
+  // Folder expand/collapse
+  document.querySelectorAll("[data-folder]").forEach(node => {
+    node.addEventListener("click", () => node.classList.toggle("is-open"));
+  });
+
+  // Backlink group toggle
+  document.querySelectorAll(".backlink-head").forEach(head => {
+    head.addEventListener("click", () => head.parentElement.classList.toggle("is-open"));
+  });
+
+  // RR tab toggle
+  document.querySelectorAll(".rr-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".rr-tab").forEach(t => t.classList.remove("is-active"));
+      tab.classList.add("is-active");
+    });
+  });
+
+  // Tab click
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.addEventListener("click", e => {
+      if (e.target.closest(".tab-close")) return;
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("is-active"));
+      tab.classList.add("is-active");
+    });
+  });
+</script>
+</body>
+</html>
