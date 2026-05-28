@@ -67,10 +67,7 @@ export async function renderHtml(
 
 /** Write rendered preview HTML to a temp file (Rust-side, bypasses the
  * JS fs scope) and return its absolute path. */
-export async function writePreviewHtml(
-  html: string,
-  baseName: string,
-): Promise<string> {
+export async function writePreviewHtml(html: string, baseName: string): Promise<string> {
   return await invoke<string>("write_preview_html", { html, baseName });
 }
 

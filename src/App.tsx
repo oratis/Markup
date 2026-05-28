@@ -30,6 +30,7 @@ import {
   setVaultRoot as blockSetVaultRoot,
 } from "./lib/block-index-store";
 import { toggleBookmark } from "./lib/bookmarks";
+import { IS_MAS_BUILD } from "./lib/build-flags";
 import { disposeCanvasStore } from "./lib/canvas-registry";
 import {
   cycleHeadingLevel,
@@ -131,7 +132,6 @@ import {
 } from "./lib/tauri";
 import { applyTemplate, dailyNotePath } from "./lib/template";
 import { buildToc } from "./lib/toc";
-import { IS_MAS_BUILD } from "./lib/build-flags";
 import { checkForUpdates } from "./lib/updater";
 import { findVaultFile, wikilinkAtClick } from "./lib/wikilink";
 import { DEFAULT_SETTINGS, type Theme, getActiveTab, useAppStore } from "./store";
@@ -296,10 +296,7 @@ export function App() {
           if (s && typeof s === "object") {
             // Migration: the right-rail redesign needs ≥ 280px to fit
             // the 4-tab segmented control. Bump old stored values.
-            if (
-              typeof s.outlineWidth === "number" &&
-              s.outlineWidth < 280
-            ) {
+            if (typeof s.outlineWidth === "number" && s.outlineWidth < 280) {
               s.outlineWidth = 320;
             }
             setSettings(s);
@@ -1573,12 +1570,7 @@ export function App() {
           setReadMode(false);
           return;
         }
-        if (
-          e.key === "Escape" &&
-          !readMode &&
-          !sourceMode &&
-          !isEditableTarget
-        ) {
+        if (e.key === "Escape" && !readMode && !sourceMode && !isEditableTarget) {
           e.preventDefault();
           setReadMode(true);
           return;

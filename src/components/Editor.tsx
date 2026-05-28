@@ -140,9 +140,7 @@ function WysiwygEditor({
   useEffect(() => {
     const editor = get();
     if (!editor) return;
-    const dom = editor.action(
-      (ctx) => ctx.get(editorViewCtx).dom as HTMLElement,
-    );
+    const dom = editor.action((ctx) => ctx.get(editorViewCtx).dom as HTMLElement);
     if (!dom) return;
     const onCompositionEnd = () => {
       setTimeout(() => {

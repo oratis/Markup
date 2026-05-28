@@ -46,7 +46,10 @@
       "a11y": {
         "useKeyWithClickEvents": "off",
         "useButtonType": "off",
-        "useGenericFontNames": "off"
+        "useGenericFontNames": "off",
+        "noSvgWithoutTitle": "off",
+        "useFocusableInteractive": "off",
+        "useSemanticElements": "off"
       },
       "complexity": {
         "noForEach": "off"

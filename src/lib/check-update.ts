@@ -2,9 +2,9 @@ import { getVersion } from "@tauri-apps/api/app";
 
 /** GitHub release shape — only the fields we use. */
 export interface LatestRelease {
-  tagName: string;        // e.g. "v0.4.0"
-  version: string;        // e.g. "0.4.0"
-  htmlUrl: string;        // release page URL
+  tagName: string; // e.g. "v0.4.0"
+  version: string; // e.g. "0.4.0"
+  htmlUrl: string; // release page URL
   publishedAt: string;
   name: string | null;
   body: string | null;
@@ -50,8 +50,8 @@ export async function fetchLatestRelease(): Promise<LatestRelease | null> {
  */
 export function isNewerVersion(latest: string, current: string): boolean {
   const norm = (v: string) => v.replace(/^v/i, "").split("-")[0].split(".");
-  const a = norm(latest).map((s) => parseInt(s, 10) || 0);
-  const b = norm(current).map((s) => parseInt(s, 10) || 0);
+  const a = norm(latest).map((s) => Number.parseInt(s, 10) || 0);
+  const b = norm(current).map((s) => Number.parseInt(s, 10) || 0);
   const len = Math.max(a.length, b.length, 3);
   for (let i = 0; i < len; i++) {
     const da = a[i] ?? 0;

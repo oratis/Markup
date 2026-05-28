@@ -75,12 +75,16 @@ export function Toolbar({ onInsertLink }: ToolbarProps) {
       <div className="titlebar-drag mk-titlebar flex items-center gap-3 px-3 h-10 border-b border-black/5 dark:border-white/10 bg-canvas-light dark:bg-canvas-dark">
         <div className="w-[68px] shrink-0" aria-hidden />
         <div className="mk-breadcrumb flex items-center gap-1.5 min-w-0 flex-1">
-          <span className="mk-app-mark" aria-hidden>◆</span>
+          <span className="mk-app-mark" aria-hidden>
+            ◆
+          </span>
           <span className="mk-app-name">Markup</span>
           {vaultName && (
             <>
               <span className="mk-sep">/</span>
-              <span className="mk-vault-name truncate" title={vaultRoot ?? undefined}>{vaultName}</span>
+              <span className="mk-vault-name truncate" title={vaultRoot ?? undefined}>
+                {vaultName}
+              </span>
             </>
           )}
           <span className="mk-sep">/</span>
@@ -97,7 +101,19 @@ export function Toolbar({ onInsertLink }: ToolbarProps) {
             className="mk-icon-btn"
             aria-label="Toggle right panel"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <line x1="15" y1="4" x2="15" y2="20" />
+            </svg>
           </button>
         </div>
       </div>
@@ -147,10 +163,20 @@ export function Toolbar({ onInsertLink }: ToolbarProps) {
           }}
           className="mk-preview-btn flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-            <polyline points="15 3 21 3 21 9"/>
-            <line x1="10" y1="14" x2="21" y2="3"/>
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
           </svg>
           <span>Preview</span>
         </button>

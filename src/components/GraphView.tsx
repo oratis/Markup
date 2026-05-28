@@ -221,14 +221,15 @@ export function GraphView({ onClose }: Props) {
                     ? "Open a folder that contains .md files."
                     : noEdges && allPathsCount > 0
                       ? `${allPathsCount} files indexed but no [[wikilinks]] found between them. Add some links — they'll appear here as edges. If you've just opened this vault, run "Rebuild Link Index" from the command palette.`
-                      : "Run \"Rebuild Link Index\" from the command palette."}
+                      : 'Run "Rebuild Link Index" from the command palette.'}
                 </div>
               </div>
             </div>
           )}
         </div>
         <div className="px-4 py-2 text-[11px] opacity-60 border-t border-black/5 dark:border-white/10">
-          {t("graph.help")} ・ Showing labels for top {LABEL_TOP_N} hubs; hover any dot for its filename.
+          {t("graph.help")} ・ Showing labels for top {LABEL_TOP_N} hubs; hover any dot
+          for its filename.
         </div>
       </div>
     </div>
