@@ -1,3 +1,4 @@
+import { showToast } from "../components/Toast";
 import { writeImage } from "./tauri";
 
 interface InsertOpts {
@@ -35,7 +36,9 @@ export function installImagePaste(target: HTMLElement, opts: InsertOpts): () => 
 
     const root = opts.vaultRoot;
     if (!root) {
-      console.warn("image paste: no vault open; ignoring (open a vault to enable)");
+      // No vault → nowhere to store the image. Tell the user instead of
+      // silently dropping the paste (previously looked like a no-op bug).
+      showToast("Open a vault (⌘⇧O) to paste images");
       return;
     }
 
