@@ -19,6 +19,7 @@ import { Slice } from "@milkdown/prose/model";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
 import { useEffect, useRef } from "react";
+import { compositionTracker } from "../lib/milkdown/composition";
 import { embedDecorate } from "../lib/milkdown/embed-deco";
 import { imageView } from "../lib/milkdown/image-view";
 import { tagDecorate } from "../lib/milkdown/tag-deco";
@@ -88,6 +89,7 @@ function WysiwygEditor({
       .use(indent)
       .use(math)
       .use(diagram)
+      .use(compositionTracker)
       .use(wikilinkDecorate)
       .use(tagDecorate)
       .use(embedDecorate)

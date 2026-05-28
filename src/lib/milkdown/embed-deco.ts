@@ -2,6 +2,7 @@ import type { Node as ProseNode } from "@milkdown/prose/model";
 import { Plugin, PluginKey } from "@milkdown/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/prose/view";
 import { $prose } from "@milkdown/utils";
+import { RECOMPUTE_META, isComposing } from "./composition";
 
 /**
  * Inline decoration for `![[file]]` / `![[file#heading]]` / `![[file^block]]`
@@ -50,7 +51,10 @@ export const embedDecorate = $prose(
           return decorationsFor(doc);
         },
         apply(tr, old, _oldState, newState) {
-          if (tr.docChanged) return decorationsFor(newState.doc);
+          if (isComposing()) return old.map(tr.mapping, tr.doc);
+          if (tr.getMeta(RECOMPUTE_META) || tr.docChanged) {
+            return decorationsFor(newState.doc);
+          }
           return old.map(tr.mapping, tr.doc);
         },
       },

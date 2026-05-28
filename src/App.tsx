@@ -131,6 +131,7 @@ import {
 } from "./lib/tauri";
 import { applyTemplate, dailyNotePath } from "./lib/template";
 import { buildToc } from "./lib/toc";
+import { IS_MAS_BUILD } from "./lib/build-flags";
 import { checkForUpdates } from "./lib/updater";
 import { findVaultFile, wikilinkAtClick } from "./lib/wikilink";
 import { DEFAULT_SETTINGS, type Theme, getActiveTab, useAppStore } from "./store";
@@ -316,7 +317,8 @@ export function App() {
     }
     // Auto-updater check (silent on failure; requires updater.active=true
     // + pubkey configured to actually upgrade — see lib/updater.ts).
-    checkForUpdates();
+    // Skipped in the MAS build — the App Store owns updates there.
+    if (!IS_MAS_BUILD) checkForUpdates();
     // Restore previously-open tabs. Runs async — failures are silent
     // (file may have been deleted / moved since the last session).
     const sess = readSession();
@@ -3269,7 +3271,7 @@ export function App() {
         />
       )}
       <ToastHost />
-      <UpdateBanner />
+      {!IS_MAS_BUILD && <UpdateBanner />}
     </div>
   );
 }
