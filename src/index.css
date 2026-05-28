@@ -167,7 +167,9 @@ body {
   height: auto;
   border-radius: 6px;
   display: block;
-  margin: 0.8em auto;
+  /* Left-aligned (margin 0, not auto): a centered block was pushing the
+     post-image caret to the column centre after a paste. */
+  margin: 0.8em 0;
 }
 
 /* Wikilink — visual treatment for [[xxx]] in WYSIWYG editor */
