@@ -35,6 +35,19 @@ export const compositionTracker = $prose(
     new Plugin({
       key: COMPOSITION_KEY,
       props: {
+        // Swallow keystrokes that belong to an active IME composition.
+        // The big one: the Enter (or Space) that *confirms* a CJK
+        // candidate also reaches the editor's keymap as "split block",
+        // inserting a stray newline. `isComposing` is the modern signal;
+        // keyCode 229 is the legacy "input being processed by IME"
+        // sentinel. Returning true stops ProseMirror's command dispatch;
+        // the IME still confirms at the OS input-method level.
+        handleKeyDown: (_view, event) => {
+          if (event.isComposing || event.keyCode === 229) {
+            return true;
+          }
+          return false;
+        },
         handleDOMEvents: {
           compositionstart: () => {
             composing = true;
