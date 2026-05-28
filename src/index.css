@@ -172,6 +172,15 @@ body {
   margin: 0.8em 0;
 }
 
+/* CJK IME composition: WebKit can render a phantom trailing line-box
+   (a blank line below the composing text) while a composition is active.
+   It's never serialized — purely visual — so we suppress the trailing
+   break only while composing (class toggled by the composition tracker).
+   Scoped tightly so normal editing / empty-line rendering is untouched. */
+html.mk-composing .milkdown .editor br.ProseMirror-trailingBreak {
+  display: none;
+}
+
 /* Wikilink — visual treatment for [[xxx]] in WYSIWYG editor */
 .milkdown .wikilink {
   background: rgba(9, 105, 218, 0.1);
