@@ -39,6 +39,21 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Markdown parser (Rust-side, for indexing snippets and exports)
 comrak = { version = "0.40", default-features = false }
 
+# Security-scoped bookmark persistence (base64-encode the bookmark blob)
+base64 = "0.22"
+
+# macOS security-scoped bookmarks — lets a sandboxed (Mac App Store) build
+# re-access the user's vault folder across launches. No-op on other OSes.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = [
+    "NSURL",
+    "NSString",
+    "NSData",
+    "NSError",
+    "NSArray",
+] }
+
 [dev-dependencies]
 tempfile = "3"
 criterion = "0.7"

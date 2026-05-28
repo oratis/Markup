@@ -26,6 +26,10 @@ pub struct VaultFileEntry {
 #[derive(Default)]
 pub struct VaultState {
     inner: RwLock<Option<OpenVault>>,
+    /// Serializes `open()` calls. Without it, a launch-time restore and a
+    /// user-triggered open could run concurrently and race on the Tantivy
+    /// index writer lock / the final state swap.
+    open_lock: tokio::sync::Mutex<()>,
 }
 
 struct OpenVault {
@@ -58,6 +62,8 @@ impl VaultState {
         app: AppHandle,
         index_dir: PathBuf,
     ) -> AppResult<usize> {
+        // Serialize concurrent opens (e.g. launch restore vs. user open).
+        let _open_guard = self.open_lock.lock().await;
         if !root.is_dir() {
             return Err(AppError::Other(format!(
                 "vault path is not a directory: {}",

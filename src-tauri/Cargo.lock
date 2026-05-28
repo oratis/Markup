@@ -2449,10 +2449,13 @@ checksum = "373f5eceeeab7925e0c1098212f2fbc4d416adec9d35051a6ab251e824c1854a"
 name = "markup"
 version = "0.5.0"
 dependencies = [
+ "base64 0.22.1",
  "comrak",
  "criterion",
  "notify",
  "notify-debouncer-full",
+ "objc2",
+ "objc2-foundation",
  "parking_lot",
  "serde",
  "serde_json",
