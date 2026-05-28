@@ -123,3 +123,17 @@ export async function clearRecentFilesNative(): Promise<void> {
 export async function listenVaultChanged(cb: () => void): Promise<UnlistenFn> {
   return await listen<void>("vault-changed", () => cb());
 }
+
+/** Live "open these files" events from macOS (Finder double-click /
+ * Open With) while the app is already running. */
+export async function listenOpenFiles(
+  cb: (paths: string[]) => void,
+): Promise<UnlistenFn> {
+  return await listen<string[]>("open-files", (e) => cb(e.payload));
+}
+
+/** Drain files macOS asked us to open before the listener was ready
+ * (cold start via double-click). Returns [] on a normal launch. */
+export async function takePendingFiles(): Promise<string[]> {
+  return await invoke<string[]>("take_pending_files");
+}

@@ -59,7 +59,7 @@
         "name": "Markdown",
         "description": "Markdown document",
         "role": "Editor",
-        "rank": "Default"
+        "rank": "Owner"
       }
     ]
   },

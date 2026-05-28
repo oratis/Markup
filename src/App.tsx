@@ -115,6 +115,7 @@ import {
   listRecentFilesNative,
   listVaultFiles,
   listenMenu,
+  listenOpenFiles,
   listenVaultChanged,
   openFileDialog,
   openNewWindow,
@@ -125,6 +126,7 @@ import {
   readFile,
   renameFile,
   renderHtml,
+  takePendingFiles,
   writeFile,
 } from "./lib/tauri";
 import { applyTemplate, dailyNotePath } from "./lib/template";
@@ -359,6 +361,36 @@ export function App() {
     } catch {
       /* ignore */
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // macOS "open with Markup" — opens .md files double-clicked in Finder
+  // (or `open file.md`). Drains the cold-start buffer once, then listens
+  // for live opens while the app stays running.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    const openPaths = async (paths: string[]) => {
+      for (const p of paths) {
+        try {
+          const loaded = await readFile(p);
+          openLoadedFile(loaded);
+          pushRecentFile(p);
+        } catch (e) {
+          console.warn("open-file failed:", p, e);
+        }
+      }
+    };
+    listenOpenFiles(openPaths).then((u) => {
+      unlisten = u;
+    });
+    takePendingFiles()
+      .then((paths) => {
+        if (paths.length) openPaths(paths);
+      })
+      .catch(() => {});
+    return () => {
+      if (unlisten) unlisten();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
