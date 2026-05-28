@@ -1,144 +1,157 @@
+<div align="center">
+
 # Markup
 
-> 高性能 macOS Markdown 编辑器 — Typora 风格的开源克隆。
+**A fast, native, open-source Markdown editor for macOS.**
+Read your Markdown like a beautiful web page — edit when you want.
+
+<!-- Hero GIF: drop docs/assets/hero.gif here once recorded (storyboard + capture script in docs/HERO-GIF.md), then uncomment:
+<img src="docs/assets/hero.gif" alt="Open a vault, read it like a web page, press E to edit, ⌘P to jump, search across 10k files" width="820">
+-->
 
 [![CI](https://github.com/oratis/Markup/actions/workflows/ci.yml/badge.svg)](https://github.com/oratis/Markup/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/oratis/Markup?label=release)](https://github.com/oratis/Markup/releases)
-[![codecov](https://codecov.io/gh/oratis/Markup/branch/main/graph/badge.svg)](https://codecov.io/gh/oratis/Markup)
+[![Latest release](https://img.shields.io/github/v/release/oratis/Markup?label=release)](https://github.com/oratis/Markup/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/oratis/Markup/total)](https://github.com/oratis/Markup/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-设计与决策见 [docs/README.md](./docs/README.md)。
+[**Download for macOS**](https://github.com/oratis/Markup/releases/latest) · [中文说明](#中文) · [Docs](./docs/README.md)
 
-## 特性
+⭐ **If Markup is useful to you, a star helps other people find it.**
 
-**编辑**
-- WYSIWYG（Milkdown / ProseMirror）↔ Source mode（CodeMirror 6），`⌘/` 切换
-- Focus / Typewriter 模式，CSS 变量驱动主题
-- KaTeX 数学公式、Mermaid 图表、Shiki 代码高亮、GFM 表格 / 任务列表
+</div>
 
-**文件管理**
-- Vault（任意 Markdown 文件夹）+ 虚拟滚动文件树 + 右键 rename / Move to Trash
-- 多 tab，Welcome 自动让位
-- Quick Open（`⌘P` 模糊匹配）
-- 全文搜索（`⌘⇧F`，Tantivy 索引）
-- 文件监听 + 外部修改 reload 提示
-- 自动保存（300ms debounce）+ 原子写入 + mtime 防覆盖
+---
 
-**心流**
-- Outline 面板（`⌘⌥O`）
-- Command Palette（`⌘⇧P`，~17 条命令）
-- Wikilinks `[[file]]` 点击跳转
-- Copy Link to Paragraph → `[[file#heading]]` 入剪贴板
-- Find in File（`⌘F`）
-- 三主题：Light / Dark / Sepia
-- Settings 面板（字号 / 行宽 / 自动保存延迟 / 图片目录 / 语言）
-- 中英文 UI（auto / en / zh）
-- 图片粘贴自动入库（vault/assets/）
-- Save As…（`⌘⇧S`）+ 导出 HTML / 打印 PDF
+## Why Markup
 
-**性能**（Spike 0.3 实测）
-- 10,000 文件 vault：扫描 15ms / 索引 1.09s / 搜索 2.4ms
-- 主 chunk 356KB（gzipped 102KB），Mermaid / KaTeX / Milkdown / CodeMirror 各自独立 lazy chunk
-- Idle RSS ~88MB（约为 Electron baseline 的 1/3）
+I wanted **Typora's writing feel** without the closed source and price, and **Obsidian's look** without the Electron weight. So Markup is the open, native, lightweight one that's actually pleasant to _read_ in:
 
-## 截图
+- **Reader-first.** Open a folder and your notes render like a clean web page — not a text box. Press `E` to edit (WYSIWYG), `⌘/` for raw source. Reading is the default; editing is on demand.
+- **Native, not Electron.** Built on [Tauri](https://tauri.app/) (Rust + the system WebView). ~88 MB idle RAM — roughly a third of a comparable Electron app.
+- **A real vault.** Wikilinks, backlinks, a graph view, and full-text search powered by [Tantivy](https://github.com/quickwit-oss/tantivy) — a 10,000-file vault indexes in about a second.
+- **Free and open source.** MIT. No account, no paywall, no telemetry.
 
-> 占位 — v1.0 公开发布前替换。
-> 当前推荐看 https://github.com/oratis/Markup/releases/tag/v0.1.1。
+|  | **Markup** | Typora | Obsidian | MacDown / iA |
+|---|:---:|:---:|:---:|:---:|
+| Price | **Free** | $15 | Free (closed) | Free / paid |
+| Open source | **✅ MIT** | ❌ | ❌ | mixed |
+| Native (not Electron) | **✅ Tauri, ~88 MB** | ✅ | ❌ Electron | ✅ |
+| Reader-first (MD as a page) | **✅** | ◐ | ❌ (KB tool) | ◐ |
+| Vault + backlinks + graph + full-text | **✅** | ❌ | ✅ | ❌ |
+| Chinese IME | **✅** | ✅ | ◐ | varies |
 
-## 安装
+> Status: **macOS-only, pre-1.0.** The DMG is currently **unsigned** (signing is the next milestone — see [install](#install)). Built largely with the help of [Claude Code](https://claude.com/claude-code).
 
-下载 [最新 release](https://github.com/oratis/Markup/releases/latest) 的 `Markup_*_x64.dmg`。
+## Features
 
-DMG 当前**未签名**（签名公证 pipeline 在 [scripts/sign-and-notarize.sh](./scripts/sign-and-notarize.sh)，需要 Apple Developer 凭据才能跑）。第一次打开时 macOS Gatekeeper 会拦截 — 在 **System Settings → Privacy & Security** 里点 "Open Anyway"。
+**Read / Edit / Source — one keystroke apart**
+- **Read** (default): your Markdown rendered as a document — KaTeX math, Mermaid diagrams, syntax-highlighted code, GFM tables & task lists.
+- **Edit** (`E`): WYSIWYG editing via Milkdown / ProseMirror.
+- **Source** (`⌘/`): raw Markdown in CodeMirror 6.
 
-## 开发
+**Vault & navigation**
+- Point it at any folder of `.md` files — virtual-scrolled file tree, multi-tab, right-click rename / Move to Trash.
+- **Quick Open** (`⌘P`) fuzzy file jump.
+- **Full-text search** (`⌘⇧F`) across the whole vault (Tantivy).
+- **Wikilinks** `[[file]]` and `[[file#heading]]`, **backlinks**, and a **graph view**.
+- **Command Palette** (`⌘⇧P`) and an **Outline** panel (`⌘⌥O`).
+- File-watching with an external-change reload prompt; auto-save (debounced, atomic write, mtime guard).
 
-### 环境
-- macOS 12+（开发 / 运行）
-- [Node 18+](https://nodejs.org/) + pnpm 8+
-- [Rust 1.77+](https://rustup.rs/)
-- Xcode Command Line Tools (`xcode-select --install`)
+**Writing comfort**
+- Three themes: **Light / Dark / Sepia**; adjustable prose font & line width.
+- Focus / typewriter modes.
+- Paste an image → auto-saved into the vault (`assets/`) and rendered inline.
+- **One-click preview** as a standalone HTML page in your browser.
+- Export to HTML / print to PDF; `Save As…` (`⌘⇧S`).
+- Bilingual UI (English / 中文, auto-detected).
+- Double-click a `.md` file in Finder to open it in Markup.
+
+**Fast** (measured on a 10k-file vault)
+- Scan 15 ms · index 1.09 s · search 2.4 ms.
+- Main chunk 356 KB (102 KB gzipped); Mermaid / KaTeX / Milkdown / CodeMirror are lazy-loaded.
+- Idle RSS ~88 MB.
+
+## Screenshots
+
+> _Coming with the v0.6.0 signed release — hero GIF + dark/light/graph stills._
+
+## Install
+
+1. Download the latest DMG from [**Releases**](https://github.com/oratis/Markup/releases/latest):
+   - `Markup_<version>_apple-silicon.dmg` — Apple Silicon Macs (M1 / M2 / M3 / M4)
+   - `Markup_<version>_intel.dmg` — Intel Macs
+2. Open the DMG and drag **Markup** to **Applications**.
+
+**First launch (unsigned build):** macOS Gatekeeper will say the app "can't be opened." This is expected until the signed build (v0.6.0) ships. To open it:
+
+> **System Settings → Privacy & Security →** scroll down → **"Open Anyway"** next to Markup. (Or right-click the app → **Open** → **Open**.)
+
+Signing & notarization are pipelined in [`scripts/sign-and-notarize.sh`](./scripts/sign-and-notarize.sh) and will remove this prompt.
+
+## Build from source
+
+Requirements: macOS 12+, [Node 18+](https://nodejs.org/) with pnpm 8+, [Rust 1.77+](https://rustup.rs/), and Xcode Command Line Tools (`xcode-select --install`).
 
 ```bash
 git clone https://github.com/oratis/Markup
 cd Markup
-. "$HOME/.cargo/env"
 pnpm install
-pnpm tauri:dev
+pnpm tauri:dev      # first run compiles Rust deps — 5–10 min
 ```
-
-首次 `tauri dev` 会编译大量 Rust 依赖，5–10 分钟。
-
-### 测试 / 验证
 
 ```bash
-pnpm tsc --noEmit          # 类型检查
-pnpm lint                  # Biome
-pnpm test                  # Vitest（46 个 React 测试）
-pnpm test:rust             # Cargo dev tests
-pnpm bench:spike03         # 10k 文件 Tantivy 索引 benchmark
-pnpm build                 # Vite 前端构建
-pnpm tauri:build           # 完整 macOS bundle
+pnpm tsc --noEmit   # type-check
+pnpm lint           # Biome
+pnpm test           # Vitest
+pnpm test:rust      # cargo tests
+pnpm tauri:build    # full macOS bundle
 ```
 
-### 出 Release
-
-```bash
-git tag -a vX.Y.Z -m "release notes"
-git push origin vX.Y.Z
-# Release workflow 自动跑 build + 上传 unsigned DMG + SHA256SUMS
-```
-
-签名版（需要 [docs/decisions/ADR-002](./docs/decisions/ADR-002-distribution.md) 描述的 keychain credentials）：
-
-```bash
-./scripts/sign-and-notarize.sh
-```
-
-## 技术栈
+## Tech stack
 
 ```
 ┌─ Tauri 2 (Rust) ──────────────────────────────┐
-│   commands  · vault scanner · notify watcher  │
-│   Tantivy index · comrak · tokio              │
+│   commands · vault scanner · notify watcher   │
+│   Tantivy full-text index · comrak · tokio    │
+└──────────────────────┬─────────────────────────┘
+                       │ IPC
+┌─ React + Vite ───────┴─────────────────────────┐
+│   Milkdown WYSIWYG · CodeMirror 6 source mode  │
+│   Zustand store · Tailwind                     │
+│   Mermaid · KaTeX · code highlight             │
 └────────────────────────────────────────────────┘
-                  │ IPC
-┌─ React + Vite ────────────────────────────────┐
-│   Milkdown WYSIWYG · CodeMirror 6 source mode │
-│   Zustand store · Tailwind                    │
-│   Mermaid · KaTeX · Shiki                     │
-└────────────────────────────────────────────────┘
 ```
 
-完整说明：[docs/decisions/ADR-001-tech-stack.md](./docs/decisions/ADR-001-tech-stack.md)
+Design notes & ADRs: [`docs/`](./docs/README.md) · roadmap: [`docs/RELEASE-PLAN.md`](./docs/RELEASE-PLAN.md).
 
-## 仓库结构
+## Contributing
 
-```
-Markup/
-├── docs/                # 调研报告、ADR、设计文档、状态文档
-├── scripts/             # 占位图标生成、测试 fixture、签名脚本
-├── src/                 # React 前端
-│   ├── components/      # 30+ 组件
-│   ├── lib/             # i18n / wikilink / fuzzy / tauri 包装 / 等
-│   └── store.ts         # Zustand 全局状态
-├── src-tauri/           # Rust 后端
-│   ├── src/             # commands · vault · index · scanner · watcher
-│   └── tests/           # Spike 0.3 benchmark
-├── .github/
-│   ├── workflows/       # ci.yml + release.yml
-│   ├── ISSUE_TEMPLATE/  # bug + feature + config
-│   └── PULL_REQUEST_TEMPLATE.md
-└── README.md
-```
+Issues and PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and the issue/PR templates. Work lands via PR with two green CI checks (Frontend + Rust).
 
-## 路线图
+---
 
-详见 [docs/STATUS.md](./docs/STATUS.md) 和 [docs/design/03-roadmap.md](./docs/design/03-roadmap.md)。当前位置：M2 polish 完成，向 V1.0 推进。
+## 中文
+
+**Markup —— 原生、开源、轻量的 macOS Markdown 阅读/编辑器。**
+用 HTML 的形态来看 MD，想改再改。
+
+想要 Typora 的书写手感但不想要闭源和收费，想要 Obsidian 的观感但不想要 Electron 的体量 —— Markup 就是那个开源、原生、轻量、而且“读起来很舒服”的选择：
+
+- **阅读优先**：打开一个文件夹，笔记像干净的网页一样渲染，而不是一个文本框。按 `E` 进入所见即所得编辑，`⌘/` 看原始 Markdown。默认是阅读，编辑按需触发。
+- **原生而非 Electron**：基于 [Tauri](https://tauri.app/)（Rust + 系统 WebView），空闲内存约 88 MB，约为同类 Electron 应用的三分之一。
+- **完整的 vault**：双向链接、反向链接、关系图谱，以及由 [Tantivy](https://github.com/quickwit-oss/tantivy) 驱动的全文搜索 —— 1 万个文件约 1 秒建好索引。
+- **免费开源**：MIT 协议，无账号、无付费墙、无遥测。
+
+**安装**：到 [Releases](https://github.com/oratis/Markup/releases/latest) 下载 DMG —— Apple 芯片选 `apple-silicon`，Intel 选 `intel`。当前 DMG **未签名**（签名版为下一个里程碑 v0.6.0），首次打开时在 **系统设置 → 隐私与安全性** 里点 **“仍要打开”**。
+
+更多设计与决策文档见 [`docs/`](./docs/README.md)。**如果 Markup 对你有用，点个 ⭐ 能帮到更多人。**
+
+---
+
+## Star history
+
+[![Star History Chart](https://api.star-history.com/svg?repos=oratis/Markup&type=Date)](https://star-history.com/#oratis/Markup&Date)
 
 ## License
 
-[MIT](./LICENSE) © 2026 Oratis
-
-由 Claude Code 协助开发。
+[MIT](./LICENSE) © 2026 Oratis. Developed with the help of [Claude Code](https://claude.com/claude-code).
