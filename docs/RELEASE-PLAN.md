@@ -75,6 +75,7 @@ This is the flow used since v0.3.0 — keep to it.
 
 ### v0.6.0 — "Trustworthy install" (signing)
 **Goal:** users can open Markup without the Gatekeeper scare.
+**Code is done; remaining steps are account-gated — full runbook: [app-store/signing-setup.md](./app-store/signing-setup.md).**
 - [ ] Provision **Developer ID Application** cert (account: wangharp@gmail.com).
 - [ ] Wire the six Apple secrets into the release workflow's signing gate (already coded — see `release.yml` `HAS_APPLE_SIGNING`).
 - [ ] Codesign (hardened runtime) + notarize + staple the direct DMGs.
