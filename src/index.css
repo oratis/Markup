@@ -14,64 +14,64 @@
   --markup-prose-max-width: 760px;
 
   /* Light — default */
-  --mk-bg-app:        #ffffff;
-  --mk-bg-sidebar:    #f7f7f5;
-  --mk-bg-elevated:   #ececea;
-  --mk-bg-selected:   rgba(0, 0, 0, 0.06);
-  --mk-bg-hover:      rgba(0, 0, 0, 0.04);
-  --mk-fg-default:    #2e2e2e;
-  --mk-fg-strong:     #111111;
-  --mk-fg-muted:      #6a6a6a;
-  --mk-fg-faint:      #aaaaaa;
-  --mk-border:        rgba(0, 0, 0, 0.07);
+  --mk-bg-app: #ffffff;
+  --mk-bg-sidebar: #f7f7f5;
+  --mk-bg-elevated: #ececea;
+  --mk-bg-selected: rgba(0, 0, 0, 0.06);
+  --mk-bg-hover: rgba(0, 0, 0, 0.04);
+  --mk-fg-default: #2e2e2e;
+  --mk-fg-strong: #111111;
+  --mk-fg-muted: #6a6a6a;
+  --mk-fg-faint: #aaaaaa;
+  --mk-border: rgba(0, 0, 0, 0.07);
   --mk-border-strong: rgba(0, 0, 0, 0.13);
-  --mk-accent:        #0969da;
-  --mk-accent-soft:   rgba(9, 105, 218, 0.12);
-  --mk-code-bg:       #f1f0ed;
-  --mk-shadow:        0 6px 18px rgba(0, 0, 0, 0.10);
+  --mk-accent: #0969da;
+  --mk-accent-soft: rgba(9, 105, 218, 0.12);
+  --mk-code-bg: #f1f0ed;
+  --mk-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
 
   /* alias — old code */
-  --markup-bg:     var(--mk-bg-app);
-  --markup-fg:     var(--mk-fg-default);
-  --markup-muted:  var(--mk-fg-muted);
+  --markup-bg: var(--mk-bg-app);
+  --markup-fg: var(--mk-fg-default);
+  --markup-muted: var(--mk-fg-muted);
   --markup-border: var(--mk-border);
   --markup-accent: var(--mk-accent);
 }
 
 html.theme-dark {
-  --mk-bg-app:        #1e1e1e;
-  --mk-bg-sidebar:    #1a1a1a;
-  --mk-bg-elevated:   #242424;
-  --mk-bg-selected:   rgba(255, 255, 255, 0.08);
-  --mk-bg-hover:      rgba(255, 255, 255, 0.05);
-  --mk-fg-default:    #dcddde;
-  --mk-fg-strong:     #e6e6e6;
-  --mk-fg-muted:      #808080;
-  --mk-fg-faint:      #5a5a5a;
-  --mk-border:        rgba(255, 255, 255, 0.06);
+  --mk-bg-app: #1e1e1e;
+  --mk-bg-sidebar: #1a1a1a;
+  --mk-bg-elevated: #242424;
+  --mk-bg-selected: rgba(255, 255, 255, 0.08);
+  --mk-bg-hover: rgba(255, 255, 255, 0.05);
+  --mk-fg-default: #dcddde;
+  --mk-fg-strong: #e6e6e6;
+  --mk-fg-muted: #808080;
+  --mk-fg-faint: #5a5a5a;
+  --mk-border: rgba(255, 255, 255, 0.06);
   --mk-border-strong: rgba(255, 255, 255, 0.12);
-  --mk-accent:        #58a6ff;
-  --mk-accent-soft:   rgba(88, 166, 255, 0.18);
-  --mk-code-bg:       #2a2a2a;
-  --mk-shadow:        0 8px 24px rgba(0, 0, 0, 0.45);
+  --mk-accent: #58a6ff;
+  --mk-accent-soft: rgba(88, 166, 255, 0.18);
+  --mk-code-bg: #2a2a2a;
+  --mk-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 html.theme-sepia {
-  --mk-bg-app:        #f7efde;
-  --mk-bg-sidebar:    #efe4cb;
-  --mk-bg-elevated:   #e8ddc0;
-  --mk-bg-selected:   rgba(58, 46, 37, 0.08);
-  --mk-bg-hover:      rgba(58, 46, 37, 0.05);
-  --mk-fg-default:    #3a2e25;
-  --mk-fg-strong:     #2a1e15;
-  --mk-fg-muted:      rgba(58, 46, 37, 0.6);
-  --mk-fg-faint:      rgba(58, 46, 37, 0.35);
-  --mk-border:        rgba(58, 46, 37, 0.12);
+  --mk-bg-app: #f7efde;
+  --mk-bg-sidebar: #efe4cb;
+  --mk-bg-elevated: #e8ddc0;
+  --mk-bg-selected: rgba(58, 46, 37, 0.08);
+  --mk-bg-hover: rgba(58, 46, 37, 0.05);
+  --mk-fg-default: #3a2e25;
+  --mk-fg-strong: #2a1e15;
+  --mk-fg-muted: rgba(58, 46, 37, 0.6);
+  --mk-fg-faint: rgba(58, 46, 37, 0.35);
+  --mk-border: rgba(58, 46, 37, 0.12);
   --mk-border-strong: rgba(58, 46, 37, 0.22);
-  --mk-accent:        #8b5a2b;
-  --mk-accent-soft:   rgba(139, 90, 43, 0.18);
-  --mk-code-bg:       #ebdfc5;
-  --mk-shadow:        0 6px 18px rgba(58, 46, 37, 0.15);
+  --mk-accent: #8b5a2b;
+  --mk-accent-soft: rgba(139, 90, 43, 0.18);
+  --mk-code-bg: #ebdfc5;
+  --mk-shadow: 0 6px 18px rgba(58, 46, 37, 0.15);
 }
 
 html,
@@ -157,6 +157,19 @@ body {
 .toast-item[data-phase="out"] {
   opacity: 0;
   transform: translateY(-2px);
+}
+
+/* Vault images rendered via the image-view nodeView (src resolved to an
+   asset:// URL). Keep them readable + bounded inside the prose column. */
+.milkdown .editor img.milkdown-img,
+.milkdown .editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+  /* Left-aligned (margin 0, not auto): a centered block was pushing the
+     post-image caret to the column centre after a paste. */
+  margin: 0.8em 0;
 }
 
 /* Wikilink — visual treatment for [[xxx]] in WYSIWYG editor */
@@ -573,7 +586,9 @@ div[class*="hover:bg-black/5"][class*="dark:hover:bg-white/10"]:hover {
 }
 
 /* Body bg / global app bg drive from token */
-html, body, #root {
+html,
+body,
+#root {
   background: var(--mk-bg-app);
   color: var(--mk-fg-default);
 }
@@ -735,7 +750,8 @@ html, body, #root {
   animation: mk-update-pulse 2.4s ease-in-out infinite;
 }
 @keyframes mk-update-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 3px var(--mk-accent-soft);
   }
   50% {

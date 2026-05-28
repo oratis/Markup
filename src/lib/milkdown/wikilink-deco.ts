@@ -2,6 +2,7 @@ import type { Node as ProseNode } from "@milkdown/prose/model";
 import { Plugin, PluginKey } from "@milkdown/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/prose/view";
 import { $prose } from "@milkdown/utils";
+import { RECOMPUTE_META, isComposing } from "./composition";
 
 const WIKILINK_RE = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
 
@@ -42,7 +43,13 @@ export const wikilinkDecorate = $prose(
           return decorationsFor(doc);
         },
         apply(tr, old, _oldState, newState) {
-          if (tr.docChanged) return decorationsFor(newState.doc);
+          // Never rebuild decorations mid-IME-composition — it aborts the
+          // composition (CJK caret/line-break corruption). Just map the
+          // existing set; recompute on compositionend (RECOMPUTE_META).
+          if (isComposing()) return old.map(tr.mapping, tr.doc);
+          if (tr.getMeta(RECOMPUTE_META) || tr.docChanged) {
+            return decorationsFor(newState.doc);
+          }
           return old.map(tr.mapping, tr.doc);
         },
       },

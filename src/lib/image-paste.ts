@@ -1,11 +1,13 @@
+import { showToast } from "../components/Toast";
 import { writeImage } from "./tauri";
 
 interface InsertOpts {
   vaultRoot: string | null;
   /** Where to drop the image, relative to vault root. Default "assets". */
   imageDir?: string;
-  /** Insert markdown text at cursor. Receives the relative path. */
-  insert: (markdown: string) => void;
+  /** Insert a vault-relative image at the cursor. The caller decides how
+   * (a real WYSIWYG image node, or markdown text in source mode). */
+  insertImage: (relPath: string) => void;
 }
 
 /**
@@ -34,7 +36,9 @@ export function installImagePaste(target: HTMLElement, opts: InsertOpts): () => 
 
     const root = opts.vaultRoot;
     if (!root) {
-      console.warn("image paste: no vault open; ignoring (open a vault to enable)");
+      // No vault → nowhere to store the image. Tell the user instead of
+      // silently dropping the paste (previously looked like a no-op bug).
+      showToast("Open a vault (⌘⇧O) to paste images");
       return;
     }
 
@@ -46,8 +50,7 @@ export function installImagePaste(target: HTMLElement, opts: InsertOpts): () => 
     try {
       const dir = opts.imageDir?.trim() || "assets";
       const rel = await writeImage(root, dir, buf, ext);
-      const md = `![](${rel})`;
-      opts.insert(md);
+      opts.insertImage(rel);
     } catch (err) {
       console.error("writeImage failed", err);
     }

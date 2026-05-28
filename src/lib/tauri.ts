@@ -65,6 +65,12 @@ export async function renderHtml(
   return await invoke<string>("render_html", { content, title, theme });
 }
 
+/** Write rendered preview HTML to a temp file (Rust-side, bypasses the
+ * JS fs scope) and return its absolute path. */
+export async function writePreviewHtml(html: string, baseName: string): Promise<string> {
+  return await invoke<string>("write_preview_html", { html, baseName });
+}
+
 export async function pickVault(): Promise<string | null> {
   return await invoke<string | null>("pick_vault");
 }
@@ -113,4 +119,18 @@ export async function clearRecentFilesNative(): Promise<void> {
 
 export async function listenVaultChanged(cb: () => void): Promise<UnlistenFn> {
   return await listen<void>("vault-changed", () => cb());
+}
+
+/** Live "open these files" events from macOS (Finder double-click /
+ * Open With) while the app is already running. */
+export async function listenOpenFiles(
+  cb: (paths: string[]) => void,
+): Promise<UnlistenFn> {
+  return await listen<string[]>("open-files", (e) => cb(e.payload));
+}
+
+/** Drain files macOS asked us to open before the listener was ready
+ * (cold start via double-click). Returns [] on a normal launch. */
+export async function takePendingFiles(): Promise<string[]> {
+  return await invoke<string[]>("take_pending_files");
 }

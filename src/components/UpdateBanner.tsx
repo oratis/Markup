@@ -69,9 +69,7 @@ export function UpdateBanner() {
     >
       <span className="mk-update-dot" aria-hidden />
       <span className="mk-update-text">
-        <span className="mk-update-title">
-          New version {latest.tagName}
-        </span>
+        <span className="mk-update-title">New version {latest.tagName}</span>
         <span className="mk-update-sub">
           {current} → {latest.version} · click to download
         </span>

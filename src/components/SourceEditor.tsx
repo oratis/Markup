@@ -138,10 +138,12 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
         selection: { anchor: from + md.length },
       });
     };
+    // In source mode the markdown text IS the content, so a pasted image
+    // is just its `![](rel)` reference inserted at the caret.
     const imageOpts = {
       vaultRoot: useAppStore.getState().vaultRoot,
       imageDir: useAppStore.getState().imagePasteDir,
-      insert: insertAtSelection,
+      insertImage: (rel: string) => insertAtSelection(`![](${rel})`),
     };
     const detachPaste = installImagePaste(hostRef.current, imageOpts);
     const detachDrop = installImageDrop(hostRef.current, imageOpts);

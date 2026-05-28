@@ -30,6 +30,7 @@ import {
   setVaultRoot as blockSetVaultRoot,
 } from "./lib/block-index-store";
 import { toggleBookmark } from "./lib/bookmarks";
+import { IS_MAS_BUILD } from "./lib/build-flags";
 import { disposeCanvasStore } from "./lib/canvas-registry";
 import {
   cycleHeadingLevel,
@@ -115,6 +116,7 @@ import {
   listRecentFilesNative,
   listVaultFiles,
   listenMenu,
+  listenOpenFiles,
   listenVaultChanged,
   openFileDialog,
   openNewWindow,
@@ -125,6 +127,7 @@ import {
   readFile,
   renameFile,
   renderHtml,
+  takePendingFiles,
   writeFile,
 } from "./lib/tauri";
 import { applyTemplate, dailyNotePath } from "./lib/template";
@@ -293,10 +296,7 @@ export function App() {
           if (s && typeof s === "object") {
             // Migration: the right-rail redesign needs ≥ 280px to fit
             // the 4-tab segmented control. Bump old stored values.
-            if (
-              typeof s.outlineWidth === "number" &&
-              s.outlineWidth < 280
-            ) {
+            if (typeof s.outlineWidth === "number" && s.outlineWidth < 280) {
               s.outlineWidth = 320;
             }
             setSettings(s);
@@ -314,7 +314,8 @@ export function App() {
     }
     // Auto-updater check (silent on failure; requires updater.active=true
     // + pubkey configured to actually upgrade — see lib/updater.ts).
-    checkForUpdates();
+    // Skipped in the MAS build — the App Store owns updates there.
+    if (!IS_MAS_BUILD) checkForUpdates();
     // Restore previously-open tabs. Runs async — failures are silent
     // (file may have been deleted / moved since the last session).
     const sess = readSession();
@@ -335,6 +336,40 @@ export function App() {
         }
       });
     }
+    // NOTE: auto-reopen of the last vault on launch was reverted — it
+    // regressed manual "Open Vault". Vault persistence across launches
+    // (esp. under the App Sandbox) needs Rust-side security-scoped
+    // bookmarks; tracked separately. See docs/app-store/MAS-publishing-plan.md §1.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // macOS "open with Markup" — opens .md files double-clicked in Finder
+  // (or `open file.md`). Drains the cold-start buffer once, then listens
+  // for live opens while the app stays running.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    const openPaths = async (paths: string[]) => {
+      for (const p of paths) {
+        try {
+          const loaded = await readFile(p);
+          openLoadedFile(loaded);
+          pushRecentFile(p);
+        } catch (e) {
+          console.warn("open-file failed:", p, e);
+        }
+      }
+    };
+    listenOpenFiles(openPaths).then((u) => {
+      unlisten = u;
+    });
+    takePendingFiles()
+      .then((paths) => {
+        if (paths.length) openPaths(paths);
+      })
+      .catch(() => {});
+    return () => {
+      if (unlisten) unlisten();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -835,10 +870,19 @@ export function App() {
       range.insertNode(document.createTextNode(md));
       sel.collapseToEnd();
     };
+    // For WYSIWYG, route image insertion through Milkdown so it becomes a
+    // real image node (and the image-view nodeView resolves its src to a
+    // loadable asset URL). Falls back to text insertion only if the event
+    // somehow isn't handled.
+    const insertImage = (relPath: string) => {
+      window.dispatchEvent(
+        new CustomEvent("markup:insert-image", { detail: { src: relPath } }),
+      );
+    };
     const opts = {
       vaultRoot: useAppStore.getState().vaultRoot,
       imageDir: useAppStore.getState().imagePasteDir,
-      insert: insertAtSelection,
+      insertImage,
     };
     const detachPaste = installImagePaste(host, opts);
     const detachSmart = installSmartPaste(host, {
@@ -1526,12 +1570,7 @@ export function App() {
           setReadMode(false);
           return;
         }
-        if (
-          e.key === "Escape" &&
-          !readMode &&
-          !sourceMode &&
-          !isEditableTarget
-        ) {
+        if (e.key === "Escape" && !readMode && !sourceMode && !isEditableTarget) {
           e.preventDefault();
           setReadMode(true);
           return;
@@ -3224,7 +3263,7 @@ export function App() {
         />
       )}
       <ToastHost />
-      <UpdateBanner />
+      {!IS_MAS_BUILD && <UpdateBanner />}
     </div>
   );
 }

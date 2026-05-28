@@ -18,7 +18,8 @@ const TABS: { key: RailTab; label: string; title: string }[] = [
 function loadInitial(): RailTab {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "outline" || v === "backlinks" || v === "tags" || v === "bookmarks") return v;
+    if (v === "outline" || v === "backlinks" || v === "tags" || v === "bookmarks")
+      return v;
   } catch {
     /* ignore */
   }

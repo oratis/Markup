@@ -3,8 +3,8 @@ import { writeImage } from "./tauri";
 interface InsertOpts {
   vaultRoot: string | null;
   imageDir?: string;
-  /** Insert markdown text at cursor / drop point. Receives the relative path. */
-  insert: (markdown: string) => void;
+  /** Insert a vault-relative image at the cursor / drop point. */
+  insertImage: (relPath: string) => void;
   /**
    * Optional handler for dropped *markdown* files (.md, .markdown, .mdx, .mkd).
    * If provided and the dropped file is recognised, it's invoked with an
@@ -66,7 +66,7 @@ export function installImageDrop(target: HTMLElement, opts: InsertOpts): () => v
       const buf = new Uint8Array(await file.arrayBuffer());
       try {
         const rel = await writeImage(root, dir, buf, ext);
-        opts.insert(`![](${rel})`);
+        opts.insertImage(rel);
       } catch (err) {
         console.error("writeImage failed", err);
       }

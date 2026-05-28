@@ -18,8 +18,11 @@ import { gfm } from "@milkdown/preset-gfm";
 import { Slice } from "@milkdown/prose/model";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
+import { getMarkdown } from "@milkdown/utils";
 import { useEffect, useRef } from "react";
+import { compositionTracker, isComposing } from "../lib/milkdown/composition";
 import { embedDecorate } from "../lib/milkdown/embed-deco";
+import { imageView } from "../lib/milkdown/image-view";
 import { tagDecorate } from "../lib/milkdown/tag-deco";
 import { wikilinkDecorate } from "../lib/milkdown/wikilink-deco";
 import { log as perfLog } from "../lib/perf";
@@ -75,7 +78,13 @@ function WysiwygEditor({
           editable: () => !readModeRef.current,
         }));
         ctx.get(listenerCtx).markdownUpdated((_, markdown, prevMarkdown) => {
-          if (markdown !== prevMarkdown) onChangeRef.current(markdown);
+          // Suppress store updates mid-IME-composition: each store write
+          // triggers a React re-render that reflows the editor line and
+          // visually breaks the composing text (中文输入折行). The final
+          // value is flushed once on compositionend (see effect below).
+          if (markdown !== prevMarkdown && !isComposing()) {
+            onChangeRef.current(markdown);
+          }
         });
       })
       .use(commonmark)
@@ -87,10 +96,63 @@ function WysiwygEditor({
       .use(indent)
       .use(math)
       .use(diagram)
+      .use(compositionTracker)
       .use(wikilinkDecorate)
       .use(tagDecorate)
-      .use(embedDecorate),
+      .use(embedDecorate)
+      .use(imageView),
   );
+
+  // Insert a real image node when the paste handler (App.tsx) writes a
+  // pasted image into the vault. Routed via a window event because the
+  // paste handler lives outside this component and has no editor handle.
+  //
+  // We build the transaction by hand instead of using Milkdown's
+  // insertImageCommand because that command appends `.scrollIntoView()`,
+  // which yanks the viewport (the cursor appeared to "jump to centre"
+  // after a paste). A plain replaceSelectionWith keeps the view put.
+  useEffect(() => {
+    const onInsertImage = (e: Event) => {
+      const ce = e as CustomEvent<{ src: string; alt?: string }>;
+      const editor = get();
+      if (!editor || !ce.detail?.src) return;
+      editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        const imageType = view.state.schema.nodes.image;
+        if (!imageType) return;
+        const node = imageType.create({
+          src: ce.detail.src,
+          alt: ce.detail.alt ?? "",
+          title: "",
+        });
+        view.dispatch(view.state.tr.replaceSelectionWith(node));
+      });
+    };
+    window.addEventListener("markup:insert-image", onInsertImage);
+    return () => window.removeEventListener("markup:insert-image", onInsertImage);
+  }, [get]);
+
+  // Flush the final markdown to the store when an IME composition ends.
+  // We suppress markdownUpdated→onChange during composition (above) to
+  // avoid mid-composition reflow, so the store would otherwise miss the
+  // composed text. Deferred a tick so ProseMirror has committed the
+  // compositionend before we serialize.
+  useEffect(() => {
+    const editor = get();
+    if (!editor) return;
+    const dom = editor.action((ctx) => ctx.get(editorViewCtx).dom as HTMLElement);
+    if (!dom) return;
+    const onCompositionEnd = () => {
+      setTimeout(() => {
+        const ed = get();
+        if (!ed) return;
+        const md = ed.action(getMarkdown());
+        if (typeof md === "string") onChangeRef.current(md);
+      }, 0);
+    };
+    dom.addEventListener("compositionend", onCompositionEnd);
+    return () => dom.removeEventListener("compositionend", onCompositionEnd);
+  }, [get]);
 
   // Load content into the editor ONLY when the file changes (tab
   // switch). Within the same file the editor is the source of truth —

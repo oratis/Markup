@@ -14,7 +14,7 @@ pub mod watcher;
 
 use commands::{
     log_perf, open_file, read_file, rename_file, render_html, trash_file, write_file,
-    write_image,
+    write_image, write_preview_html,
 };
 use commands_locale::set_locale;
 use commands_window::new_window;
@@ -22,8 +22,38 @@ use commands_vault::{
     close_vault, current_vault, list_vault_files, open_vault, pick_vault, search_vault,
 };
 use recent::{clear_recent_files, list_recent_files, push_recent_file};
-use tauri::Emitter;
+use std::sync::Mutex;
+use tauri::{Emitter, Manager, RunEvent, State};
 use vault::VaultState;
+
+/// Files macOS asked us to open (Finder double-click / "Open With" /
+/// `open file.md`) before the webview's listener was ready. The frontend
+/// drains this once on startup; live opens come through the "open-files"
+/// event instead.
+#[derive(Default)]
+struct PendingOpenFiles(Mutex<Vec<String>>);
+
+#[tauri::command]
+fn take_pending_files(state: State<PendingOpenFiles>) -> Vec<String> {
+    let mut v = state.0.lock().unwrap_or_else(|e| e.into_inner());
+    std::mem::take(&mut *v)
+}
+
+/// Convert the `file://` URLs from a macOS open-document event into
+/// filesystem paths, keeping only Markdown files we recognise.
+fn open_urls_to_paths(urls: &[tauri::Url]) -> Vec<String> {
+    urls.iter()
+        .filter_map(|u| u.to_file_path().ok())
+        .map(|p| p.to_string_lossy().into_owned())
+        .filter(|p| {
+            let lower = p.to_ascii_lowercase();
+            lower.ends_with(".md")
+                || lower.ends_with(".markdown")
+                || lower.ends_with(".mdx")
+                || lower.ends_with(".mkd")
+        })
+        .collect()
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -38,8 +68,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        // Persists the user-selected vault folder as a security-scoped
+        // bookmark so access survives relaunch under the App Sandbox
+        // (MAS). Harmless in the non-sandboxed direct build. Must be
+        // registered AFTER fs so it can wrap the fs scope.
+        .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(VaultState::new())
+        .manage(PendingOpenFiles::default())
         .setup(|app| {
             let menu = menu::build(app.handle())?;
             app.set_menu(menu)?;
@@ -60,6 +96,7 @@ pub fn run() {
             trash_file,
             write_image,
             render_html,
+            write_preview_html,
             log_perf,
             set_locale,
             new_window,
@@ -72,7 +109,26 @@ pub fn run() {
             list_vault_files,
             current_vault,
             search_vault,
+            take_pending_files,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running markup");
+        .build(tauri::generate_context!())
+        .expect("error while building markup")
+        .run(|handle, event| {
+            // macOS delivers Finder double-clicks / "Open With" / `open
+            // file.md` as RunEvent::Opened. We both buffer (for cold
+            // start, before the webview listener exists) and emit (for
+            // when the app is already running).
+            if let RunEvent::Opened { urls } = event {
+                let paths = open_urls_to_paths(&urls);
+                if paths.is_empty() {
+                    return;
+                }
+                if let Some(state) = handle.try_state::<PendingOpenFiles>() {
+                    if let Ok(mut v) = state.0.lock() {
+                        v.extend(paths.iter().cloned());
+                    }
+                }
+                let _ = handle.emit("open-files", paths);
+            }
+        });
 }

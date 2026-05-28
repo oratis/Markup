@@ -213,6 +213,41 @@ pub async fn render_html(
     Ok(html)
 }
 
+/// Write pre-rendered preview HTML to a temp file and return its path.
+///
+/// Done in Rust deliberately: the JS `fs` plugin enforces a path scope
+/// all-list and rejects writes to the temp dir ("forbidden path"), and
+/// under the App Sandbox the temp dir is the container's own
+/// `…/Data/tmp` — writing there from native code is always permitted
+/// and isn't subject to the JS scope. Returns the absolute file path so
+/// the caller can hand it to the opener.
+#[tauri::command]
+pub async fn write_preview_html(html: String, base_name: String) -> AppResult<String> {
+    let dir = std::env::temp_dir().join("markup-preview");
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| AppError::Other(format!("create preview dir: {e}")))?;
+
+    // Sanitize: strip the .md family extension, keep [A-Za-z0-9._-],
+    // collapse the rest to '-', cap length, fall back to "untitled".
+    let stem = base_name
+        .rsplit_once('.')
+        .map(|(s, _)| s)
+        .unwrap_or(&base_name);
+    let mut safe: String = stem
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-' { c } else { '-' })
+        .collect();
+    safe.truncate(80);
+    if safe.is_empty() {
+        safe.push_str("untitled");
+    }
+
+    let path = dir.join(format!("{safe}.html"));
+    std::fs::write(&path, html.as_bytes())
+        .map_err(|e| AppError::Other(format!("write preview: {e}")))?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
 fn theme_css(name: &str) -> &'static str {
     match name {
         "plain" => PLAIN_CSS,
