@@ -113,15 +113,26 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          # --bundles dmg makes Tauri run bundle_dmg.sh, which honours the
-          # bundle.macOS.dmg layout in tauri.conf.json (window size +
-          # Markup.app / Applications icon positions). The earlier
-          # `--bundles app` skipped that, leaving the Assemble step to
-          # hand-roll a flat, symlink-less DMG.
-          pnpm tauri build --target ${{ matrix.target }} --bundles dmg
-          APP="src-tauri/target/${{ matrix.target }}/release/bundle/macos/Markup.app"
-          if [ ! -d "$APP" ]; then
-            echo "::error ::$APP missing — bundle step failed"; exit 1
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          if [ "${HAS_APPLE_SIGNING}" = "true" ]; then
+            # Signed flow needs the standalone Markup.app to codesign
+            # before packaging, so bundle app-only. The Assemble step
+            # builds the DMG (with an /Applications symlink) afterwards.
+            pnpm tauri build --target ${{ matrix.target }} --bundles app
+            if [ ! -d "$BUNDLE_DIR/macos/Markup.app" ]; then
+              echo "::error ::Markup.app missing — app bundle step failed"; exit 1
+            fi
+          else
+            # Unsigned flow: let Tauri build the DMG directly via
+            # bundle_dmg.sh, which honours bundle.macOS.dmg in
+            # tauri.conf.json (window size + Markup.app / Applications
+            # icon positions). NOTE: --bundles dmg deletes the
+            # standalone Markup.app afterwards ("Cleaning Markup.app"),
+            # so we must verify the DMG, not the app.
+            pnpm tauri build --target ${{ matrix.target }} --bundles dmg
+            if ! ls "$BUNDLE_DIR/dmg/"*.dmg >/dev/null 2>&1; then
+              echo "::error ::no DMG produced — dmg bundle step failed"; exit 1
+            fi
           fi
 
       - name: Sign Markup.app (hardened runtime + entitlements)
