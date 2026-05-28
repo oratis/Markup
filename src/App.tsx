@@ -835,10 +835,19 @@ export function App() {
       range.insertNode(document.createTextNode(md));
       sel.collapseToEnd();
     };
+    // For WYSIWYG, route image insertion through Milkdown so it becomes a
+    // real image node (and the image-view nodeView resolves its src to a
+    // loadable asset URL). Falls back to text insertion only if the event
+    // somehow isn't handled.
+    const insertImage = (relPath: string) => {
+      window.dispatchEvent(
+        new CustomEvent("markup:insert-image", { detail: { src: relPath } }),
+      );
+    };
     const opts = {
       vaultRoot: useAppStore.getState().vaultRoot,
       imageDir: useAppStore.getState().imagePasteDir,
-      insert: insertAtSelection,
+      insertImage,
     };
     const detachPaste = installImagePaste(host, opts);
     const detachSmart = installSmartPaste(host, {

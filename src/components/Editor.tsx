@@ -13,13 +13,15 @@ import { history } from "@milkdown/plugin-history";
 import { indent } from "@milkdown/plugin-indent";
 import { listener, listenerCtx } from "@milkdown/plugin-listener";
 import { math } from "@milkdown/plugin-math";
-import { commonmark } from "@milkdown/preset-commonmark";
+import { commonmark, insertImageCommand } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
 import { Slice } from "@milkdown/prose/model";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
+import { callCommand } from "@milkdown/utils";
 import { useEffect, useRef } from "react";
 import { embedDecorate } from "../lib/milkdown/embed-deco";
+import { imageView } from "../lib/milkdown/image-view";
 import { tagDecorate } from "../lib/milkdown/tag-deco";
 import { wikilinkDecorate } from "../lib/milkdown/wikilink-deco";
 import { log as perfLog } from "../lib/perf";
@@ -89,8 +91,29 @@ function WysiwygEditor({
       .use(diagram)
       .use(wikilinkDecorate)
       .use(tagDecorate)
-      .use(embedDecorate),
+      .use(embedDecorate)
+      .use(imageView),
   );
+
+  // Insert a real image node when the paste handler (App.tsx) writes a
+  // pasted image into the vault. Routed via a window event because the
+  // paste handler lives outside this component and has no editor handle.
+  useEffect(() => {
+    const onInsertImage = (e: Event) => {
+      const ce = e as CustomEvent<{ src: string; alt?: string }>;
+      const editor = get();
+      if (!editor || !ce.detail?.src) return;
+      editor.action(
+        callCommand(insertImageCommand.key, {
+          src: ce.detail.src,
+          alt: ce.detail.alt ?? "",
+          title: "",
+        }),
+      );
+    };
+    window.addEventListener("markup:insert-image", onInsertImage);
+    return () => window.removeEventListener("markup:insert-image", onInsertImage);
+  }, [get]);
 
   // Load content into the editor ONLY when the file changes (tab
   // switch). Within the same file the editor is the source of truth —

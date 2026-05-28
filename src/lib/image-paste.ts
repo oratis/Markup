@@ -4,8 +4,9 @@ interface InsertOpts {
   vaultRoot: string | null;
   /** Where to drop the image, relative to vault root. Default "assets". */
   imageDir?: string;
-  /** Insert markdown text at cursor. Receives the relative path. */
-  insert: (markdown: string) => void;
+  /** Insert a vault-relative image at the cursor. The caller decides how
+   * (a real WYSIWYG image node, or markdown text in source mode). */
+  insertImage: (relPath: string) => void;
 }
 
 /**
@@ -46,8 +47,7 @@ export function installImagePaste(target: HTMLElement, opts: InsertOpts): () => 
     try {
       const dir = opts.imageDir?.trim() || "assets";
       const rel = await writeImage(root, dir, buf, ext);
-      const md = `![](${rel})`;
-      opts.insert(md);
+      opts.insertImage(rel);
     } catch (err) {
       console.error("writeImage failed", err);
     }

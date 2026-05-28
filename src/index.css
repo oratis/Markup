@@ -159,6 +159,17 @@ body {
   transform: translateY(-2px);
 }
 
+/* Vault images rendered via the image-view nodeView (src resolved to an
+   asset:// URL). Keep them readable + bounded inside the prose column. */
+.milkdown .editor img.milkdown-img,
+.milkdown .editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+  margin: 0.8em auto;
+}
+
 /* Wikilink — visual treatment for [[xxx]] in WYSIWYG editor */
 .milkdown .wikilink {
   background: rgba(9, 105, 218, 0.1);
