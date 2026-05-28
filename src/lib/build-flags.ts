@@ -9,9 +9,7 @@
  *
  * The direct-download DMG build leaves this unset, keeping the banner.
  */
-// The project doesn't pull in `vite/client` ambient types, so access
-// import.meta.env through a local cast. Vite still statically replaces
-// this at build time.
-const viteEnv = (import.meta as unknown as { env?: Record<string, string | undefined> })
-  .env;
-export const IS_MAS_BUILD = viteEnv?.VITE_MARKUP_MAS === "1";
+// Written as a direct `import.meta.env.X` read (typed via src/vite-env.d.ts)
+// so Vite statically replaces it at build time — letting the MAS build
+// dead-code-eliminate the update banner.
+export const IS_MAS_BUILD = import.meta.env.VITE_MARKUP_MAS === "1";
