@@ -1,3 +1,4 @@
+mod bookmark;
 mod commands;
 mod commands_locale;
 mod commands_vault;
@@ -19,7 +20,8 @@ use commands::{
 use commands_locale::set_locale;
 use commands_window::new_window;
 use commands_vault::{
-    close_vault, current_vault, list_vault_files, open_vault, pick_vault, search_vault,
+    close_vault, current_vault, list_vault_files, open_vault, pick_vault, restore_vault,
+    search_vault,
 };
 use recent::{clear_recent_files, list_recent_files, push_recent_file};
 use std::sync::Mutex;
@@ -109,6 +111,7 @@ pub fn run() {
             list_vault_files,
             current_vault,
             search_vault,
+            restore_vault,
             take_pending_files,
         ])
         .build(tauri::generate_context!())

@@ -83,6 +83,13 @@ export async function closeVault(): Promise<void> {
   await invoke("close_vault");
 }
 
+/** Resolve the last vault for launch-time restore. On sandbox builds this
+ * re-acquires folder access via a security-scoped bookmark. Returns the
+ * path to open, or null if there's nothing to restore. */
+export async function restoreVault(): Promise<string | null> {
+  return await invoke<string | null>("restore_vault");
+}
+
 export async function listVaultFiles(): Promise<VaultFile[]> {
   return await invoke<VaultFile[]>("list_vault_files");
 }

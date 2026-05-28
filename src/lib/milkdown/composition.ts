@@ -23,8 +23,9 @@ export function isComposing(): boolean {
   return composing;
 }
 
-/** Transaction meta key: "recompute your decorations now" — fired once
- * after a composition ends so plugins refresh against the final text. */
+/** Transaction meta key kept for the decoration plugins' API. We no
+ * longer dispatch it (see below); decorations refresh on the next real
+ * edit after a composition. */
 export const RECOMPUTE_META = "markup/recompute-decos";
 
 const COMPOSITION_KEY = new PluginKey("markup/composition");
@@ -39,12 +40,14 @@ export const compositionTracker = $prose(
             composing = true;
             return false; // observe only — let ProseMirror handle it
           },
-          compositionend: (view) => {
+          compositionend: () => {
+            // Observe only. Do NOT dispatch a transaction here:
+            // mutating editor state during ProseMirror's own
+            // compositionend handling makes it re-read the DOM and
+            // double-count the composed text — inserting a spurious
+            // newline on every CJK keystroke. Decorations recompute on
+            // the next real edit (isComposing() is false by then).
             composing = false;
-            // Composition committed; nudge decoration plugins to refresh
-            // against the now-final document. docChanged is false here, so
-            // they key off RECOMPUTE_META instead.
-            view.dispatch(view.state.tr.setMeta(RECOMPUTE_META, true));
             return false;
           },
         },

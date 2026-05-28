@@ -127,6 +127,7 @@ import {
   readFile,
   renameFile,
   renderHtml,
+  restoreVault,
   takePendingFiles,
   writeFile,
 } from "./lib/tauri";
@@ -1318,6 +1319,23 @@ export function App() {
     },
     [setVault, tr],
   );
+
+  // Restore the last vault on launch. On sandbox (MAS) builds the Rust
+  // side re-acquires folder access via a security-scoped bookmark first;
+  // on the direct build it just hands back the stored path. Opening goes
+  // through the normal path (openRecentVault), and VaultState serializes
+  // opens so this can't race a user-triggered open.
+  useEffect(() => {
+    let cancelled = false;
+    restoreVault()
+      .then((path) => {
+        if (!cancelled && path) openRecentVault(path);
+      })
+      .catch((e) => console.warn("restore vault failed:", e));
+    return () => {
+      cancelled = true;
+    };
+  }, [openRecentVault]);
 
   const refreshVault = useCallback(async () => {
     try {
