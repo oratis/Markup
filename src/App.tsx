@@ -337,30 +337,10 @@ export function App() {
         }
       });
     }
-    // Reopen the last vault so the file tree is restored on launch
-    // (matches VS Code / Obsidian "reopen last workspace"). Previously
-    // only tabs were restored; the tree always started empty.
-    // NOTE under the App Sandbox this std::fs-backed open_vault will be
-    // denied unless a security-scoped bookmark for `root` is active —
-    // see docs/app-store/MAS-publishing-plan.md §1.
-    try {
-      const recentV = localStorage.getItem(RECENT_VAULTS_KEY);
-      const arr = recentV ? JSON.parse(recentV) : [];
-      const lastVault =
-        Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "string"
-          ? (arr[0] as string)
-          : null;
-      if (lastVault) {
-        openVault(lastVault)
-          .then(async (opened) => {
-            const files = await listVaultFiles();
-            setVault(opened.root, files.map(toVaultFileTs));
-          })
-          .catch((e) => console.warn("auto-reopen vault failed:", e));
-      }
-    } catch {
-      /* ignore */
-    }
+    // NOTE: auto-reopen of the last vault on launch was reverted — it
+    // regressed manual "Open Vault". Vault persistence across launches
+    // (esp. under the App Sandbox) needs Rust-side security-scoped
+    // bookmarks; tracked separately. See docs/app-store/MAS-publishing-plan.md §1.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
