@@ -107,32 +107,20 @@ jobs:
           echo "MARKUP_KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
-      - name: Build (Tauri bundle, ${{ matrix.target }})
+      - name: Build (Tauri app bundle, ${{ matrix.target }})
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
-          if [ "${HAS_APPLE_SIGNING}" = "true" ]; then
-            # Signed flow needs the standalone Markup.app to codesign
-            # before packaging, so bundle app-only. The Assemble step
-            # builds the DMG (with an /Applications symlink) afterwards.
-            pnpm tauri build --target ${{ matrix.target }} --bundles app
-            if [ ! -d "$BUNDLE_DIR/macos/Markup.app" ]; then
-              echo "::error ::Markup.app missing — app bundle step failed"; exit 1
-            fi
-          else
-            # Unsigned flow: let Tauri build the DMG directly via
-            # bundle_dmg.sh, which honours bundle.macOS.dmg in
-            # tauri.conf.json (window size + Markup.app / Applications
-            # icon positions). NOTE: --bundles dmg deletes the
-            # standalone Markup.app afterwards ("Cleaning Markup.app"),
-            # so we must verify the DMG, not the app.
-            pnpm tauri build --target ${{ matrix.target }} --bundles dmg
-            if ! ls "$BUNDLE_DIR/dmg/"*.dmg >/dev/null 2>&1; then
-              echo "::error ::no DMG produced — dmg bundle step failed"; exit 1
-            fi
+          # App-only: we assemble the DMG ourselves with dmgbuild, which
+          # writes the icon layout headlessly. (Tauri's --bundles dmg uses
+          # a Finder AppleScript that no-ops on CI — icons land top-left —
+          # and it deletes the standalone .app we need to sign/package.)
+          pnpm tauri build --target ${{ matrix.target }} --bundles app
+          if [ ! -d "$BUNDLE_DIR/macos/Markup.app" ]; then
+            echo "::error ::Markup.app missing — app bundle step failed"; exit 1
           fi
 
       - name: Sign Markup.app (hardened runtime + entitlements)
@@ -149,36 +137,21 @@ jobs:
             "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
 
-      - name: Assemble DMG
+      - name: Assemble DMG (dmgbuild — large centered icons, headless layout)
         run: |
           set -euo pipefail
+          python3 -m pip install --quiet --user --break-system-packages dmgbuild \
+            || python3 -m pip install --quiet --user dmgbuild
           BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
-          mkdir -p "$BUNDLE_DIR/dmg"
+          APP="$BUNDLE_DIR/macos/Markup.app"
           DEST="$BUNDLE_DIR/dmg/Markup_${GITHUB_REF_NAME#v}_${{ matrix.suffix }}.dmg"
-
-          if [ "${HAS_APPLE_SIGNING}" = "true" ]; then
-            # Signed flow: the .app was codesigned *after* Tauri built its
-            # DMG, so that DMG holds the unsigned app — rebuild from the
-            # signed app. Stage app + an /Applications symlink so users
-            # still get a drag target. (Full icon layout would need a
-            # Finder AppleScript pass, skipped on headless runners.)
-            STAGING="$(mktemp -d)/Markup"
-            mkdir -p "$STAGING"
-            cp -R "$BUNDLE_DIR/macos/Markup.app" "$STAGING/"
-            ln -s /Applications "$STAGING/Applications"
-            rm -f "$DEST"
-            hdiutil create -volname Markup \
-              -srcfolder "$STAGING" \
-              -ov -format UDZO -fs HFS+ \
-              "$DEST"
-          else
-            # Unsigned flow: Tauri already produced a fully laid-out DMG
-            # (Applications symlink + icon positions from tauri.conf.json).
-            # Just rename it to our friendly Intel / Apple Silicon name.
-            SRC="$(ls "$BUNDLE_DIR/dmg/"*.dmg | grep -v "/Markup_${GITHUB_REF_NAME#v}_${{ matrix.suffix }}.dmg$" | head -1 || true)"
-            [ -z "$SRC" ] && SRC="$(ls "$BUNDLE_DIR/dmg/"*.dmg | head -1)"
-            if [ "$SRC" != "$DEST" ]; then mv "$SRC" "$DEST"; fi
-          fi
+          mkdir -p "$(dirname "$DEST")"
+          rm -f "$DEST"
+          # dmgbuild writes the .DS_Store layout directly (no Finder), so
+          # the 128px centered icon layout from scripts/dmg-settings.py is
+          # reproducible on the headless runner. Works for both the signed
+          # (.app already codesigned above) and unsigned flows.
+          DMG_APP="$APP" python3 -m dmgbuild -s scripts/dmg-settings.py "Markup" "$DEST"
           ls -lh "$DEST"
 
       - name: Notarize DMG with Apple notary

@@ -35,32 +35,24 @@ export const compositionTracker = $prose(
     new Plugin({
       key: COMPOSITION_KEY,
       props: {
-        // Swallow keystrokes that belong to an active IME composition.
-        // The big one: the Enter (or Space) that *confirms* a CJK
-        // candidate also reaches the editor's keymap as "split block",
-        // inserting a stray newline. `isComposing` is the modern signal;
-        // keyCode 229 is the legacy "input being processed by IME"
-        // sentinel. Returning true stops ProseMirror's command dispatch;
-        // the IME still confirms at the OS input-method level.
-        handleKeyDown: (_view, event) => {
-          if (event.isComposing || event.keyCode === 229) {
-            return true;
-          }
-          return false;
-        },
         handleDOMEvents: {
           compositionstart: () => {
             composing = true;
+            // Tag a global class so CSS can neutralise WebKit's phantom
+            // trailing line-box that renders as a blank line below the
+            // composing text. Mutating a class outside ProseMirror's DOM
+            // tree is safe (it isn't a content mutation).
+            document.documentElement.classList.add("mk-composing");
             return false; // observe only — let ProseMirror handle it
           },
           compositionend: () => {
-            // Observe only. Do NOT dispatch a transaction here:
-            // mutating editor state during ProseMirror's own
-            // compositionend handling makes it re-read the DOM and
-            // double-count the composed text — inserting a spurious
-            // newline on every CJK keystroke. Decorations recompute on
-            // the next real edit (isComposing() is false by then).
+            // Observe only. Do NOT dispatch a transaction here: mutating
+            // editor state during ProseMirror's own compositionend
+            // handling makes it re-read the DOM and double-count the
+            // composed text. Decorations recompute on the next real edit
+            // (isComposing() is false by then).
             composing = false;
+            document.documentElement.classList.remove("mk-composing");
             return false;
           },
         },
