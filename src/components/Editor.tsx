@@ -13,12 +13,11 @@ import { history } from "@milkdown/plugin-history";
 import { indent } from "@milkdown/plugin-indent";
 import { listener, listenerCtx } from "@milkdown/plugin-listener";
 import { math } from "@milkdown/plugin-math";
-import { commonmark, insertImageCommand } from "@milkdown/preset-commonmark";
+import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
 import { Slice } from "@milkdown/prose/model";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
-import { callCommand } from "@milkdown/utils";
 import { useEffect, useRef } from "react";
 import { embedDecorate } from "../lib/milkdown/embed-deco";
 import { imageView } from "../lib/milkdown/image-view";
@@ -98,18 +97,27 @@ function WysiwygEditor({
   // Insert a real image node when the paste handler (App.tsx) writes a
   // pasted image into the vault. Routed via a window event because the
   // paste handler lives outside this component and has no editor handle.
+  //
+  // We build the transaction by hand instead of using Milkdown's
+  // insertImageCommand because that command appends `.scrollIntoView()`,
+  // which yanks the viewport (the cursor appeared to "jump to centre"
+  // after a paste). A plain replaceSelectionWith keeps the view put.
   useEffect(() => {
     const onInsertImage = (e: Event) => {
       const ce = e as CustomEvent<{ src: string; alt?: string }>;
       const editor = get();
       if (!editor || !ce.detail?.src) return;
-      editor.action(
-        callCommand(insertImageCommand.key, {
+      editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        const imageType = view.state.schema.nodes.image;
+        if (!imageType) return;
+        const node = imageType.create({
           src: ce.detail.src,
           alt: ce.detail.alt ?? "",
           title: "",
-        }),
-      );
+        });
+        view.dispatch(view.state.tr.replaceSelectionWith(node));
+      });
     };
     window.addEventListener("markup:insert-image", onInsertImage);
     return () => window.removeEventListener("markup:insert-image", onInsertImage);
