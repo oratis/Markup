@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Mac App Store entitlements. SEPARATE from Entitlements.plist (which is
+  the hardened-runtime set for the direct/notarized DMG). MAS apps run
+  under App Sandbox instead of the hardened-runtime exceptions.
+
+  - app-sandbox: mandatory for MAS.
+  - files.user-selected.read-write: lets the user grant a vault folder
+    via the system open panel.
+  - files.bookmarks.app-scope: lets us persist that grant across launches
+    via security-scoped bookmarks (tauri-plugin-persisted-scope).
+  - network.client: WKWebView + the (DMG-only) update check; harmless here.
+
+  Deliberately NOT present (forbidden / unneeded under sandbox):
+    com.apple.security.cs.disable-library-validation
+    com.apple.security.cs.allow-unsigned-executable-memory
+    com.apple.security.cs.allow-dyld-environment-variables
+  If the WKWebView refuses to start under strict validation, the ONLY
+  hardened-runtime key that is also MAS-legal is allow-jit — add it back
+  alone and re-test.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    <key>com.apple.security.files.bookmarks.app-scope</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>

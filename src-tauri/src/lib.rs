@@ -38,6 +38,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        // Persists the user-selected vault folder as a security-scoped
+        // bookmark so access survives relaunch under the App Sandbox
+        // (MAS). Harmless in the non-sandboxed direct build. Must be
+        // registered AFTER fs so it can wrap the fs scope.
+        .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(VaultState::new())
         .setup(|app| {
