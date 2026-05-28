@@ -113,7 +113,12 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          pnpm tauri build --target ${{ matrix.target }} --bundles app
+          # --bundles dmg makes Tauri run bundle_dmg.sh, which honours the
+          # bundle.macOS.dmg layout in tauri.conf.json (window size +
+          # Markup.app / Applications icon positions). The earlier
+          # `--bundles app` skipped that, leaving the Assemble step to
+          # hand-roll a flat, symlink-less DMG.
+          pnpm tauri build --target ${{ matrix.target }} --bundles dmg
           APP="src-tauri/target/${{ matrix.target }}/release/bundle/macos/Markup.app"
           if [ ! -d "$APP" ]; then
             echo "::error ::$APP missing — bundle step failed"; exit 1
@@ -138,12 +143,32 @@ jobs:
           set -euo pipefail
           BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
           mkdir -p "$BUNDLE_DIR/dmg"
-          DMG="$BUNDLE_DIR/dmg/Markup_${GITHUB_REF_NAME#v}_${{ matrix.suffix }}.dmg"
-          hdiutil create -volname Markup \
-            -srcfolder "$BUNDLE_DIR/macos/Markup.app" \
-            -ov -format UDZO -fs HFS+ \
-            "$DMG"
-          ls -lh "$DMG"
+          DEST="$BUNDLE_DIR/dmg/Markup_${GITHUB_REF_NAME#v}_${{ matrix.suffix }}.dmg"
+
+          if [ "${HAS_APPLE_SIGNING}" = "true" ]; then
+            # Signed flow: the .app was codesigned *after* Tauri built its
+            # DMG, so that DMG holds the unsigned app — rebuild from the
+            # signed app. Stage app + an /Applications symlink so users
+            # still get a drag target. (Full icon layout would need a
+            # Finder AppleScript pass, skipped on headless runners.)
+            STAGING="$(mktemp -d)/Markup"
+            mkdir -p "$STAGING"
+            cp -R "$BUNDLE_DIR/macos/Markup.app" "$STAGING/"
+            ln -s /Applications "$STAGING/Applications"
+            rm -f "$DEST"
+            hdiutil create -volname Markup \
+              -srcfolder "$STAGING" \
+              -ov -format UDZO -fs HFS+ \
+              "$DEST"
+          else
+            # Unsigned flow: Tauri already produced a fully laid-out DMG
+            # (Applications symlink + icon positions from tauri.conf.json).
+            # Just rename it to our friendly Intel / Apple Silicon name.
+            SRC="$(ls "$BUNDLE_DIR/dmg/"*.dmg | grep -v "/Markup_${GITHUB_REF_NAME#v}_${{ matrix.suffix }}.dmg$" | head -1 || true)"
+            [ -z "$SRC" ] && SRC="$(ls "$BUNDLE_DIR/dmg/"*.dmg | head -1)"
+            if [ "$SRC" != "$DEST" ]; then mv "$SRC" "$DEST"; fi
+          fi
+          ls -lh "$DEST"
 
       - name: Notarize DMG with Apple notary
         if: ${{ env.HAS_APPLE_SIGNING == 'true' }}
