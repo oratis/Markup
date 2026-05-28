@@ -18,8 +18,9 @@ import { gfm } from "@milkdown/preset-gfm";
 import { Slice } from "@milkdown/prose/model";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
+import { getMarkdown } from "@milkdown/utils";
 import { useEffect, useRef } from "react";
-import { compositionTracker } from "../lib/milkdown/composition";
+import { compositionTracker, isComposing } from "../lib/milkdown/composition";
 import { embedDecorate } from "../lib/milkdown/embed-deco";
 import { imageView } from "../lib/milkdown/image-view";
 import { tagDecorate } from "../lib/milkdown/tag-deco";
@@ -77,7 +78,13 @@ function WysiwygEditor({
           editable: () => !readModeRef.current,
         }));
         ctx.get(listenerCtx).markdownUpdated((_, markdown, prevMarkdown) => {
-          if (markdown !== prevMarkdown) onChangeRef.current(markdown);
+          // Suppress store updates mid-IME-composition: each store write
+          // triggers a React re-render that reflows the editor line and
+          // visually breaks the composing text (中文输入折行). The final
+          // value is flushed once on compositionend (see effect below).
+          if (markdown !== prevMarkdown && !isComposing()) {
+            onChangeRef.current(markdown);
+          }
         });
       })
       .use(commonmark)
@@ -123,6 +130,30 @@ function WysiwygEditor({
     };
     window.addEventListener("markup:insert-image", onInsertImage);
     return () => window.removeEventListener("markup:insert-image", onInsertImage);
+  }, [get]);
+
+  // Flush the final markdown to the store when an IME composition ends.
+  // We suppress markdownUpdated→onChange during composition (above) to
+  // avoid mid-composition reflow, so the store would otherwise miss the
+  // composed text. Deferred a tick so ProseMirror has committed the
+  // compositionend before we serialize.
+  useEffect(() => {
+    const editor = get();
+    if (!editor) return;
+    const dom = editor.action(
+      (ctx) => ctx.get(editorViewCtx).dom as HTMLElement,
+    );
+    if (!dom) return;
+    const onCompositionEnd = () => {
+      setTimeout(() => {
+        const ed = get();
+        if (!ed) return;
+        const md = ed.action(getMarkdown());
+        if (typeof md === "string") onChangeRef.current(md);
+      }, 0);
+    };
+    dom.addEventListener("compositionend", onCompositionEnd);
+    return () => dom.removeEventListener("compositionend", onCompositionEnd);
   }, [get]);
 
   // Load content into the editor ONLY when the file changes (tab
