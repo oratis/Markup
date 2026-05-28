@@ -14,7 +14,7 @@ pub mod watcher;
 
 use commands::{
     log_perf, open_file, read_file, rename_file, render_html, trash_file, write_file,
-    write_image,
+    write_image, write_preview_html,
 };
 use commands_locale::set_locale;
 use commands_window::new_window;
@@ -65,6 +65,7 @@ pub fn run() {
             trash_file,
             write_image,
             render_html,
+            write_preview_html,
             log_perf,
             set_locale,
             new_window,

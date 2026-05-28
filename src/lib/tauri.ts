@@ -65,6 +65,15 @@ export async function renderHtml(
   return await invoke<string>("render_html", { content, title, theme });
 }
 
+/** Write rendered preview HTML to a temp file (Rust-side, bypasses the
+ * JS fs scope) and return its absolute path. */
+export async function writePreviewHtml(
+  html: string,
+  baseName: string,
+): Promise<string> {
+  return await invoke<string>("write_preview_html", { html, baseName });
+}
+
 export async function pickVault(): Promise<string | null> {
   return await invoke<string | null>("pick_vault");
 }
