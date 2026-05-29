@@ -16,9 +16,11 @@ Local repo: `/Users/oratis/Documents/Claude/Markup`.
   - `HERO-GIF.md` — 14s storyboard + macOS capture & gifski/ffmpeg encode script.
   - `awesome-list-pr.md` — list-submission entries + commands.
 - **README rewritten**: English-first + 中文 section, differentiation table, corrected install (`apple-silicon`/`intel`, was wrongly `x64.dmg`), star CTA, star-history chart. The hero GIF `<img>` is a **commented placeholder block** — uncomment after recording.
-- **Two external PRs opened** (track / respond to review):
-  - awesome-tauri **#724** (`tauri-apps/awesome-tauri`, base `dev`).
-  - awesome-mac **#2109** (`jaywcjlove/awesome-mac`, base `master`).
+- **Five external awesome-list PRs opened** (track / respond to review — full table in `docs/awesome-list-pr.md`):
+  - awesome-tauri **#724** (`tauri-apps/awesome-tauri`), awesome-mac **#2109** (`jaywcjlove/awesome-mac`).
+  - awesome-markdown **#122** (`BubuAnabelas/awesome-markdown`), open-source-mac-os-apps **#1133** (`serhii-londar`, 49k★, edited `applications.json`), awesome-macOS **#839** (`iCHAIT`, 19k★, merges by endorsement votes).
+- **Social-preview card produced**: `docs/assets/social-card.png` (1280×640) + reproducible generator + `docs/SOCIAL-PREVIEW.md`. **User still needs to upload it** (Settings → Social preview).
+- **One-click MD→HTML export now highlighted** across README (EN+中文), LAUNCH-POSTS (all channels), GTM plan, and the social card (`.md → .html` badge). Feature is real: Rust `render_html` (comrak + inlined theme CSS → self-contained .html) via toolbar "Preview as HTML" + "Export as HTML…".
 - **Repo description + topics** optimized (added `obsidian`/`wysiwyg`/`note-taking`/`open-source`).
 - **v0.6.0 signing pipeline is code-complete**: `release.yml` auto-signs + notarizes + staples when the 6 Apple secrets exist, else falls back to unsigned. Runbook: `docs/app-store/signing-setup.md`. Release notes pre-written: `docs/release-notes-v0.6.0.md`. `CONTRIBUTING.md` added.
 
@@ -29,7 +31,7 @@ Local repo: `/Users/oratis/Documents/Claude/Markup`.
 - Keep version in sync across three files: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (+ `cargo update -p markup --offline`).
 
 ## Blocked on the user (don't try to brute-force)
-- **A — user's machine**: record the Hero GIF + screenshots; upload the GitHub social-preview image (Settings → Social preview). Script/storyboard in `docs/HERO-GIF.md`.
+- **A — user's machine**: record the Hero GIF + screenshots (script/storyboard in `docs/HERO-GIF.md`); **upload the social-preview image** — it's already produced at `docs/assets/social-card.png`, just needs uploading via Settings → Social preview (`docs/SOCIAL-PREVIEW.md`).
 - **B — user's Apple account**: follow `docs/app-store/signing-setup.md` to create the Developer ID cert, set the 6 GitHub secrets, tag `v0.6.0` → CI auto-produces the signed build. This is the hard gate before GTM **Phase B** (Show HN / PH / 少数派 main push).
 
 ## First steps when you pick up
