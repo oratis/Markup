@@ -22,16 +22,21 @@ import { ToastHost, showToast } from "./components/Toast";
 import { Toolbar } from "./components/Toolbar";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { WikilinkPicker } from "./components/WikilinkPicker";
+import { useCanvasStoreCleanup } from "./hooks/useCanvasStoreCleanup";
+import { useIndexStoreSync } from "./hooks/useIndexStoreSync";
+import { useLargeFileGuard } from "./hooks/useLargeFileGuard";
+import { usePinnedTabsSync } from "./hooks/usePinnedTabsSync";
+import { useScrollMemory } from "./hooks/useScrollMemory";
+import { useSessionPersistence } from "./hooks/useSessionPersistence";
+import { useSettingsPersistence } from "./hooks/useSettingsPersistence";
+import { useUiPrefPersistence } from "./hooks/useUiPrefPersistence";
 import { getActiveSourceView } from "./lib/active-source-view";
 import {
   onFileSaved as blockFileSaved,
   rebuildFromFiles as blockRebuild,
-  setVaultPaths as blockSetVaultPaths,
-  setVaultRoot as blockSetVaultRoot,
 } from "./lib/block-index-store";
 import { toggleBookmark } from "./lib/bookmarks";
 import { IS_MAS_BUILD } from "./lib/build-flags";
-import { disposeCanvasStore } from "./lib/canvas-registry";
 import {
   cycleHeadingLevel,
   dedupLines,
@@ -61,8 +66,6 @@ import { wikilinkAtCursor } from "./lib/follow-wikilink";
 import {
   onFileSaved as headingFileSaved,
   rebuildFromFiles as headingRebuild,
-  setVaultPaths as headingSetVaultPaths,
-  setVaultRoot as headingSetVaultRoot,
 } from "./lib/heading-index-store";
 import {
   jumpToSourceLine,
@@ -87,16 +90,12 @@ import {
 import {
   onFileSaved as indexFileSaved,
   rebuildFromFiles as indexRebuild,
-  setVaultPaths as indexSetVaultPaths,
-  setVaultRoot as indexSetVaultRoot,
   indexStats,
   subscribe as subscribeIndex,
 } from "./lib/link-index-store";
 import { buildParagraphLink } from "./lib/paragraph-link";
-import { getPinnedPaths, persistPinnedPath } from "./lib/pinned-paths";
 import { trimTrailingWhitespace } from "./lib/save-prep";
-import { getScroll, setScroll } from "./lib/scroll-memory";
-import { readSession, writeSession } from "./lib/session";
+import { readSession } from "./lib/session";
 import { parseSettings, serializeSettings } from "./lib/settings-io";
 import { shiftAllHeadings } from "./lib/shift-headings";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
@@ -104,12 +103,10 @@ import { matches as matchesShortcut } from "./lib/shortcuts";
 import { firstHeadingText, slugifyForFilename } from "./lib/slugify";
 import { installSmartPaste } from "./lib/smart-paste";
 import { stripMarkdown } from "./lib/strip-md";
-import { nextTheme, resolveTheme, subscribeSystemTheme } from "./lib/system-theme";
+import { nextTheme, resolveTheme } from "./lib/system-theme";
 import {
   onFileSaved as tagFileSaved,
   rebuildFromFiles as tagRebuild,
-  setVaultPaths as tagSetVaultPaths,
-  setVaultRoot as tagSetVaultRoot,
   tagStats,
 } from "./lib/tag-index-store";
 import {
@@ -133,32 +130,20 @@ import {
 } from "./lib/tauri";
 import { applyTemplate, dailyNotePath } from "./lib/template";
 import { buildToc } from "./lib/toc";
+import {
+  FOCUS_KEY,
+  OUTLINE_KEY,
+  RECENT_KEY,
+  RECENT_VAULTS_KEY,
+  SETTINGS_KEY,
+  SIDEBAR_KEY,
+  SOURCE_MODE_KEY,
+  THEME_KEY,
+  TYPEWRITER_KEY,
+} from "./lib/ui-pref-keys";
 import { checkForUpdates } from "./lib/updater";
 import { findVaultFile, wikilinkAtClick } from "./lib/wikilink";
 import { DEFAULT_SETTINGS, type Theme, getActiveTab, useAppStore } from "./store";
-
-const THEME_KEY = "markup.theme";
-const SOURCE_MODE_KEY = "markup.sourceMode";
-const SIDEBAR_KEY = "markup.sidebar";
-const OUTLINE_KEY = "markup.outline";
-const FOCUS_KEY = "markup.focus";
-const TYPEWRITER_KEY = "markup.typewriter";
-const RECENT_KEY = "markup.recentFiles";
-const RECENT_VAULTS_KEY = "markup.recentVaults";
-const SETTINGS_KEY = "markup.settings";
-
-function applyThemeToHtml(theme: Theme) {
-  const root = document.documentElement;
-  const resolved = resolveTheme(theme);
-  root.classList.remove("theme-light", "theme-dark", "theme-sepia");
-  root.classList.add(`theme-${resolved}`);
-  if (resolved === "dark") root.classList.add("dark");
-  else root.classList.remove("dark");
-}
-
-function applyClass(htmlClass: string, on: boolean) {
-  document.documentElement.classList.toggle(htmlClass, on);
-}
 
 export function App() {
   const tr = useT();
@@ -222,37 +207,10 @@ export function App() {
   const editorScrollRef = useRef<HTMLElement | null>(null);
   const saveTimerRef = useRef<number | null>(null);
 
-  // Keep the link-index store in sync with the active vault. Root change
-  // restores the persisted cache (instant), file-list change reconciles
-  // stale targets. The actual full rebuild is opt-in via the palette
-  // command — touching every file at vault-open would freeze large vaults.
-  useEffect(() => {
-    indexSetVaultRoot(vaultRoot);
-    tagSetVaultRoot(vaultRoot);
-    headingSetVaultRoot(vaultRoot);
-    blockSetVaultRoot(vaultRoot);
-  }, [vaultRoot]);
-
-  useEffect(() => {
-    const paths = vaultFiles.map((f) => f.path);
-    indexSetVaultPaths(paths);
-    tagSetVaultPaths(paths);
-    headingSetVaultPaths(paths);
-    blockSetVaultPaths(paths);
-  }, [vaultFiles]);
-
-  // Dispose per-canvas stores when their tabs close. The registry would
-  // otherwise leak one store per opened-then-closed canvas for the
-  // lifetime of the session, and a re-opened tab would silently inherit
-  // the stale in-memory state instead of the fresh disk content.
-  const prevCanvasTabIdsRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const current = new Set(tabs.filter((t) => t.kind === "canvas").map((t) => t.id));
-    for (const id of prevCanvasTabIdsRef.current) {
-      if (!current.has(id)) disposeCanvasStore(id);
-    }
-    prevCanvasTabIdsRef.current = current;
-  }, [tabs]);
+  // Keep the link / tag / heading / block index stores in sync with the
+  // active vault, and dispose per-canvas stores when their tabs close.
+  useIndexStoreSync(vaultRoot, vaultFiles);
+  useCanvasStoreCleanup(tabs);
 
   // Restore prefs on mount
   useEffect(() => {
@@ -383,62 +341,19 @@ export function App() {
     setShowOnboarding(false);
   }
 
-  // Persist + apply theme; if theme is "auto", subscribe to system changes
-  // so flipping macOS Light/Dark Mode updates the editor live.
-  useEffect(() => {
-    applyThemeToHtml(theme);
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      /*ignore*/
-    }
-    return subscribeSystemTheme(theme, () => applyThemeToHtml(theme));
-  }, [theme]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(SOURCE_MODE_KEY, String(sourceMode));
-    } catch {
-      /*ignore*/
-    }
-  }, [sourceMode]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(SIDEBAR_KEY, String(sidebarOpen));
-    } catch {
-      /*ignore*/
-    }
-  }, [sidebarOpen]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(OUTLINE_KEY, String(outlineOpen));
-    } catch {
-      /*ignore*/
-    }
-  }, [outlineOpen]);
-  useEffect(() => {
-    applyClass("focus-mode", focusMode);
-    try {
-      localStorage.setItem(FOCUS_KEY, String(focusMode));
-    } catch {
-      /*ignore*/
-    }
-  }, [focusMode]);
-  useEffect(() => {
-    applyClass("typewriter-mode", typewriterMode);
-    try {
-      localStorage.setItem(TYPEWRITER_KEY, String(typewriterMode));
-    } catch {
-      /*ignore*/
-    }
-  }, [typewriterMode]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(RECENT_KEY, JSON.stringify(recentFiles));
-      localStorage.setItem(RECENT_VAULTS_KEY, JSON.stringify(recentVaults));
-    } catch {
-      /*ignore*/
-    }
-  }, [recentFiles, recentVaults]);
+  // Persist UI prefs (theme + view modes + recent lists) and reflect them
+  // onto the document root. Theme subscribes to system Light/Dark while in
+  // "auto" mode so the editor updates live.
+  useUiPrefPersistence({
+    theme,
+    sourceMode,
+    sidebarOpen,
+    outlineOpen,
+    focusMode,
+    typewriterMode,
+    recentFiles,
+    recentVaults,
+  });
 
   // Settings → CSS variables + persist
   const exportTheme = useAppStore((s) => s.exportTheme);
@@ -454,36 +369,7 @@ export function App() {
   const showToolbar = useAppStore((s) => s.showToolbar);
   const showTabBar = useAppStore((s) => s.showTabBar);
   const vaultSort = useAppStore((s) => s.vaultSort);
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty("--markup-font-size", `${fontSize}px`);
-    root.style.setProperty("--markup-prose-max-width", `${proseMaxWidth}px`);
-    try {
-      localStorage.setItem(
-        SETTINGS_KEY,
-        JSON.stringify({
-          fontSize,
-          proseMaxWidth,
-          autosaveMs,
-          imagePasteDir,
-          exportTheme,
-          spellcheck,
-          lineWrap,
-          sidebarWidth,
-          outlineWidth,
-          saveOnBlur,
-          trimOnSave,
-          showLineNumbers,
-          wordCountGoal,
-          showToolbar,
-          showTabBar,
-          vaultSort,
-        }),
-      );
-    } catch {
-      /*ignore*/
-    }
-  }, [
+  useSettingsPersistence({
     fontSize,
     proseMaxWidth,
     autosaveMs,
@@ -500,7 +386,7 @@ export function App() {
     showToolbar,
     showTabBar,
     vaultSort,
-  ]);
+  });
 
   // Push recent file when active tab changes to a real file. Mirror to
   // the Rust-side store so other windows + next launches see it without
@@ -516,17 +402,10 @@ export function App() {
   // Big-file safety net: > 5 MB → switch to source mode (CodeMirror handles
   // huge documents via virtualisation; Milkdown is fine with big text but
   // its initial parse + render can stall the main thread).
-  useEffect(() => {
-    if (!tab) return;
-    const size = tab.content.length;
-    const LIMIT = 5 * 1024 * 1024;
-    if (size > LIMIT && !sourceMode) {
-      setSourceMode(true);
-      const mb = (size / (1024 * 1024)).toFixed(1);
-      showToast(tr("toast.largeFileSource", `${mb} MB`));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab?.id]);
+  useLargeFileGuard(tab, sourceMode, (mb) => {
+    setSourceMode(true);
+    showToast(tr("toast.largeFileSource", `${mb} MB`));
+  });
 
   // Focus + Typewriter installer
   useEffect(() => {
@@ -537,63 +416,11 @@ export function App() {
     return dispose;
   }, [focusMode, typewriterMode]);
 
-  // Pinned-tab persistence. When a path-backed tab opens whose path is
-  // in the persisted set, mark it pinned. We also subscribe to tabs
-  // changes so toggling a pin (which only mutates the in-memory flag)
-  // gets mirrored back into the persisted set.
-  useEffect(() => {
-    const persisted = getPinnedPaths();
-    if (persisted.size === 0) return;
-    // Apply to current tabs once on mount.
-    useAppStore.setState((s) => ({
-      tabs: s.tabs.map((t) =>
-        !t.pinned && t.path && persisted.has(t.path) ? { ...t, pinned: true } : t,
-      ),
-    }));
-  }, []);
-
-  useEffect(() => {
-    // Mirror current pinned state back to the persisted set whenever
-    // the tabs change. Only path-backed tabs participate.
-    const known = getPinnedPaths();
-    const wantPinned = new Set(
-      tabs.filter((t) => t.pinned && t.path).map((t) => t.path as string),
-    );
-    // Persist diffs only.
-    for (const t of tabs) {
-      if (!t.path) continue;
-      const isPinned = wantPinned.has(t.path);
-      const wasPinned = known.has(t.path);
-      if (isPinned !== wasPinned) persistPinnedPath(t.path, isPinned);
-    }
-  }, [tabs]);
-
-  // Persist the open-tab session — list of path-backed tabs + the
-  // currently active path. Restored on next launch.
-  useEffect(() => {
-    const open = tabs.map((t) => t.path).filter((p): p is string => Boolean(p));
-    const active = tab?.path ?? null;
-    writeSession({ open, active });
-  }, [tabs, tab?.path]);
-
-  // Per-tab WYSIWYG scroll memory: capture on scroll, restore on tab
-  // switch. Source mode owns its own scroll element via SourceEditor.
-  useEffect(() => {
-    const host = editorScrollRef.current;
-    if (!host || !tab || sourceMode) return;
-    // Restore after first paint so layout is established. rAF is fine —
-    // Milkdown mounts synchronously by the time we get here.
-    const id = tab.id;
-    const raf = window.requestAnimationFrame(() => {
-      host.scrollTop = getScroll(id);
-    });
-    const onScroll = () => setScroll(id, host.scrollTop);
-    host.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.cancelAnimationFrame(raf);
-      host.removeEventListener("scroll", onScroll);
-    };
-  }, [tab?.id, sourceMode]);
+  // Pinned-tab persistence (apply persisted pins on mount; mirror pin/unpin
+  // changes back to the persisted set) and per-tab WYSIWYG scroll memory.
+  usePinnedTabsSync(tabs);
+  useSessionPersistence(tabs, tab?.path);
+  useScrollMemory(editorScrollRef, tab?.id, sourceMode);
 
   // Cmd+click on a `[[wikilink]]` in source mode — SourceEditor dispatches
   // a window event with the click position; resolve + open the file.

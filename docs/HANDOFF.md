@@ -16,9 +16,10 @@ Local repo: `/Users/oratis/Documents/Claude/Markup`.
   - `HERO-GIF.md` — 14s storyboard + macOS capture & gifski/ffmpeg encode script.
   - `awesome-list-pr.md` — list-submission entries + commands.
 - **README rewritten**: English-first + 中文 section, differentiation table, corrected install (`apple-silicon`/`intel`, was wrongly `x64.dmg`), star CTA, star-history chart. The hero GIF `<img>` is a **commented placeholder block** — uncomment after recording.
-- **Five external awesome-list PRs opened** (track / respond to review — full table in `docs/awesome-list-pr.md`):
-  - awesome-tauri **#724** (`tauri-apps/awesome-tauri`), awesome-mac **#2109** (`jaywcjlove/awesome-mac`).
-  - awesome-markdown **#122** (`BubuAnabelas/awesome-markdown`), open-source-mac-os-apps **#1133** (`serhii-londar`, 49k★, edited `applications.json`), awesome-macOS **#839** (`iCHAIT`, 19k★, merges by endorsement votes).
+- **Ten external awesome-list PRs opened** (track / respond to review — full table in `docs/awesome-list-pr.md`):
+  - awesome-tauri **#724**, awesome-mac **#2109**, awesome-markdown **#122**, open-source-mac-os-apps **#1133** (49k★, `applications.json`), awesome-macOS **#839** (iCHAIT, vote-gated).
+  - awesome-markdown-editors **#168** (`UPCOMING.md`), awesome-note-taking **#82** (Tauri section), phmullins/awesome-macos **#194**, linsa-io/macos-apps **#49**, awesome-native-macosx-apps **#80**.
+  - **Deferred:** `rust-unofficial/awesome-rust` is a perfect fit but has a hard **>50-star gate** — **resubmit once Markup passes 50★** (see awesome-list-pr.md).
 - **Social-preview card produced**: `docs/assets/social-card.png` (1280×640) + reproducible generator + `docs/SOCIAL-PREVIEW.md`. **User still needs to upload it** (Settings → Social preview).
 - **One-click MD→HTML export now highlighted** across README (EN+中文), LAUNCH-POSTS (all channels), GTM plan, and the social card (`.md → .html` badge). Feature is real: Rust `render_html` (comrak + inlined theme CSS → self-contained .html) via toolbar "Preview as HTML" + "Export as HTML…".
 - **Repo description + topics** optimized (added `obsidian`/`wysiwyg`/`note-taking`/`open-source`).

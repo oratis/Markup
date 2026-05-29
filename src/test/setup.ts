@@ -1,5 +1,49 @@
 import "@testing-library/jest-dom/vitest";
 
+// Some local jsdom + Node combinations (notably Node 26 + jsdom 29) construct
+// the window without a Web Storage implementation, so `localStorage` /
+// `sessionStorage` are undefined and every storage-backed test throws. CI has
+// real storage, so this polyfill is a no-op there — it only installs when the
+// global is actually missing. A minimal, spec-shaped in-memory Storage is
+// enough for our use (getItem / setItem / removeItem / clear / length / key).
+class MemoryStorage implements Storage {
+  #map = new Map<string, string>();
+  get length(): number {
+    return this.#map.size;
+  }
+  clear(): void {
+    this.#map.clear();
+  }
+  getItem(key: string): string | null {
+    return this.#map.has(key) ? (this.#map.get(key) as string) : null;
+  }
+  key(index: number): string | null {
+    return Array.from(this.#map.keys())[index] ?? null;
+  }
+  removeItem(key: string): void {
+    this.#map.delete(key);
+  }
+  setItem(key: string, value: string): void {
+    this.#map.set(key, String(value));
+  }
+}
+if (typeof window !== "undefined") {
+  for (const prop of ["localStorage", "sessionStorage"] as const) {
+    let usable = false;
+    try {
+      usable = typeof window[prop] !== "undefined" && window[prop] !== null;
+    } catch {
+      usable = false;
+    }
+    if (!usable) {
+      Object.defineProperty(window, prop, {
+        configurable: true,
+        value: new MemoryStorage(),
+      });
+    }
+  }
+}
+
 // jsdom logs "Not implemented" for confirm/alert/prompt every call. Override
 // to silent defaults; tests that care use vi.spyOn for explicit values.
 if (typeof window !== "undefined") {
