@@ -20,8 +20,23 @@ export async function exportPdfViaPrint(
   win.document.open();
   win.document.write(html);
   win.document.close();
-  // Wait briefly for content + fonts to lay out before triggering print.
-  await new Promise((r) => setTimeout(r, 250));
+  // Wait for the document's resources to load — this matters when the export
+  // pulls KaTeX / Mermaid from a CDN, which only happens for docs that use
+  // math or diagrams. Cap the wait so a slow/offline CDN can't hang the print.
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    if (win.document.readyState === "complete") finish();
+    else win.addEventListener("load", finish, { once: true });
+    setTimeout(finish, 4000);
+  });
+  // A short extra settle for asynchronous diagram rendering (mermaid renders
+  // to SVG in a microtask after load) and font layout.
+  await new Promise((r) => setTimeout(r, 400));
   win.focus();
   win.print();
 }

@@ -169,48 +169,195 @@ pub async fn write_image(
     Ok(rel.to_string_lossy().into_owned())
 }
 
+/// syntect theme used for code-fence highlighting. "InspiredGitHub" is a
+/// light, near-white theme that sits well on top of all three light export
+/// themes. syntect emits inline styles, so the export stays self-contained.
+const SYNTECT_THEME: &str = "InspiredGitHub";
+
+/// CDN versions for the math / diagram renderers. Pinned so an export made
+/// today keeps rendering the same way. Only injected when the document
+/// actually contains math / mermaid (see `build_head_assets`).
+const KATEX_VERSION: &str = "0.16.11";
+const MERMAID_VERSION: &str = "11";
+
+/// A code-fence highlighter that delegates to syntect for real languages but
+/// routes ```mermaid fences to a `<pre class="mermaid">` block so the injected
+/// mermaid.js can render them client-side (syntect has no mermaid grammar and
+/// would otherwise dump the diagram source as plain text).
+struct MarkupHighlighter {
+    inner: comrak::plugins::syntect::SyntectAdapter,
+}
+
+impl comrak::adapters::SyntaxHighlighterAdapter for MarkupHighlighter {
+    fn write_highlighted(
+        &self,
+        output: &mut dyn Write,
+        lang: Option<&str>,
+        code: &str,
+    ) -> std::io::Result<()> {
+        if lang == Some("mermaid") {
+            // Emit the diagram source verbatim (escaped). mermaid.js reads the
+            // element's textContent and swaps in the rendered SVG.
+            return output.write_all(html_escape(code).as_bytes());
+        }
+        // syntect's default syntax set has no TypeScript grammar; highlight the
+        // TS family (and JSX) as JavaScript so the common case still gets
+        // keywords/strings/comments coloured.
+        let lang = match lang {
+            Some("ts" | "tsx" | "mts" | "cts" | "jsx") => Some("js"),
+            other => other,
+        };
+        self.inner.write_highlighted(output, lang, code)
+    }
+
+    fn write_pre_tag(
+        &self,
+        output: &mut dyn Write,
+        attributes: std::collections::HashMap<String, String>,
+    ) -> std::io::Result<()> {
+        // With `github_pre_lang` the fence language arrives as the `lang`
+        // attribute on the <pre> — the only place we can see it before the
+        // <code>/highlight calls.
+        if attributes.get("lang").map(String::as_str) == Some("mermaid") {
+            return output.write_all(b"<pre class=\"mermaid\">");
+        }
+        self.inner.write_pre_tag(output, attributes)
+    }
+
+    fn write_code_tag(
+        &self,
+        output: &mut dyn Write,
+        attributes: std::collections::HashMap<String, String>,
+    ) -> std::io::Result<()> {
+        // Under `github_pre_lang` the language lives on the <pre>, so the
+        // <code> attributes are empty for every fence — delegating yields a
+        // clean `<code>` for both mermaid and highlighted blocks.
+        self.inner.write_code_tag(output, attributes)
+    }
+}
+
+/// Build the `<head>` `<script>`/`<link>` tags for math and/or diagrams.
+/// Returns an empty string when neither is present, keeping ordinary exports
+/// fully self-contained and offline-renderable.
+fn build_head_assets(needs_math: bool, needs_mermaid: bool) -> String {
+    let mut out = String::new();
+    if needs_math {
+        out.push_str(&format!(
+            r#"<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@{v}/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@{v}/dist/katex.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {{
+  document.querySelectorAll("[data-math-style]").forEach(function (el) {{
+    var display = el.getAttribute("data-math-style") === "display";
+    try {{ katex.render(el.textContent, el, {{ displayMode: display, throwOnError: false }}); }} catch (e) {{}}
+  }});
+}});
+</script>
+"#,
+            v = KATEX_VERSION
+        ));
+    }
+    if needs_mermaid {
+        out.push_str(&format!(
+            r#"<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@{v}/dist/mermaid.esm.min.mjs";
+mermaid.initialize({{ startOnLoad: false }});
+window.addEventListener("DOMContentLoaded", async function () {{
+  var blocks = document.querySelectorAll("pre.mermaid");
+  for (var i = 0; i < blocks.length; i++) {{
+    try {{ var r = await mermaid.render("mmd-" + i, blocks[i].textContent); blocks[i].innerHTML = r.svg; }} catch (e) {{}}
+  }}
+}});
+</script>
+"#,
+            v = MERMAID_VERSION
+        ));
+    }
+    out
+}
+
 /// Render markdown to standalone HTML using one of the named themes.
 /// `theme` accepts "github" (default), "plain", or "tufte".
+///
+/// Code fences are syntax-highlighted with inline styles (self-contained).
+/// `$math$` / `$$math$$` and ```mermaid blocks render via KaTeX / mermaid,
+/// whose assets are injected only when the document uses them.
 #[tauri::command]
 pub async fn render_html(
     content: String,
     title: Option<String>,
     theme: Option<String>,
 ) -> AppResult<String> {
+    Ok(render_markdown_document(
+        &content,
+        title.as_deref(),
+        theme.as_deref(),
+    ))
+}
+
+/// The actual render pipeline, split out from the `#[tauri::command]` wrapper
+/// so unit tests can exercise the real code path (the macro wraps the public
+/// fn behind an Invoke handler that's awkward to fake).
+pub(crate) fn render_markdown_document(
+    content: &str,
+    title: Option<&str>,
+    theme: Option<&str>,
+) -> String {
     let mut opts = comrak::Options::default();
     opts.extension.table = true;
     opts.extension.strikethrough = true;
     opts.extension.tasklist = true;
     opts.extension.autolink = true;
     opts.extension.footnotes = true;
+    // Stable heading ids so exports support in-page anchors / TOCs.
+    opts.extension.header_ids = Some(String::new());
+    // Parse `$inline$` / `$$display$$` math at the AST level — the same rule
+    // the editor uses — so prose like "$5 and $10" is never mistaken for math.
+    opts.extension.math_dollars = true;
     opts.render.unsafe_ = true; // allow inline HTML
+    // Put the fence language on the <pre> so MarkupHighlighter can see it.
+    opts.render.github_pre_lang = true;
 
-    let body = comrak::markdown_to_html(&content, &opts);
-    let title = title.unwrap_or_else(|| "Markup export".to_string());
-    let css = theme_css(theme.as_deref().unwrap_or("github"));
+    let highlighter = MarkupHighlighter {
+        inner: comrak::plugins::syntect::SyntectAdapter::new(Some(SYNTECT_THEME)),
+    };
+    let mut plugins = comrak::Plugins::default();
+    plugins.render.codefence_syntax_highlighter = Some(&highlighter);
 
-    let html = format!(
+    let body = comrak::markdown_to_html_with_plugins(content, &opts, &plugins);
+
+    let needs_math = body.contains("data-math-style");
+    let needs_mermaid = body.contains(r#"class="mermaid""#);
+    let head_assets = build_head_assets(needs_math, needs_mermaid);
+
+    let title = title.unwrap_or("Markup export");
+    let css = theme_css(theme.unwrap_or("github"));
+
+    format!(
         r#"<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
 <style>
-{}
-{}
+{css}
+{print}
+{common}
 </style>
-</head>
+{assets}</head>
 <body>
-{}
+{body}
 </body>
 </html>
 "#,
-        html_escape(&title),
-        css,
-        PRINT_RULES,
-        body
-    );
-    Ok(html)
+        title = html_escape(title),
+        css = css,
+        print = PRINT_RULES,
+        common = COMMON_CSS,
+        assets = head_assets,
+        body = body,
+    )
 }
 
 /// Write pre-rendered preview HTML to a temp file and return its path.
@@ -331,6 +478,38 @@ hr { border: 0; border-top: 1px solid #ccc; margin: 1.5em 0; }
 a { color: inherit; }
 "#;
 
+/// Theme-independent rules applied after the chosen theme. Covers
+/// syntect-highlighted code, inline code, tables, task lists, footnotes, and
+/// resets so mermaid / math blocks don't render inside a code box.
+const COMMON_CSS: &str = r#"
+pre { overflow: auto; border-radius: 6px; }
+/* syntect sets the <pre> background + inline span colours; keep the inner
+   <code> from re-applying our inline-code chrome. */
+pre code { background: none; padding: 0; font-size: 0.88em; line-height: 1.5; }
+:not(pre) > code {
+  background: rgba(127, 127, 127, 0.14);
+  padding: 0.12em 0.34em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+/* Task lists: drop the bullet, align the checkbox. */
+li > input[type="checkbox"] { margin: 0 0.45em 0 -1.2em; }
+table { display: block; overflow-x: auto; max-width: 100%; }
+thead th { background: rgba(127, 127, 127, 0.08); }
+tbody tr:nth-child(even) { background: rgba(127, 127, 127, 0.04); }
+/* Mermaid + math must not look like code blocks. */
+pre.mermaid { background: none; border: none; padding: 0; text-align: center; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+pre[data-math-style] { background: none; padding: 0; overflow: visible; }
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.2em 0; }
+.footnotes {
+  font-size: 0.9em;
+  border-top: 1px solid rgba(127, 127, 127, 0.25);
+  margin-top: 2.5rem;
+  padding-top: 0.5rem;
+}
+"#;
+
 fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -408,28 +587,9 @@ mod ext_tests {
 mod render_tests {
     use super::*;
 
-    /// Recreates the body of `render_html` for unit testing — the
-    /// `#[tauri::command]` macro wraps the public fn behind a handler that
-    /// expects an Invoke context, which is awkward to fake.
-    fn run_render(content: &str, title: Option<&str>, theme: Option<&str>) -> String {
-        let mut opts = comrak::Options::default();
-        opts.extension.table = true;
-        opts.extension.strikethrough = true;
-        opts.extension.tasklist = true;
-        opts.extension.autolink = true;
-        opts.extension.footnotes = true;
-        opts.render.unsafe_ = true;
-        let body = comrak::markdown_to_html(content, &opts);
-        let title = title.unwrap_or("Markup export");
-        let css = theme_css(theme.unwrap_or("github"));
-        format!(
-            "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>{}</title>\n<style>\n{}\n{}\n</style>\n</head>\n<body>\n{}\n</body>\n</html>\n",
-            html_escape(title),
-            css,
-            PRINT_RULES,
-            body
-        )
-    }
+    // Tests exercise the real pipeline (`render_markdown_document`) — the
+    // public `render_html` command just unwraps Strings and awaits it.
+    use super::render_markdown_document as run_render;
 
     #[test]
     fn print_rules_include_page_size_and_break_hints() {
@@ -459,7 +619,7 @@ mod render_tests {
             let html = run_render("# Hi\n\nbody", Some("X"), Some(theme));
             assert!(html.starts_with("<!doctype html>"));
             assert!(html.contains("<title>X</title>"));
-            assert!(html.contains("<h1>"));
+            assert!(html.contains("<h1"));
             assert!(html.contains("body"));
         }
     }
@@ -480,6 +640,75 @@ mod render_tests {
         assert!(html.contains("type=\"checkbox\""));
         let html = run_render("https://example.com", None, None);
         assert!(html.contains("href=\"https://example.com\""));
+    }
+
+    #[test]
+    fn render_adds_heading_ids_for_anchors() {
+        let html = run_render("## Some Section", None, None);
+        // comrak slugifies the heading text into a stable id.
+        assert!(html.contains(r#"id="some-section""#), "html: {html}");
+    }
+
+    #[test]
+    fn render_highlights_code_fences_with_inline_styles() {
+        let html = run_render("```ts\nconst x: number = 1;\n```", None, None);
+        // syntect emits inline-styled spans — self-contained, no external CSS.
+        assert!(html.contains("<span style=\"color:"), "html: {html}");
+        // Keyword/identifier text survives the highlight.
+        assert!(html.contains("const"));
+    }
+
+    #[test]
+    fn render_routes_mermaid_fence_to_a_mermaid_block() {
+        let html = run_render("```mermaid\ngraph LR\n  A --> B\n```", None, None);
+        assert!(html.contains(r#"<pre class="mermaid">"#), "html: {html}");
+        // Diagram source is preserved verbatim (not syntax-highlighted).
+        assert!(html.contains("graph LR"));
+        assert!(!html.contains("<span style=\"color:")); // no syntect coloring
+    }
+
+    #[test]
+    fn render_injects_mermaid_assets_only_when_a_diagram_is_present() {
+        let with = run_render("```mermaid\ngraph LR\nA-->B\n```", None, None);
+        assert!(with.contains("mermaid.esm.min.mjs"));
+        assert!(with.contains("mermaid.initialize"));
+        let without = run_render("just prose", None, None);
+        // The common CSS mentions `.mermaid`; assert the *script* isn't pulled.
+        assert!(!without.contains("mermaid.esm.min.mjs"));
+        assert!(!without.contains("mermaid.initialize"));
+    }
+
+    #[test]
+    fn render_emits_math_nodes_and_injects_katex_when_math_present() {
+        let html = run_render("Inline $a^2 + b^2 = c^2$ done", None, None);
+        // AST-level math node, not a text scan.
+        assert!(html.contains(r#"data-math-style="inline""#), "html: {html}");
+        assert!(html.contains("katex.min.css"));
+        assert!(html.contains("katex.render"));
+    }
+
+    #[test]
+    fn render_handles_display_math_blocks() {
+        let html = run_render("$$\n\\int_0^1 x\\,dx\n$$", None, None);
+        assert!(html.contains(r#"data-math-style="display""#), "html: {html}");
+    }
+
+    #[test]
+    fn render_does_not_treat_currency_as_math() {
+        // The classic false-positive a naive text scan would mangle.
+        let html = run_render("It cost between $5 and $10 total.", None, None);
+        // The common CSS has the selector `pre[data-math-style]`; a real math
+        // node carries `data-math-style="inline|display"` — assert none exist.
+        assert!(!html.contains(r#"data-math-style=""#), "html: {html}");
+        // The common CSS mentions `.katex-display`; assert the renderer
+        // assets themselves aren't injected.
+        assert!(!html.contains("katex.min.js"), "html: {html}");
+    }
+
+    #[test]
+    fn render_stays_self_contained_without_math_or_diagrams() {
+        let html = run_render("# Title\n\nSome **prose** and `code`.", None, None);
+        assert!(!html.contains("cdn.jsdelivr.net"), "html: {html}");
     }
 }
 

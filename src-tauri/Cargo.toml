@@ -1,6 +1,6 @@
 [package]
 name = "markup"
-version = "0.5.2"
+version = "0.5.3"
 description = "High-performance Markdown editor for macOS"
 authors = ["appkon"]
 edition = "2021"
@@ -37,7 +37,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Markdown parser (Rust-side, for indexing snippets and exports)
-comrak = { version = "0.40", default-features = false }
+comrak = { version = "0.40", default-features = false, features = ["syntect"] }
 
 # Security-scoped bookmark persistence (base64-encode the bookmark blob)
 base64 = "0.22"

@@ -1279,7 +1279,7 @@ export function App() {
     if (!tab) return;
     const baseName = (tab.name || "Untitled").replace(/\.[^.]+$/, "");
     try {
-      await exportHtml(tab.content, baseName);
+      await exportHtml(tab.content, baseName, exportTheme);
     } catch (e) {
       console.error("exportHtml failed", e);
     }
@@ -1288,7 +1288,7 @@ export function App() {
     if (!tab) return;
     const title = tab.name || "Untitled";
     try {
-      await exportPdfViaPrint(tab.content, title);
+      await exportPdfViaPrint(tab.content, title, exportTheme);
     } catch (e) {
       console.error("exportPdf failed", e);
     }
