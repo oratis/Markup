@@ -43,3 +43,9 @@ test-fixtures/
 
 # claude-code session state (per-machine, not for sharing)
 .claude/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

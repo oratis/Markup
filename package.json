@@ -14,6 +14,7 @@
     "test": "vitest",
     "test:coverage": "vitest --run --coverage",
     "test:rust": "cd src-tauri && cargo test",
+    "test:e2e": "playwright test",
     "bench:spike03": "cd src-tauri && cargo test --release --test spike_03 -- --nocapture --ignored",
     "lint": "biome check src",
     "lint:fix": "biome check --write src",

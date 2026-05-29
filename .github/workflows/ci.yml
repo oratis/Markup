@@ -52,6 +52,42 @@ jobs:
           flags: frontend
           fail_ci_if_error: false
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The Tauri IPC is stubbed (e2e/tauri-mock.ts), so the React frontend
+      # runs against the plain Vite dev server — Playwright's webServer block
+      # starts it automatically on port 1420.
+      - name: Run Playwright tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   rust:
     name: Rust (build + test)
     runs-on: macos-latest
