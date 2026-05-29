@@ -41,6 +41,7 @@ Supporting hooks (for different audiences):
 - *"Typora's spirit, but free and open-source."*
 - *"Obsidian's look, a fraction of the weight (~88MB RAM, Tauri-native)."*
 - *"Reader-first: your vault, rendered like a document — not a text box."*
+- *"Markdown → HTML in one click — your notes are already a web page, so exporting a clean, self-contained `.html` (or PDF) is free."*
 
 ---
 
@@ -64,7 +65,7 @@ The wedge: **"the open, native, lightweight one that's actually pleasant to *rea
 **Repo assets**
 - [ ] **Hero GIF** at top of README (10–15s: open vault → read → press E to edit → Cmd+P quick open → search). This is the single highest-ROI asset.
 - [ ] 3–4 still **screenshots** (dark + light, the Obsidian-style shell, graph view, a real doc).
-- [ ] **Social preview image** (GitHub → Settings → Social preview, 1280×640) — controls how the repo looks when shared on X/Slack/Discord. Easy, high-impact.
+- [x] **Social preview image** (1280×640) — produced at [`docs/assets/social-card.png`](./assets/social-card.png) (source + regen steps in [SOCIAL-PREVIEW.md](./SOCIAL-PREVIEW.md)). **User action left:** upload via GitHub → Settings → Social preview.
 - [ ] Tighten the **repo description** + topics (`markdown`, `markdown-editor`, `macos`, `tauri`, `rust`, `obsidian`, `wysiwyg`, `note-taking`).
 - [ ] README structure: hero → one-liner → GIF → "Why Markup" (the §3 table) → Features → Install → Build. English-first with a 中文 section (or a separate `README.zh.md` linked at top).
 - [ ] **star-history badge** + a clear **⭐ call-to-action** line ("If Markup is useful, a star helps others find it").

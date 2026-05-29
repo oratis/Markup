@@ -56,3 +56,15 @@ gh pr create --repo jaywcjlove/awesome-mac \
 ## 3. Others (same entry text, lower priority)
 - `awesome-opensource-macos`, `BubuAnabelas/awesome-markdown` (Tools), any "awesome-electron-alternatives" style lists.
 - Always: respect each list's section + alphabetical order; run their lint if they have one; one focused PR per list.
+
+## Status — submitted PRs (track / respond to review)
+
+| List | Stars | Section | PR | Notes |
+|---|---|---|---|---|
+| `tauri-apps/awesome-tauri` | — | Office & Writing | [#724](https://github.com/tauri-apps/awesome-tauri/pull/724) | CI green; awaiting merge |
+| `jaywcjlove/awesome-mac` | — | Markdown Tools | [#2109](https://github.com/jaywcjlove/awesome-mac/pull/2109) | CI green; awaiting merge |
+| `BubuAnabelas/awesome-markdown` | ~0.9k | Tools → Editors | [#122](https://github.com/BubuAnabelas/awesome-markdown/pull/122) | appended at end of Editors (list isn't strictly alphabetical; B→M pair is in order). Lint: remark + Danger (≤1 insertion — satisfied) + awesome_bot link check, all via Travis. |
+| `serhii-londar/open-source-mac-os-apps` | ~49k | Editors → Markdown | [#1133](https://github.com/serhii-londar/open-source-mac-os-apps/pull/1133) | **edited `applications.json` only** (README is generated — do NOT edit it). Languages: rust + typescript. |
+| `iCHAIT/awesome-macOS` | ~19k | Editors | [#839](https://github.com/iCHAIT/awesome-macOS/pull/839) | between MacVim/Nova, OSS+Freeware icons. **Merges via PR-endorsement votes** ("needs endorsement" label) — may sit until upvoted; durable regardless. CI = awesome_bot link check only. |
+
+Next candidates if more Phase-A reach is wanted: `awesome-electron-alternatives` style lists, `awesome-opensource` (Apps), `awesome-productivity`-type lists. Keep the same entry text; one focused PR per list; mirror each list's exact format + lint.

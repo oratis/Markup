@@ -29,6 +29,7 @@ I wanted **Typora's writing feel** without the closed source and price, and **Ob
 - **Reader-first.** Open a folder and your notes render like a clean web page — not a text box. Press `E` to edit (WYSIWYG), `⌘/` for raw source. Reading is the default; editing is on demand.
 - **Native, not Electron.** Built on [Tauri](https://tauri.app/) (Rust + the system WebView). ~88 MB idle RAM — roughly a third of a comparable Electron app.
 - **A real vault.** Wikilinks, backlinks, a graph view, and full-text search powered by [Tantivy](https://github.com/quickwit-oss/tantivy) — a 10,000-file vault indexes in about a second.
+- **Markdown → HTML in one click.** Because the reader *is* the product, exporting is basically free: turn any note into a clean, self-contained HTML page (CSS inlined, zero dependencies) — preview it in your browser or save a shareable `.html`. Print to PDF too.
 - **Free and open source.** MIT. No account, no paywall, no telemetry.
 
 |  | **Markup** | Typora | Obsidian | MacDown / iA |
@@ -61,10 +62,13 @@ I wanted **Typora's writing feel** without the closed source and price, and **Ob
 - Three themes: **Light / Dark / Sepia**; adjustable prose font & line width.
 - Focus / typewriter modes.
 - Paste an image → auto-saved into the vault (`assets/`) and rendered inline.
-- **One-click preview** as a standalone HTML page in your browser.
-- Export to HTML / print to PDF; `Save As…` (`⌘⇧S`).
 - Bilingual UI (English / 中文, auto-detected).
 - Double-click a `.md` file in Finder to open it in Markup.
+
+**Share & export**
+- **Preview as HTML** — one click opens your note rendered as a page in your default browser.
+- **Export to HTML** — a clean, **self-contained** `.html` file (theme CSS inlined, no external dependencies) you can email, host, or publish. Themes: GitHub / plain / Tufte.
+- **Print to PDF** via the system print sheet; `Save As…` (`⌘⇧S`).
 
 **Fast** (measured on a 10k-file vault)
 - Scan 15 ms · index 1.09 s · search 2.4 ms.
@@ -140,6 +144,7 @@ Issues and PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and the is
 - **阅读优先**：打开一个文件夹，笔记像干净的网页一样渲染，而不是一个文本框。按 `E` 进入所见即所得编辑，`⌘/` 看原始 Markdown。默认是阅读，编辑按需触发。
 - **原生而非 Electron**：基于 [Tauri](https://tauri.app/)（Rust + 系统 WebView），空闲内存约 88 MB，约为同类 Electron 应用的三分之一。
 - **完整的 vault**：双向链接、反向链接、关系图谱，以及由 [Tantivy](https://github.com/quickwit-oss/tantivy) 驱动的全文搜索 —— 1 万个文件约 1 秒建好索引。
+- **一键 Markdown → HTML**：因为编辑器本来就是把 MD 当网页渲染，所以「导出」几乎是免费的 —— 一键把任意笔记变成一张干净、自包含（CSS 内联、零依赖）的 HTML 网页，在浏览器里预览或存成可分享的 `.html`，也能打印成 PDF。
 - **免费开源**：MIT 协议，无账号、无付费墙、无遥测。
 
 **安装**：到 [Releases](https://github.com/oratis/Markup/releases/latest) 下载 DMG —— Apple 芯片选 `apple-silicon`，Intel 选 `intel`。当前 DMG **未签名**（签名版为下一个里程碑 v0.6.0），首次打开时在 **系统设置 → 隐私与安全性** 里点 **“仍要打开”**。
