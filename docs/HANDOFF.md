@@ -31,9 +31,11 @@ Local repo: `/Users/oratis/Documents/Claude/Markup`.
 - **Report progress in Chinese** (user preference).
 - Keep version in sync across three files: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (+ `cargo update -p markup --offline`).
 
-## Blocked on the user (don't try to brute-force)
-- **A — user's machine**: record the Hero GIF + screenshots (script/storyboard in `docs/HERO-GIF.md`); **upload the social-preview image** — it's already produced at `docs/assets/social-card.png`, just needs uploading via Settings → Social preview (`docs/SOCIAL-PREVIEW.md`).
-- **B — user's Apple account**: follow `docs/app-store/signing-setup.md` to create the Developer ID cert, set the 6 GitHub secrets, tag `v0.6.0` → CI auto-produces the signed build. This is the hard gate before GTM **Phase B** (Show HN / PH / 少数派 main push).
+## Blocked on the user — **Phase B is now UNBLOCKED**
+The old gates are cleared: **v0.6.0 is signed & notarized** ✓, **hero GIF** ✓ (in README), **social-preview image** ✓ (uploaded). What's left is the user actually launching — see **`docs/TODO.md`** for the live checklist:
+- Publish the launch video (`docs/marketing/Markup-launch.mp4`) to YouTube.
+- Post Phase B (Show HN / PH / 少数派 / V2EX / Reddit) — copy ready in `docs/LAUNCH-POSTS.md`.
+- Bootstrap real stars (also unblocks `awesome-rust` at ≥50★); rotate the ElevenLabs key.
 
 ## First steps when you pick up
 1. `cd /Users/oratis/Documents/Claude/Markup && git status && git log --oneline -8` — confirm it matches this doc.
