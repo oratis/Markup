@@ -9,7 +9,7 @@ Previous builds were unsigned, so the first launch hit macOS's "Markup can't be 
 - The DMG is **notarized by Apple and stapled**, so Gatekeeper clears it offline.
 - **Install is now: open the DMG → drag to Applications → double-click. That's it.**
 
-No feature changes from v0.5.2 — this release is about a trustworthy, frictionless install.
+This release also rolls up everything since v0.5.2 — richer HTML/PDF export (syntax highlighting, math, Mermaid, tidy lists) from v0.5.3–v0.5.5 — but the headline is a trustworthy, frictionless install.
 
 ## 📦 Files
 - `Markup_0.6.0_apple-silicon.dmg` — Apple Silicon Macs (M1 / M2 / M3 / M4)

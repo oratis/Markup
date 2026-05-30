@@ -2465,7 +2465,7 @@ checksum = "373f5eceeeab7925e0c1098212f2fbc4d416adec9d35051a6ab251e824c1854a"
 
 [[package]]
 name = "markup"
-version = "0.5.5"
+version = "0.6.0"
 dependencies = [
  "base64 0.22.1",
  "comrak",

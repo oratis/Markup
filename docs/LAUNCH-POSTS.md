@@ -1,8 +1,7 @@
 # Markup — paste-ready launch posts
 
-> Copy blocks below as-is. Each is written for the **unsigned** pre-1.0 build — disclose status honestly; it builds trust on HN and costs almost nothing.
+> Copy blocks below as-is. The DMG is now **signed & notarized** (v0.6.0) — it opens without a Gatekeeper prompt.
 > Before posting anywhere in Phase B: the **hero GIF** must be at the top of the README and the **social-preview image** set (GitHub → Settings → Social preview). See [GTM-LAUNCH-PLAN.md](./GTM-LAUNCH-PLAN.md) and [HERO-GIF.md](./HERO-GIF.md).
-> When the signed v0.6.0 build is out, delete the "unsigned / Open Anyway" sentence from every post.
 
 ---
 
@@ -36,10 +35,9 @@ Preview it in your browser or save a shareable .html (a single
 self-contained file for ordinary docs; math/diagram docs pull those
 renderers from a CDN). Print to PDF too.
 
-Honest status: macOS-only, pre-1.0, and the DMG is currently unsigned — on
-first launch you'll need System Settings → Privacy & Security → Open Anyway
-(a signed/notarized build is the next release). It was built largely with
-the help of Claude Code.
+Honest status: macOS-only, pre-1.0. The DMG is signed with an Apple
+Developer ID and notarized, so it opens without the Gatekeeper prompt. It
+was built largely with the help of Claude Code.
 
 Feedback very welcome — especially on the read-vs-edit model and anything
 that feels off in the first five minutes.
@@ -81,9 +79,9 @@ exporting is one click and high-fidelity: a themed HTML file that keeps your
 code highlighting, math, and Mermaid diagrams (or print to PDF). It's a
 Tauri app, so it stays light (~88MB idle).
 
-It's free and MIT-licensed. macOS-only and pre-1.0 today; the current DMG is
-unsigned (Open Anyway on first launch) and a signed build is next. Would
-love your feedback on the reading experience.
+It's free and MIT-licensed. macOS-only and pre-1.0 today; the DMG is signed
+& notarized, so it opens cleanly. Would love your feedback on the reading
+experience.
 ```
 
 ---
@@ -114,8 +112,8 @@ Markup：一款原生、开源、轻量的 macOS Markdown 阅读/编辑器
 - KaTeX 公式、Mermaid 图、代码高亮、GFM；三套主题（浅/深/微黄）；
 - 中文输入顺滑；免费、开源（MIT）、无账号无遥测。
 
-目前 macOS 专属、1.0 之前，DMG 暂未签名（首次打开需在「系统设置 → 隐私与安全性」
-里点「仍要打开」，签名版是下一个版本）。GitHub：github.com/oratis/Markup
+目前 macOS 专属、1.0 之前，DMG 已用 Apple Developer ID 签名并公证，拖进
+「应用程序」即可正常打开。GitHub：github.com/oratis/Markup
 欢迎试用和反馈，觉得有用的话点个 star。
 ```
 
@@ -142,8 +140,7 @@ KaTeX、Mermaid、三主题。中文输入这块专门花时间打磨过。
 顺手的一点：一键把 MD 导出成带主题样式的 HTML 网页，代码高亮、公式（KaTeX）、Mermaid 图都
 原样保留（纯文字文档是单文件离线自包含），或者打印成 PDF —— 因为编辑器本来就是把 Markdown 当网页在渲染。
 
-免费开源（MIT）。macOS 专属、1.0 之前，DMG 暂未签名（首次打开需 Open Anyway，
-签名版下个版本）。
+免费开源（MIT）。macOS 专属、1.0 之前，DMG 已签名并公证，开箱即用。
 
 GitHub：https://github.com/oratis/Markup
 求 star 和反馈，尤其是「读 vs 改」这个模式好不好用。
@@ -188,6 +185,6 @@ notes like a web page by default and you press E to edit — reader-first.
 One click exports any note to a high-fidelity HTML page (code highlighting,
 math, Mermaid intact) or PDF.
 Tauri (so ~88MB, not Electron), with a vault, backlinks, graph, and fast
-full-text search. MIT. macOS-only, pre-1.0, DMG currently unsigned.
+full-text search. MIT. macOS-only, pre-1.0, signed & notarized DMG.
 Feedback welcome: github.com/oratis/Markup
 ```
