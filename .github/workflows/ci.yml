@@ -88,6 +88,27 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  ios:
+    name: iOS (MarkupKit tests)
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      # Pin a Swift 6 toolchain so Swift Testing (`import Testing`) is available
+      # regardless of the runner image's default Xcode.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Swift version
+        run: swift --version
+
+      # MarkupKit is pure Foundation logic (no UIKit/iOS SDK), so it builds and
+      # tests on the macOS host — no simulator needed.
+      - name: Test MarkupKit
+        run: swift test --package-path ios/MarkupKit
+
   rust:
     name: Rust (build + test)
     runs-on: macos-latest
