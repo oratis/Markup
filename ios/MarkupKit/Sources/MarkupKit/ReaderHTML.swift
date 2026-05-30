@@ -34,8 +34,14 @@ public enum ReaderHTML {
     }
 
     /// Render a full, self-contained reader document.
+    ///
+    /// - Parameters:
+    ///   - fontScale: prose size multiplier (1.0 = system body).
+    ///   - maxWidth: reading column width in px.
+    ///   - restoreFraction: 0…1 scroll position to restore on load.
     public static func document(
-        markdown: String, title: String, theme: ReaderTheme = .light
+        markdown: String, title: String, theme: ReaderTheme = .light,
+        fontScale: Double = 1.0, maxWidth: Int = 720, restoreFraction: Double = 0
     ) -> String {
         let math = needsMath(markdown)
         let mermaid = needsMermaid(markdown)
@@ -70,7 +76,7 @@ public enum ReaderHTML {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <title>\(htmlEscape(title))</title>
-        <style>\(css(theme))</style>
+        <style>\(css(theme, fontScale: fontScale, maxWidth: maxWidth))</style>
         \(head)
         <script defer>
         document.addEventListener("DOMContentLoaded", function () {
@@ -113,6 +119,33 @@ public enum ReaderHTML {
               window.mermaid.run();
             } catch (e) {}
           }
+
+          // Task-list checkboxes → notify native (which rewrites the file).
+          var boxes = content.querySelectorAll(".task-list-item input[type=checkbox], li input[type=checkbox]");
+          boxes.forEach(function (box, i) {
+            box.addEventListener("click", function (e) {
+              e.preventDefault();
+              try { window.webkit.messageHandlers.task.postMessage(i); } catch (e2) {}
+            });
+          });
+
+          // Restore reading position, then report scroll fraction (debounced).
+          var restore = \(clampFraction(restoreFraction));
+          if (restore > 0) {
+            requestAnimationFrame(function () {
+              var h = document.body.scrollHeight - window.innerHeight;
+              if (h > 0) window.scrollTo(0, h * restore);
+            });
+          }
+          var t = null;
+          window.addEventListener("scroll", function () {
+            if (t) clearTimeout(t);
+            t = setTimeout(function () {
+              var h = document.body.scrollHeight - window.innerHeight;
+              var f = h > 0 ? (window.scrollY / h) : 0;
+              try { window.webkit.messageHandlers.scroll.postMessage(f); } catch (e3) {}
+            }, 150);
+          }, { passive: true });
         });
         </script>
         </head>
@@ -131,6 +164,8 @@ public enum ReaderHTML {
             .replacingOccurrences(of: ">", with: "&gt;")
     }
 
+    static func clampFraction(_ v: Double) -> Double { min(1, max(0, v)) }
+
     /// Encode a Swift string as a safe JavaScript string literal (JSON-quoted),
     /// neutralising `</script>` so embedded markdown can't break out of the tag.
     static func jsString(_ s: String) -> String {
@@ -144,18 +179,20 @@ public enum ReaderHTML {
 
     // MARK: - Themes (minimal app chrome; desktop doc-themes are a follow-up)
 
-    private static func css(_ theme: ReaderTheme) -> String {
+    private static func css(_ theme: ReaderTheme, fontScale: Double, maxWidth: Int) -> String {
         let (bg, fg, muted, codeBg, accent): (String, String, String, String, String)
         switch theme {
         case .light: (bg, fg, muted, codeBg, accent) = ("#ffffff", "#1c1c1e", "#6b6b70", "#f4f4f6", "#0a84ff")
         case .dark:  (bg, fg, muted, codeBg, accent) = ("#1c1c1e", "#e6e6e8", "#9a9aa0", "#2c2c2e", "#0a84ff")
         case .sepia: (bg, fg, muted, codeBg, accent) = ("#f4ecd8", "#3a3228", "#7a6f5a", "#e8dcc0", "#9a6b3f")
         }
+        let pct = Int((min(2.0, max(0.6, fontScale)) * 100).rounded())
+        let width = max(360, maxWidth)
         return """
         :root { color-scheme: light dark; }
-        html { -webkit-text-size-adjust: 100%; }
+        html { -webkit-text-size-adjust: 100%; font-size: \(pct)%; }
         body {
-          margin: 0 auto; padding: 24px 18px 64px; max-width: 720px;
+          margin: 0 auto; padding: 24px 18px 64px; max-width: \(width)px;
           background: \(bg); color: \(fg);
           font: -apple-system-body, system-ui, -apple-system, "SF Pro Text", sans-serif;
           line-height: 1.65; word-wrap: break-word;

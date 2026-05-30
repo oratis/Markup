@@ -87,4 +87,17 @@ final class VaultStore {
     func content(of file: VaultFile) -> String? {
         try? String(contentsOf: URL(fileURLWithPath: file.path), encoding: .utf8)
     }
+
+    /// Write text back to a file (atomic). Returns whether it succeeded.
+    @discardableResult
+    func write(_ content: String, to file: VaultFile) -> Bool {
+        do {
+            try content.write(
+                to: URL(fileURLWithPath: file.path), atomically: true, encoding: .utf8)
+            return true
+        } catch {
+            errorMessage = "Couldn't save \(file.name)."
+            return false
+        }
+    }
 }
