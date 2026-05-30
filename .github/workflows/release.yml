@@ -54,6 +54,9 @@ jobs:
       # downstream. "true" iff all six Apple Developer ID secrets are
       # wired (we gate on APPLE_TEAM_ID since it's set last).
       HAS_APPLE_SIGNING: ${{ secrets.APPLE_TEAM_ID != '' }}
+      # Same trick for the updater signing key — gates the .app.tar.gz +
+      # signature production used by the auto-updater (latest.json).
+      HAS_UPDATER_SIGNING: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     steps:
       - uses: actions/checkout@v5
 
@@ -173,23 +176,49 @@ jobs:
           xcrun stapler staple "$BUNDLE_DIR/macos/Markup.app"
           spctl --assess --type execute --verbose=2 "$BUNDLE_DIR/macos/Markup.app"
 
+      # Auto-updater artifact: a gzipped tar of the *signed + stapled* .app
+      # plus a minisign signature (verified client-side against the pubkey in
+      # tauri.conf.json). Built from the post-notarization app so the update
+      # the user receives is itself signed + notarized. Gated on the updater
+      # key being present — falls through cleanly when it isn't.
+      - name: Build + sign updater artifact (.app.tar.gz)
+        if: ${{ env.HAS_UPDATER_SIGNING == 'true' }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          VERSION="${GITHUB_REF_NAME#v}"
+          TARBALL="$BUNDLE_DIR/macos/Markup_${VERSION}_${{ matrix.suffix }}.app.tar.gz"
+          tar -C "$BUNDLE_DIR/macos" -czf "$TARBALL" "Markup.app"
+          # tauri signer reads the key + password from the env vars above;
+          # writes "<tarball>.sig" next to it.
+          pnpm tauri signer sign "$TARBALL"
+          ls -lh "$TARBALL" "$TARBALL.sig"
+
       - name: Clean up signing keychain
         if: always() && env.MARKUP_KEYCHAIN_PATH != ''
         run: |
           security delete-keychain "$MARKUP_KEYCHAIN_PATH" || true
           rm -f "$MARKUP_KEYCHAIN_PATH" || true
 
-      - name: Stage DMG for release job
+      - name: Stage artifacts for release job
         run: |
           set -euo pipefail
           mkdir -p staged
-          cp "src-tauri/target/${{ matrix.target }}/release/bundle/dmg/"*.dmg staged/
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          cp "$BUNDLE_DIR/dmg/"*.dmg staged/
+          # Updater tarball + signature, when produced.
+          cp "$BUNDLE_DIR/macos/"*.app.tar.gz staged/ 2>/dev/null || true
+          cp "$BUNDLE_DIR/macos/"*.app.tar.gz.sig staged/ 2>/dev/null || true
+          ls -lh staged/
 
-      - name: Upload DMG artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dmg-${{ matrix.suffix }}
-          path: staged/*.dmg
+          path: staged/*
           retention-days: 7
           if-no-files-found: error
 
@@ -207,13 +236,39 @@ jobs:
           path: dmg-staging
           merge-multiple: true
 
-      - name: Compute SHA256SUMS over all DMGs
+      - name: Compute SHA256SUMS
         run: |
           set -euo pipefail
           cd dmg-staging
+          shopt -s nullglob
           ls -lh
-          shasum -a 256 *.dmg > SHA256SUMS
+          shasum -a 256 *.dmg *.app.tar.gz > SHA256SUMS
           cat SHA256SUMS
+
+      # Build the updater manifest the app polls (tauri.conf.json →
+      # plugins.updater.endpoints). No-op for unsigned builds with no
+      # tarballs, so the release still publishes its DMGs.
+      - name: Generate updater latest.json
+        run: |
+          set -euo pipefail
+          cd dmg-staging
+          shopt -s nullglob
+          tarballs=( *.app.tar.gz )
+          if [ ${#tarballs[@]} -eq 0 ]; then
+            echo "No updater tarballs (unsigned build) — skipping latest.json."
+            exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          BASE="https://github.com/oratis/Markup/releases/download/${GITHUB_REF_NAME}"
+          ARM_SIG="$(cat "Markup_${VERSION}_apple-silicon.app.tar.gz.sig")"
+          X64_SIG="$(cat "Markup_${VERSION}_intel.app.tar.gz.sig")"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf '{\n  "version": "%s",\n  "notes": "See %s/releases/tag/%s",\n  "pub_date": "%s",\n  "platforms": {\n    "darwin-aarch64": { "signature": "%s", "url": "%s/Markup_%s_apple-silicon.app.tar.gz" },\n    "darwin-x86_64": { "signature": "%s", "url": "%s/Markup_%s_intel.app.tar.gz" }\n  }\n}\n' \
+            "$VERSION" "https://github.com/oratis/Markup" "$GITHUB_REF_NAME" "$PUB_DATE" \
+            "$ARM_SIG" "$BASE" "$VERSION" \
+            "$X64_SIG" "$BASE" "$VERSION" > latest.json
+          echo "--- latest.json ---"; cat latest.json
+          python3 -c "import json;json.load(open('latest.json'))" && echo "latest.json is valid JSON"
 
       - name: Create / update GitHub Release
         uses: softprops/action-gh-release@v2
@@ -224,4 +279,6 @@ jobs:
           fail_on_unmatched_files: false
           files: |
             dmg-staging/*.dmg
+            dmg-staging/*.app.tar.gz
+            dmg-staging/latest.json
             dmg-staging/SHA256SUMS
