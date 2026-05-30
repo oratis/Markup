@@ -1,14 +1,20 @@
 import SwiftUI
 import MarkupKit
 
-/// Renders one note as a page, with theme + text-size controls, reading-position
-/// memory, tap-to-toggle task lists, and outline/backlinks. Reading is default.
+/// One note: reads as a rendered page, or edits as native Markdown source.
+/// Reading is the default; tap the pencil to edit. Edits autosave (debounced,
+/// atomic) with a mtime conflict guard.
 struct ReaderView: View {
     let file: VaultFile
     private let vault: VaultStore
     private let onOpen: (VaultFile) -> Void
 
     @State private var content: String
+    @State private var loadedMtimeMs: Double
+    @State private var isEditing = false
+    @State private var showConflict = false
+    @State private var saveTask: Task<Void, Never>?
+
     @StateObject private var proxy = WebViewProxy()
     @State private var showOutline = false
     @State private var showBacklinks = false
@@ -24,6 +30,7 @@ struct ReaderView: View {
         self.vault = vault
         self.onOpen = onOpen
         _content = State(initialValue: content)
+        _loadedMtimeMs = State(initialValue: file.mtimeMs)
     }
 
     private var theme: ReaderTheme { ReaderTheme(rawValue: themeRaw) ?? .light }
@@ -37,22 +44,53 @@ struct ReaderView: View {
     }
 
     var body: some View {
-        ReaderWebView(
-            html: html,
-            baseURL: baseURL,
-            proxy: proxy,
-            onScroll: { fraction in positions.save(fraction, for: file.relPath) },
-            onToggleTask: { index in
-                if let updated = MarkdownTasks.toggle(content, at: index),
-                   vault.write(updated, to: file) {
-                    content = updated
-                }
+        Group {
+            if isEditing {
+                SourceEditorView(text: $content)
+                    .onChange(of: content) { _, _ in scheduleSave() }
+            } else {
+                ReaderWebView(
+                    html: html,
+                    baseURL: baseURL,
+                    proxy: proxy,
+                    onScroll: { positions.save($0, for: file.relPath) },
+                    onToggleTask: { index in
+                        if let updated = MarkdownTasks.toggle(content, at: index),
+                           vault.write(updated, to: file) {
+                            content = updated
+                            loadedMtimeMs = vault.modificationDateMs(of: file) ?? loadedMtimeMs
+                        }
+                    }
+                )
             }
-        )
+        }
         .ignoresSafeArea(edges: .bottom)
         .navigationTitle(file.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
+        .toolbar { toolbarContent }
+        .sheet(isPresented: $showOutline) { OutlineView(content: content, proxy: proxy) }
+        .sheet(isPresented: $showBacklinks) { BacklinksView(vault: vault, file: file, onOpen: onOpen) }
+        .onDisappear { saveNow() }
+        .alert("This note changed on disk", isPresented: $showConflict) {
+            Button("Keep mine", role: .destructive) { forceWrite() }
+            Button("Reload", role: .cancel) { reloadFromDisk() }
+        } message: {
+            Text("It was modified elsewhere (e.g. iCloud sync) since you opened it.")
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                if isEditing { saveNow() }
+                isEditing.toggle()
+            } label: {
+                Image(systemName: isEditing ? "book" : "pencil")
+            }
+            .accessibilityLabel(isEditing ? "Read" : "Edit")
+        }
+        if !isEditing {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { showOutline = true } label: { Image(systemName: "list.bullet.indent") }
                     .accessibilityLabel("Outline")
@@ -80,11 +118,39 @@ struct ReaderView: View {
                 }
             }
         }
-        .sheet(isPresented: $showOutline) {
-            OutlineView(content: content, proxy: proxy)
+    }
+
+    // MARK: - Saving
+
+    private func scheduleSave() {
+        saveTask?.cancel()
+        saveTask = Task {
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            if Task.isCancelled { return }
+            await MainActor.run { saveNow() }
         }
-        .sheet(isPresented: $showBacklinks) {
-            BacklinksView(vault: vault, file: file, onOpen: onOpen)
+    }
+
+    private func saveNow() {
+        saveTask?.cancel()
+        guard isEditing else { return }
+        if let disk = vault.modificationDateMs(of: file), disk > loadedMtimeMs + 1 {
+            showConflict = true
+            return
+        }
+        forceWrite()
+    }
+
+    private func forceWrite() {
+        if vault.write(content, to: file) {
+            loadedMtimeMs = vault.modificationDateMs(of: file) ?? loadedMtimeMs
+        }
+    }
+
+    private func reloadFromDisk() {
+        if let fresh = vault.content(of: file) {
+            content = fresh
+            loadedMtimeMs = vault.modificationDateMs(of: file) ?? loadedMtimeMs
         }
     }
 }

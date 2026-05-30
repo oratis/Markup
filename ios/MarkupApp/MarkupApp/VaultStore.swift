@@ -120,6 +120,13 @@ final class VaultStore {
         try? String(contentsOf: URL(fileURLWithPath: file.path), encoding: .utf8)
     }
 
+    /// Current on-disk modification time in ms (for the save-time conflict guard).
+    func modificationDateMs(of file: VaultFile) -> Double? {
+        let attrs = try? FileManager.default.attributesOfItem(atPath: file.path)
+        guard let date = attrs?[.modificationDate] as? Date else { return nil }
+        return date.timeIntervalSince1970 * 1000
+    }
+
     /// Write text back to a file (atomic). Returns whether it succeeded.
     @discardableResult
     func write(_ content: String, to file: VaultFile) -> Bool {
