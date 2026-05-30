@@ -41,7 +41,7 @@ I wanted **Typora's writing feel** without the closed source and price, and **Ob
 | Vault + backlinks + graph + full-text | **✅** | ❌ | ✅ | ❌ |
 | Chinese IME | **✅** | ✅ | ◐ | varies |
 
-> Status: **macOS-only, pre-1.0.** The DMG is currently **unsigned** (signing is the next milestone — see [install](#install)). Built largely with the help of [Claude Code](https://claude.com/claude-code).
+> Status: **macOS-only, pre-1.0.** The DMG is **signed & notarized** (Apple Developer ID) — it opens without a Gatekeeper prompt. Built largely with the help of [Claude Code](https://claude.com/claude-code).
 
 ## Features
 
@@ -77,20 +77,14 @@ I wanted **Typora's writing feel** without the closed source and price, and **Ob
 
 ## Screenshots
 
-> _Coming with the v0.6.0 signed release — hero GIF + dark/light/graph stills._
+> _Coming soon — hero GIF + dark/light/graph stills._
 
 ## Install
 
 1. Download the latest DMG from [**Releases**](https://github.com/oratis/Markup/releases/latest):
    - `Markup_<version>_apple-silicon.dmg` — Apple Silicon Macs (M1 / M2 / M3 / M4)
    - `Markup_<version>_intel.dmg` — Intel Macs
-2. Open the DMG and drag **Markup** to **Applications**.
-
-**First launch (unsigned build):** macOS Gatekeeper will say the app "can't be opened." This is expected until the signed build (v0.6.0) ships. To open it:
-
-> **System Settings → Privacy & Security →** scroll down → **"Open Anyway"** next to Markup. (Or right-click the app → **Open** → **Open**.)
-
-Signing & notarization are pipelined in [`scripts/sign-and-notarize.sh`](./scripts/sign-and-notarize.sh) and will remove this prompt.
+2. Open the DMG and drag **Markup** to **Applications**. That's it — the app is signed with an Apple Developer ID and notarized by Apple, so it opens normally with no Gatekeeper prompt.
 
 ## Build from source
 
@@ -147,7 +141,7 @@ Issues and PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and the is
 - **一键 Markdown → HTML（高保真）**：因为编辑器本来就是把 MD 当网页渲染，所以「导出」几乎是免费的 —— 一键把任意笔记变成一张带主题样式的 HTML 网页，**代码高亮、KaTeX 公式、Mermaid 图都原样保留**，还带标题锚点（可做页内目录）。在浏览器里预览或存成可分享的 `.html`，也能打印成 PDF。（纯文字文档是单文件、离线自包含；只有用到公式/图表的文档会从 CDN 加载对应渲染器。）
 - **免费开源**：MIT 协议，无账号、无付费墙、无遥测。
 
-**安装**：到 [Releases](https://github.com/oratis/Markup/releases/latest) 下载 DMG —— Apple 芯片选 `apple-silicon`，Intel 选 `intel`。当前 DMG **未签名**（签名版为下一个里程碑 v0.6.0），首次打开时在 **系统设置 → 隐私与安全性** 里点 **“仍要打开”**。
+**安装**：到 [Releases](https://github.com/oratis/Markup/releases/latest) 下载 DMG —— Apple 芯片选 `apple-silicon`，Intel 选 `intel`。DMG 已用 Apple Developer ID **签名并公证**，拖进「应用程序」即可正常打开，无需绕过 Gatekeeper。
 
 更多设计与决策文档见 [`docs/`](./docs/README.md)。**如果 Markup 对你有用，点个 ⭐ 能帮到更多人。**
 

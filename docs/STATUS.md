@@ -7,9 +7,11 @@ This is the wake-up brief. Read this first.
 `main` branch has 170+ commits across **153 feature batches** (v1
 B001–B135, v2 B201–B218), all CI-green. `main` is protected (linear
 history, required CI, no force-push, no deletion; admin can hotfix).
-`v0.1.2` is the latest released DMG (unsigned). The app compiles,
-type-checks, lint-clean, **841 React tests + 26 Rust unit + 9 integration**,
-double-Codecov coverage upload, runs cleanly in dev.
+`v0.6.0` is the latest released DMG — **signed with an Apple Developer ID
+and notarized** (opens without a Gatekeeper prompt); both arches built by CI
+from the six `APPLE_*` secrets. The app compiles, type-checks, lint-clean,
+**870 React tests + 35 Rust unit + 9 integration**, double-Codecov coverage
+upload, runs cleanly in dev.
 
 **Obsidian roadmap closed end-to-end:**
 - Tier-1 (must-have to be an Obsidian alternative): ✅ **5/5 complete**
