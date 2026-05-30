@@ -29,10 +29,12 @@ real vault — wikilinks, backlinks, a graph view, and full-text search via
 Tantivy (a 10k-file vault indexes in ~1s). KaTeX, Mermaid, code highlight,
 dark/light/sepia. Idle RAM is ~88MB. MIT licensed.
 
-Because the reader is the product, "export" is basically free: one click
-turns any note into a clean, self-contained HTML page (CSS inlined, no
-dependencies) — preview it in your browser or save a shareable .html. Print
-to PDF too.
+Because the reader is the product, "export" is basically free — and
+high-fidelity: one click turns any note into a themed HTML page that keeps
+your syntax-highlighted code, KaTeX math, and Mermaid diagrams intact.
+Preview it in your browser or save a shareable .html (a single
+self-contained file for ordinary docs; math/diagram docs pull those
+renderers from a CDN). Print to PDF too.
 
 Honest status: macOS-only, pre-1.0, and the DMG is currently unsigned — on
 first launch you'll need System Settings → Privacy & Security → Open Anyway
@@ -62,8 +64,9 @@ Markup reads your Markdown like a beautiful web page and lets you edit on
 demand. Native (Tauri, ~88MB — not Electron), open source (MIT), and built
 around a real vault: wikilinks, backlinks, a graph view, and full-text
 search that indexes 10,000 files in about a second. One click exports any
-note to a clean, self-contained HTML page (or PDF). Free, no account.
-macOS-only, pre-1.0.
+note to a themed, high-fidelity HTML page — code highlighting, KaTeX math,
+and Mermaid diagrams intact — or to PDF. Free, no account. macOS-only,
+pre-1.0.
 ```
 
 **Maker's first comment:**
@@ -74,8 +77,9 @@ source, and Obsidian's look without the Electron weight.
 The core idea is "read first, edit on demand" — your notes render like a
 clean document by default, and editing is one keystroke away (E for WYSIWYG,
 ⌘/ for source). And since it's already rendering your Markdown as a page,
-exporting is one click: a clean, self-contained HTML file you can share or
-host (or print to PDF). It's a Tauri app, so it stays light (~88MB idle).
+exporting is one click and high-fidelity: a themed HTML file that keeps your
+code highlighting, math, and Mermaid diagrams (or print to PDF). It's a
+Tauri app, so it stays light (~88MB idle).
 
 It's free and MIT-licensed. macOS-only and pre-1.0 today; the current DMG is
 unsigned (Open Anyway on first launch) and a signed build is next. Would
@@ -103,8 +107,10 @@ Markup：一款原生、开源、轻量的 macOS Markdown 阅读/编辑器
 
 - 原生：基于 Tauri（Rust + 系统 WebView），空闲内存约 88MB；
 - 完整 vault：双链、反链、关系图谱，Tantivy 全文搜索，1 万个文件约 1 秒建索引；
-- 一键导出 HTML：因为本来就是把 MD 当网页渲染，所以「导出」几乎是免费的 ——
-  一键把任意笔记变成一张干净、自包含（CSS 内联、零依赖）的 HTML 网页，在浏览器里预览或存成可分享的 .html，也可以打印成 PDF；
+- 一键导出 HTML（高保真）：因为本来就是把 MD 当网页渲染，所以「导出」几乎是免费的 ——
+  一键把任意笔记变成一张带主题样式的 HTML 网页，代码高亮、KaTeX 公式、Mermaid 图都原样保留，
+  在浏览器里预览或存成可分享的 .html，也可以打印成 PDF（纯文字文档是单文件离线自包含，
+  用到公式/图表的会从 CDN 加载渲染器）；
 - KaTeX 公式、Mermaid 图、代码高亮、GFM；三套主题（浅/深/微黄）；
 - 中文输入顺滑；免费、开源（MIT）、无账号无遥测。
 
@@ -133,8 +139,8 @@ Markup：一款原生、开源、轻量的 macOS Markdown 阅读/编辑器
 空闲内存约 88MB。有 vault、双链、反链、图谱、全文搜索（1 万文件约 1 秒索引）、
 KaTeX、Mermaid、三主题。中文输入这块专门花时间打磨过。
 
-顺手的一点：一键把 MD 导出成自包含的 HTML 网页（CSS 内联、零依赖，直接能发/能托管），
-或者打印成 PDF —— 因为编辑器本来就是把 Markdown 当网页在渲染。
+顺手的一点：一键把 MD 导出成带主题样式的 HTML 网页，代码高亮、公式（KaTeX）、Mermaid 图都
+原样保留（纯文字文档是单文件离线自包含），或者打印成 PDF —— 因为编辑器本来就是把 Markdown 当网页在渲染。
 
 免费开源（MIT）。macOS 专属、1.0 之前，DMG 暂未签名（首次打开需 Open Anyway，
 签名版下个版本）。
@@ -152,8 +158,8 @@ GitHub：https://github.com/oratis/Markup
 Made Markup: an open-source, native macOS Markdown editor.
 
 It reads your .md like a web page, and you edit on demand. One click exports
-a clean, self-contained HTML page. Tauri-light (~88MB), vault + backlinks +
-graph + full-text search, MIT.
+a high-fidelity HTML page — code highlighting, math, Mermaid intact.
+Tauri-light (~88MB), vault + backlinks + graph + full-text search, MIT.
 
 ⭐ if you like it → github.com/oratis/Markup
 ```
@@ -179,7 +185,8 @@ Tag/与 `@tauri` 社区互动。
 ```
 I built a free, open-source, native macOS Markdown editor. It renders your
 notes like a web page by default and you press E to edit — reader-first.
-One click exports any note to a clean, self-contained HTML page (or PDF).
+One click exports any note to a high-fidelity HTML page (code highlighting,
+math, Mermaid intact) or PDF.
 Tauri (so ~88MB, not Electron), with a vault, backlinks, graph, and fast
 full-text search. MIT. macOS-only, pre-1.0, DMG currently unsigned.
 Feedback welcome: github.com/oratis/Markup

@@ -41,7 +41,7 @@ Supporting hooks (for different audiences):
 - *"Typora's spirit, but free and open-source."*
 - *"Obsidian's look, a fraction of the weight (~88MB RAM, Tauri-native)."*
 - *"Reader-first: your vault, rendered like a document — not a text box."*
-- *"Markdown → HTML in one click — your notes are already a web page, so exporting a clean, self-contained `.html` (or PDF) is free."*
+- *"Markdown → HTML in one click, high-fidelity — your notes are already a web page, so exporting a themed `.html` (or PDF) that keeps code highlighting, KaTeX math, and Mermaid diagrams is free."*
 
 ---
 
