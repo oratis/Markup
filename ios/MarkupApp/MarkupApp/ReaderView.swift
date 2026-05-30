@@ -16,7 +16,7 @@ struct ReaderView: View {
 
     var body: some View {
         ReaderWebView(
-            html: MarkdownLite.renderDocument(content, title: file.name, theme: theme),
+            html: ReaderHTML.document(markdown: content, title: file.name, theme: theme),
             baseURL: baseURL
         )
         .ignoresSafeArea(edges: .bottom)

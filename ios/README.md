@@ -26,8 +26,8 @@ ios/
       Fuzzy.swift           scoreSubsequence  (← src/lib/fuzzy.ts)
       Slugify.swift         slugifyForFilename / firstHeadingText  (← src/lib/slugify.ts)
       SearchOperators.swift parseQuery / pathMatches  (← src/lib/search-operators.ts)
-      MarkdownLite.swift    M0 placeholder Markdown→HTML renderer + reader themes
-    Tests/MarkupKitTests/   ports of the matching *.test.ts files (+ MarkdownLite)
+      ReaderHTML.swift      high-fidelity reader doc (marked + KaTeX/Mermaid/highlight) + themes
+    Tests/MarkupKitTests/   ports of the matching *.test.ts files (+ ReaderHTML)
   MarkupApp/        The SwiftUI app target (Xcode project).
     MarkupApp.xcodeproj     synchronized groups; links the local MarkupKit package
     MarkupApp/
@@ -42,7 +42,7 @@ ios/
 ## Develop
 ```bash
 # Core logic (fast, no Xcode UI):
-cd ios/MarkupKit && swift test          # 37 tests, ports of the desktop unit tests
+cd ios/MarkupKit && swift test          # 35 tests, ports of the desktop unit tests + reader
 
 # The app:
 open ios/MarkupApp/MarkupApp.xcodeproj   # run on an iPhone/iPad simulator
@@ -60,8 +60,10 @@ See the design doc §18 for detail.
   MarkdownLite) with passing tests + CI lane; **Xcode app target**: document picker +
   security-scoped bookmark → open a folder → list `.md` → render one in a WKWebView with a
   bundled theme. The end-to-end companion loop. App builds & links for the iOS Simulator SDK.
-- [ ] **M1** — Reader MVP (themes, KaTeX, Mermaid, code, tables, task-list toggle, reading
-  position, font controls; iPhone + iPad layouts).
+- [~] **M1 (in progress)** — high-fidelity reader: `ReaderHTML` renders via `marked` with
+  conditional KaTeX / Mermaid / highlight.js (pinned to desktop versions, CDN first cut) +
+  GFM tables/task-list styling. **Remaining:** offline-bundle the renderer assets, reading-position
+  memory, font-size/line-width controls, task-list tap-to-toggle write-back.
 - [ ] **M2** — Navigate: file browser, Quick Open, wikilinks/backlinks/outline/tags, SQLite FTS5
   search with operators + snippets.
 - [ ] **M3** — Light edit: native source editor, accessory bar, wikilink autocomplete, image
