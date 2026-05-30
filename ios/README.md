@@ -60,16 +60,22 @@ See the design doc §18 for detail.
   MarkdownLite) with passing tests + CI lane; **Xcode app target**: document picker +
   security-scoped bookmark → open a folder → list `.md` → render one in a WKWebView with a
   bundled theme. The end-to-end companion loop. App builds & links for the iOS Simulator SDK.
-- [~] **M1 (in progress)** — high-fidelity reader: `ReaderHTML` renders via `marked` with
-  conditional KaTeX / Mermaid / highlight.js (pinned to desktop versions, CDN first cut) +
-  GFM tables/task-list styling. **Remaining:** offline-bundle the renderer assets, reading-position
-  memory, font-size/line-width controls, task-list tap-to-toggle write-back.
-- [ ] **M2** — Navigate: file browser, Quick Open, wikilinks/backlinks/outline/tags, SQLite FTS5
-  search with operators + snippets.
-- [ ] **M3** — Light edit: native source editor, accessory bar, wikilink autocomplete, image
-  insert, autosave + mtime/conflict handling, live preview.
-- [ ] **M4** — Share/export (HTML/PDF), settings, localization (EN/中文), a11y, iPad shortcuts.
-- [ ] **M5** — TestFlight beta, performance pass, App Store metadata + privacy label.
+- [x] **M1** — high-fidelity reader (`ReaderHTML`: marked + conditional KaTeX/Mermaid/highlight,
+  pinned to desktop versions) + GFM tables/task-list; task-list tap-to-toggle, reading-position
+  memory, text-size/width controls. _Remaining: offline-bundle the renderer assets (currently CDN)._
+- [x] **M2** — file browser, Quick Open (fuzzy), full-text search (SQLite FTS5 + `tag:`/`path:`),
+  wikilinks/backlinks, outline, tags. _Remaining: in-reader wikilink click-through._
+- [x] **M3** — native source editor (`UITextView`) + Markdown accessory bar + smart list
+  continuation; debounced atomic autosave with mtime conflict guard. _Remaining: image insert,
+  wikilink autocomplete in-editor._
+- [x] **M4** — share/export (HTML/PDF/Markdown via share sheet), Settings, EN/中文 localization,
+  iPad keyboard shortcuts (⌘P/⌘⇧F).
+- [ ] **M5** — TestFlight beta, performance pass, App Store metadata + privacy label. _(needs the
+  owner's Apple account.)_
+
+> **Note on verification:** all iOS code is verified by `swift test` (the MarkupKit logic) and an
+> `xcodebuild` compile+link for the simulator SDK. Actual on-screen behaviour (rendering, gestures,
+> editor) needs a run on a simulator/device — open the Xcode project to try it.
 
 ## Porting note
 `MarkupKit` deliberately re-ports already-tested desktop logic from `src/lib/*` (and their

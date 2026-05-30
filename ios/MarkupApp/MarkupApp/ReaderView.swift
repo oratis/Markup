@@ -18,6 +18,8 @@ struct ReaderView: View {
     @StateObject private var proxy = WebViewProxy()
     @State private var showOutline = false
     @State private var showBacklinks = false
+    @State private var shareItem: ShareItem?
+    @State private var pdfExporter: PDFExporter?
 
     @AppStorage("reader.theme") private var themeRaw = ReaderTheme.light.rawValue
     @AppStorage("reader.fontScale") private var fontScale = 1.0
@@ -70,6 +72,7 @@ struct ReaderView: View {
         .toolbar { toolbarContent }
         .sheet(isPresented: $showOutline) { OutlineView(content: content, proxy: proxy) }
         .sheet(isPresented: $showBacklinks) { BacklinksView(vault: vault, file: file, onOpen: onOpen) }
+        .sheet(item: $shareItem) { ActivityView(items: [$0.url]) }
         .onDisappear { saveNow() }
         .alert("This note changed on disk", isPresented: $showConflict) {
             Button("Keep mine", role: .destructive) { forceWrite() }
@@ -96,6 +99,13 @@ struct ReaderView: View {
                     .accessibilityLabel("Outline")
                 Button { showBacklinks = true } label: { Image(systemName: "link") }
                     .accessibilityLabel("Backlinks")
+                Menu {
+                    Button { shareHTML() } label: { Label("Share as HTML", systemImage: "safari") }
+                    Button { sharePDF() } label: { Label("Export PDF", systemImage: "doc.richtext") }
+                    Button { shareMarkdown() } label: { Label("Share Markdown", systemImage: "doc.plaintext") }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
                 Menu {
                     Picker("Theme", selection: $themeRaw) {
                         ForEach(ReaderTheme.allCases, id: \.rawValue) { t in
@@ -151,6 +161,29 @@ struct ReaderView: View {
         if let fresh = vault.content(of: file) {
             content = fresh
             loadedMtimeMs = vault.modificationDateMs(of: file) ?? loadedMtimeMs
+        }
+    }
+
+    // MARK: - Sharing
+
+    private func shareHTML() {
+        if let url = ShareService.writeHTML(content: content, title: file.name, theme: theme) {
+            shareItem = ShareItem(url: url)
+        }
+    }
+
+    private func shareMarkdown() {
+        if let url = ShareService.writeMarkdown(content: content, title: file.name) {
+            shareItem = ShareItem(url: url)
+        }
+    }
+
+    private func sharePDF() {
+        let exporter = PDFExporter(title: file.name)
+        pdfExporter = exporter
+        exporter.export(content: content, theme: theme) { url in
+            if let url { shareItem = ShareItem(url: url) }
+            pdfExporter = nil
         }
     }
 }
