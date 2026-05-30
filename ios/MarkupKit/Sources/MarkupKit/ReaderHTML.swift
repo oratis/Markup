@@ -85,6 +85,11 @@ public enum ReaderHTML {
           try { if (window.marked) content.innerHTML = window.marked.parse(md); }
           catch (e) { content.textContent = md; }
 
+          // Stable ids on headings so the native outline can scroll to them.
+          content.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach(function (el, i) {
+            el.id = "mk-h" + i;
+          });
+
           // Promote ```mermaid code blocks to <div class="mermaid"> for mermaid.run().
           content.querySelectorAll("code.language-mermaid").forEach(function (el) {
             var pre = el.closest("pre") || el;

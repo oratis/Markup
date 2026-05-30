@@ -7,6 +7,16 @@ struct RootView: View {
     @State private var vault = VaultStore()
     @State private var selection: VaultFile?
     @State private var showPicker = false
+    @State private var showQuickOpen = false
+    @State private var showSearch = false
+    @State private var showTags = false
+
+    private func open(_ file: VaultFile) {
+        selection = file
+        showQuickOpen = false
+        showSearch = false
+        showTags = false
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -22,6 +32,9 @@ struct RootView: View {
             }
             .ignoresSafeArea()
         }
+        .sheet(isPresented: $showQuickOpen) { QuickOpenView(vault: vault, onOpen: open) }
+        .sheet(isPresented: $showSearch) { SearchView(vault: vault, onOpen: open) }
+        .sheet(isPresented: $showTags) { TagsView(vault: vault, onOpen: open) }
     }
 
     // MARK: - Sidebar
@@ -58,13 +71,21 @@ struct RootView: View {
         }
         .navigationTitle(vault.rootName)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showPicker = true
-                } label: {
-                    Image(systemName: "folder.badge.plus")
+            ToolbarItemGroup(placement: .primaryAction) {
+                if vault.rootURL != nil {
+                    Button { showQuickOpen = true } label: { Image(systemName: "magnifyingglass") }
+                        .accessibilityLabel("Quick Open")
+                    Menu {
+                        Button { showSearch = true } label: { Label("Search vault", systemImage: "text.magnifyingglass") }
+                        Button { showTags = true } label: { Label("Tags", systemImage: "number") }
+                        Button { showPicker = true } label: { Label("Open folder", systemImage: "folder.badge.plus") }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                } else {
+                    Button { showPicker = true } label: { Image(systemName: "folder.badge.plus") }
+                        .accessibilityLabel("Open folder")
                 }
-                .accessibilityLabel("Open folder")
             }
         }
     }
@@ -85,7 +106,7 @@ struct RootView: View {
     @ViewBuilder
     private var detail: some View {
         if let file = selection, let content = vault.content(of: file) {
-            ReaderView(file: file, content: content, vault: vault)
+            ReaderView(file: file, content: content, vault: vault, onOpen: open)
                 .id(file.relPath)
         } else if selection != nil {
             ContentUnavailableView(
