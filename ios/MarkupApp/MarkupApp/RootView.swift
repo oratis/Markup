@@ -10,6 +10,7 @@ struct RootView: View {
     @State private var showQuickOpen = false
     @State private var showSearch = false
     @State private var showTags = false
+    @State private var showSettings = false
 
     private func open(_ file: VaultFile) {
         selection = file
@@ -35,6 +36,7 @@ struct RootView: View {
         .sheet(isPresented: $showQuickOpen) { QuickOpenView(vault: vault, onOpen: open) }
         .sheet(isPresented: $showSearch) { SearchView(vault: vault, onOpen: open) }
         .sheet(isPresented: $showTags) { TagsView(vault: vault, onOpen: open) }
+        .sheet(isPresented: $showSettings) { SettingsView(vault: vault) }
     }
 
     // MARK: - Sidebar
@@ -75,9 +77,12 @@ struct RootView: View {
                 if vault.rootURL != nil {
                     Button { showQuickOpen = true } label: { Image(systemName: "magnifyingglass") }
                         .accessibilityLabel("Quick Open")
+                        .keyboardShortcut("p", modifiers: .command)
                     Menu {
                         Button { showSearch = true } label: { Label("Search vault", systemImage: "text.magnifyingglass") }
+                            .keyboardShortcut("f", modifiers: [.command, .shift])
                         Button { showTags = true } label: { Label("Tags", systemImage: "number") }
+                        Button { showSettings = true } label: { Label("Settings", systemImage: "gearshape") }
                         Button { showPicker = true } label: { Label("Open folder", systemImage: "folder.badge.plus") }
                     } label: {
                         Image(systemName: "ellipsis.circle")
