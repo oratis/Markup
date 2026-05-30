@@ -85,7 +85,8 @@ struct RootView: View {
     @ViewBuilder
     private var detail: some View {
         if let file = selection, let content = vault.content(of: file) {
-            ReaderView(file: file, content: content)
+            ReaderView(file: file, content: content, vault: vault)
+                .id(file.relPath)
         } else if selection != nil {
             ContentUnavailableView(
                 "Couldn't read file", systemImage: "exclamationmark.triangle")
