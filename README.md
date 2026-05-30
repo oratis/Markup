@@ -5,9 +5,7 @@
 **A fast, native, open-source Markdown editor for macOS.**
 Read your Markdown like a beautiful web page — edit when you want.
 
-<!-- Hero GIF: drop docs/assets/hero.gif here once recorded (storyboard + capture script in docs/HERO-GIF.md), then uncomment:
-<img src="docs/assets/hero.gif" alt="Open a vault, read it like a web page, press E to edit, ⌘P to jump, search across 10k files" width="820">
--->
+<img src="docs/assets/hero.gif" alt="Markup: reading Markdown rendered like a clean web page, with a vault file tree and light/dark themes" width="820">
 
 [![CI](https://github.com/oratis/Markup/actions/workflows/ci.yml/badge.svg)](https://github.com/oratis/Markup/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/oratis/Markup?label=release)](https://github.com/oratis/Markup/releases/latest)
