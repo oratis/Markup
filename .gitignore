@@ -18,6 +18,13 @@ dist-ssr/
 src-tauri/target/
 src-tauri/gen/
 
+# iOS / Swift
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
 # logs
 npm-debug.log*
 yarn-debug.log*
