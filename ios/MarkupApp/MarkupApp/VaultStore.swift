@@ -11,6 +11,10 @@ final class VaultStore {
     var errorMessage: String?
     var isScanning = false
 
+    /// Search/links/tags/outline index. Built off the scan; nil until ready.
+    var index: IndexService?
+    var indexReady = false
+
     private let bookmarkKey = "vault.rootBookmark"
     private let markdownExtensions: Set<String> = ["md", "markdown", "mdx", "mkd"]
 
@@ -81,6 +85,34 @@ final class VaultStore {
                 mtimeMs: mtime, size: size))
         }
         files = found.sorted { $0.relPath.localizedCaseInsensitiveCompare($1.relPath) == .orderedAscending }
+        rebuildIndex()
+    }
+
+    /// Look up a scanned file by its vault-relative path (search/result mapping).
+    func file(forRelPath relPath: String) -> VaultFile? {
+        files.first { $0.relPath == relPath }
+    }
+
+    /// Rebuild the SQLite index from the current file list. Yields periodically
+    /// so a large vault doesn't freeze the UI.
+    private func rebuildIndex() {
+        let snapshot = files
+        indexReady = false
+        Task { @MainActor in
+            guard let idx = try? IndexService() else { return }
+            var n = 0
+            for f in snapshot {
+                if let content = try? String(contentsOfFile: f.path, encoding: .utf8) {
+                    try? idx.index(
+                        relPath: f.relPath, name: f.name, content: content,
+                        mtimeMs: f.mtimeMs, size: f.size)
+                }
+                n += 1
+                if n % 50 == 0 { await Task.yield() }
+            }
+            self.index = idx
+            self.indexReady = true
+        }
     }
 
     /// Read a file's text content, or `nil` on failure.

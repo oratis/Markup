@@ -1,11 +1,25 @@
 import SwiftUI
 import WebKit
 
-/// Displays rendered HTML in a `WKWebView` and bridges two messages back from
-/// the page: scroll position (for reading-position memory) and task-list taps.
+/// Holds a weak reference to the live reader WebView so other views (e.g. the
+/// outline) can drive it — currently to scroll to a heading.
+@MainActor
+final class WebViewProxy: ObservableObject {
+    fileprivate weak var webView: WKWebView?
+
+    func scrollToHeading(_ index: Int) {
+        webView?.evaluateJavaScript(
+            "document.getElementById('mk-h\(index)')?.scrollIntoView({behavior:'smooth',block:'start'});",
+            completionHandler: nil)
+    }
+}
+
+/// Displays rendered HTML in a `WKWebView` and bridges scroll position and
+/// task-list taps back to native.
 struct ReaderWebView: UIViewRepresentable {
     let html: String
     let baseURL: URL?
+    var proxy: WebViewProxy? = nil
     var onScroll: (Double) -> Void = { _ in }
     var onToggleTask: (Int) -> Void = { _ in }
 
@@ -21,10 +35,12 @@ struct ReaderWebView: UIViewRepresentable {
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
         webView.scrollView.contentInsetAdjustmentBehavior = .automatic
+        proxy?.webView = webView
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+        proxy?.webView = webView
         context.coordinator.onScroll = onScroll
         context.coordinator.onToggleTask = onToggleTask
         if context.coordinator.lastHTML != html {
