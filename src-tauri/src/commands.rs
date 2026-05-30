@@ -309,6 +309,9 @@ pub(crate) fn render_markdown_document(
     opts.extension.tasklist = true;
     opts.extension.autolink = true;
     opts.extension.footnotes = true;
+    // Emit GitHub-style `contains-task-list` / `task-list-item` classes so we
+    // can style checkboxes without relying on the newer `:has()` selector.
+    opts.render.tasklist_classes = true;
     // Stable heading ids so exports support in-page anchors / TOCs.
     opts.extension.header_ids = Some(String::new());
     // Parse `$inline$` / `$$display$$` math at the AST level — the same rule
@@ -492,8 +495,22 @@ pre code { background: none; padding: 0; font-size: 0.88em; line-height: 1.5; }
   border-radius: 4px;
   font-size: 0.9em;
 }
-/* Task lists: drop the bullet, align the checkbox. */
-li > input[type="checkbox"] { margin: 0 0.45em 0 -1.2em; }
+/* Lists. comrak renders a "loose" list (blank lines between items) as
+   <li><p>…</p></li>; the <p>'s default 1em margins otherwise detach the
+   bullet from its text and balloon the spacing. Collapse them so loose and
+   tight lists look identical, and keep nesting compact. */
+ul, ol { padding-left: 1.6em; margin: 0.6em 0; }
+li { margin: 0.2em 0; }
+li > p { margin: 0.2em 0; }
+li > p:first-child { margin-top: 0; }
+li > p:last-child { margin-bottom: 0; }
+li > ul, li > ol { margin: 0.2em 0; }
+/* Task lists (GitHub-style classes via tasklist_classes). Drop the bullet,
+   and keep the checkbox inline with its text — in a loose list the item text
+   is wrapped in a block <p>, which would otherwise drop below the checkbox. */
+.contains-task-list { list-style: none; padding-left: 0.2em; }
+.task-list-item > input[type="checkbox"] { margin: 0 0.45em 0 0; vertical-align: middle; }
+.task-list-item > input[type="checkbox"] + p { display: inline; }
 table { display: block; overflow-x: auto; max-width: 100%; }
 thead th { background: rgba(127, 127, 127, 0.08); }
 tbody tr:nth-child(even) { background: rgba(127, 127, 127, 0.04); }
@@ -709,6 +726,24 @@ mod render_tests {
     fn render_stays_self_contained_without_math_or_diagrams() {
         let html = run_render("# Title\n\nSome **prose** and `code`.", None, None);
         assert!(!html.contains("cdn.jsdelivr.net"), "html: {html}");
+    }
+
+    #[test]
+    fn render_tags_task_lists_with_github_classes() {
+        // A *loose* task list (blank lines between items) used to strand the
+        // checkbox above its text; the classes let CSS keep them inline.
+        let html = run_render("- [x] done\n\n- [ ] todo", None, None);
+        assert!(html.contains(r#"class="contains-task-list""#), "html: {html}");
+        assert!(html.contains(r#"class="task-list-item""#), "html: {html}");
+        assert!(html.contains(r#"type="checkbox""#));
+    }
+
+    #[test]
+    fn common_css_keeps_loose_list_items_tight() {
+        // The fix hinges on collapsing the <p> margins comrak adds inside
+        // loose-list items and keeping the task checkbox inline.
+        assert!(COMMON_CSS.contains("li > p"));
+        assert!(COMMON_CSS.contains(".task-list-item > input[type=\"checkbox\"] + p"));
     }
 }
 
