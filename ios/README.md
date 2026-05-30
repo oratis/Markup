@@ -26,25 +26,40 @@ ios/
       Fuzzy.swift           scoreSubsequence  (← src/lib/fuzzy.ts)
       Slugify.swift         slugifyForFilename / firstHeadingText  (← src/lib/slugify.ts)
       SearchOperators.swift parseQuery / pathMatches  (← src/lib/search-operators.ts)
-    Tests/MarkupKitTests/   ports of the matching *.test.ts files
-  (app target — Xcode project — added in M0/M1)
+      MarkdownLite.swift    M0 placeholder Markdown→HTML renderer + reader themes
+    Tests/MarkupKitTests/   ports of the matching *.test.ts files (+ MarkdownLite)
+  MarkupApp/        The SwiftUI app target (Xcode project).
+    MarkupApp.xcodeproj     synchronized groups; links the local MarkupKit package
+    MarkupApp/
+      MarkupAppApp.swift     @main App
+      RootView.swift         NavigationSplitView shell (adaptive iPhone/iPad)
+      VaultStore.swift       folder open + security-scoped bookmark + scan
+      FolderPicker.swift     UIDocumentPicker (folder) wrapper
+      ReaderWebView.swift    WKWebView reader surface
+      ReaderView.swift       rendered note + theme switcher
 ```
 
 ## Develop
 ```bash
-cd ios/MarkupKit
-swift build
-swift test          # 26 tests, ports of the desktop unit tests
+# Core logic (fast, no Xcode UI):
+cd ios/MarkupKit && swift test          # 37 tests, ports of the desktop unit tests
+
+# The app:
+open ios/MarkupApp/MarkupApp.xcodeproj   # run on an iPhone/iPad simulator
+# or compile-check from CLI:
+cd ios/MarkupApp && xcodebuild -project MarkupApp.xcodeproj -target MarkupApp \
+  -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
 ```
-Requires a Swift 6 toolchain (Xcode 16+ / Swift 6.0+). Verified on Xcode 26 / Swift 6.2.
+Requires a Swift 6 toolchain (Xcode 16+ / Swift 6.0+). Verified on Xcode 26 / Swift 6.2;
+the app builds & links for the iOS Simulator SDK.
 
 ## Status — milestones
 See the design doc §18 for detail.
 
-- [x] **M0 (in progress)** — `MarkupKit` package + first ported logic (fuzzy, slugify, search
-  operators, models) with passing tests; CI lane wired.
-- [ ] **M0 cont.** — Xcode app target, document picker + security-scoped bookmark, open a folder,
-  list `.md`, render one in a WebView with a bundled theme (the end-to-end companion loop).
+- [x] **M0** — `MarkupKit` package + ported logic (fuzzy, slugify, search operators, models,
+  MarkdownLite) with passing tests + CI lane; **Xcode app target**: document picker +
+  security-scoped bookmark → open a folder → list `.md` → render one in a WKWebView with a
+  bundled theme. The end-to-end companion loop. App builds & links for the iOS Simulator SDK.
 - [ ] **M1** — Reader MVP (themes, KaTeX, Mermaid, code, tables, task-list toggle, reading
   position, font controls; iPhone + iPad layouts).
 - [ ] **M2** — Navigate: file browser, Quick Open, wikilinks/backlinks/outline/tags, SQLite FTS5
