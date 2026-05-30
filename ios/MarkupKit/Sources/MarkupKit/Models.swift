@@ -6,7 +6,7 @@ import Foundation
 /// A file in the vault as surfaced by a scan. `path` is the location we can
 /// open (resolved from a security-scoped bookmark on iOS); `relPath` is the
 /// vault-relative path used as a stable identity and for link resolution.
-public struct VaultFile: Equatable, Sendable, Identifiable {
+public struct VaultFile: Equatable, Hashable, Sendable, Identifiable {
     public var path: String
     public var relPath: String
     public var name: String
