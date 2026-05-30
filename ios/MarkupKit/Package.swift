@@ -20,7 +20,10 @@ let package = Package(
         .library(name: "MarkupKit", targets: ["MarkupKit"]),
     ],
     targets: [
-        .target(name: "MarkupKit"),
+        .target(
+            name: "MarkupKit",
+            linkerSettings: [.linkedLibrary("sqlite3")]
+        ),
         .testTarget(name: "MarkupKitTests", dependencies: ["MarkupKit"]),
     ]
 )
