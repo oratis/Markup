@@ -1,0 +1,67 @@
+build:
+  name: Markup iOS — native archive → TestFlight
+  # Custom EAS build for a NATIVE SwiftUI app (not Expo/RN): the EAS macOS
+  # worker just runs xcodebuild on the Xcode project. Signing uses an
+  # App Store Connect API key stored as EAS secrets (Expo-managed credentials):
+  #   ASC_KEY_BASE64  – base64 of the .p8 key
+  #   ASC_KEY_ID      – the key ID (e.g. ABCD1234EF)
+  #   ASC_ISSUER_ID   – the issuer UUID
+  #   APPLE_TEAM_ID   – your 10-char Apple Developer Team ID
+  # Set them with:  eas secret:create --scope project --name ASC_KEY_ID --value ...
+  steps:
+    - eas/checkout
+
+    - run:
+        name: Install App Store Connect API key
+        command: |
+          set -euo pipefail
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_KEY_BASE64" | base64 --decode \
+            > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          mkdir -p "$HOME/markup-build"
+
+    - run:
+        name: Archive (Release, generic iOS)
+        working_directory: MarkupApp
+        command: |
+          set -euo pipefail
+          xcodebuild \
+            -project MarkupApp.xcodeproj \
+            -scheme MarkupApp \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$HOME/markup-build/Markup.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            archive
+
+    - run:
+        name: Export signed IPA
+        working_directory: MarkupApp
+        command: |
+          set -euo pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$HOME/markup-build/Markup.xcarchive" \
+            -exportPath "$HOME/markup-build/export" \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+    - run:
+        name: Upload to TestFlight
+        command: |
+          set -euo pipefail
+          IPA="$(ls "$HOME/markup-build/export/"*.ipa | head -1)"
+          echo "Uploading $IPA"
+          xcrun altool --upload-app -f "$IPA" -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+    - eas/find_and_upload_build_artifacts:
+        inputs:
+          build_artifact_paths:
+            - "/Users/expo/markup-build/export/*.ipa"

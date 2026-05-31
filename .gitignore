@@ -23,6 +23,9 @@ src-tauri/gen/
 .swiftpm/
 DerivedData/
 ios/**/build/
+# …but keep the EAS custom-build config (it lives under .eas/build/)
+!ios/.eas/build/
+!ios/.eas/build/**
 *.xcuserstate
 xcuserdata/
 
