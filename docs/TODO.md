@@ -51,6 +51,6 @@
 | **deferred:** rust-unofficial/awesome-rust | — | **resubmit at ≥50★** |
 
 ## Working rules
-- Code lands via PR + 2 green CI checks (Frontend + Rust); **docs-only commits go directly to `main`**.
+- **All** changes (including docs) land via **PR + merge** — never direct-push to `main`. Needs the 2 CI checks (Frontend + Rust) green; no review required, so self-merge once green.
 - End commits with `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 - **Report progress in Chinese.** Don't kick off outward-facing actions (new PRs, posting) before confirming.
