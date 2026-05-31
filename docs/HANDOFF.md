@@ -26,7 +26,7 @@ Local repo: `/Users/oratis/Documents/Claude/Markup`.
 - **v0.6.0 signing pipeline is code-complete**: `release.yml` auto-signs + notarizes + staples when the 6 Apple secrets exist, else falls back to unsigned. Runbook: `docs/app-store/signing-setup.md`. Release notes pre-written: `docs/release-notes-v0.6.0.md`. `CONTRIBUTING.md` added.
 
 ## Working rules (must follow)
-- Land code via **PR + merge**, never push feature work directly to `main`. `main` is branch-protected; needs **two CI checks** (Frontend + Rust) green. (Docs-only commits have been pushed to `main` directly, following repo history.)
+- Land **all** changes — **including docs** — via **PR + merge**; never push directly to `main`. `main` is branch-protected: needs the two CI checks (**Frontend** + **Rust**) green, branch up to date (`strict`); **no review required**, so self-merge once both checks pass. (Policy updated 2026-05 — earlier docs-only direct pushes are no longer the practice.)
 - End commit messages with: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 - **Report progress in Chinese** (user preference).
 - Keep version in sync across three files: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (+ `cargo update -p markup --offline`).
