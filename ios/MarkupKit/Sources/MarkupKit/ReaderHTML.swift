@@ -39,9 +39,13 @@ public enum ReaderHTML {
     ///   - fontScale: prose size multiplier (1.0 = system body).
     ///   - maxWidth: reading column width in px.
     ///   - restoreFraction: 0…1 scroll position to restore on load.
+    ///   - assetBase: when non-nil, load the renderer assets from this base
+    ///     (e.g. a bundled `markupasset:///` scheme) instead of the jsDelivr CDN,
+    ///     so the reader works fully offline.
     public static func document(
         markdown: String, title: String, theme: ReaderTheme = .light,
-        fontScale: Double = 1.0, maxWidth: Int = 720, restoreFraction: Double = 0
+        fontScale: Double = 1.0, maxWidth: Int = 720, restoreFraction: Double = 0,
+        assetBase: String? = nil
     ) -> String {
         let math = needsMath(markdown)
         let mermaid = needsMermaid(markdown)
@@ -49,23 +53,40 @@ public enum ReaderHTML {
         let hljsTheme = (theme == .dark) ? "github-dark" : "github"
         let mermaidTheme = (theme == .dark) ? "dark" : "default"
 
+        // Asset URLs: bundled (offline) when assetBase is set, else pinned CDN.
+        func asset(_ cdn: String, _ local: String) -> String {
+            assetBase.map { $0 + local } ?? cdn
+        }
+        let hljsCSS = asset(
+            "https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@\(hljsVersion)/styles/\(hljsTheme).min.css",
+            "highlight/\(hljsTheme).min.css")
+        let markedJS = asset(
+            "https://cdn.jsdelivr.net/npm/marked@\(markedVersion)/marked.min.js", "marked.umd.js")
+        let hljsJS = asset(
+            "https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@\(hljsVersion)/highlight.min.js",
+            "highlight/highlight.min.js")
+
         var head = """
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@\(hljsVersion)/styles/\(hljsTheme).min.css">
-        <script defer src="https://cdn.jsdelivr.net/npm/marked@\(markedVersion)/marked.min.js"></script>
-        <script defer src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@\(hljsVersion)/highlight.min.js"></script>
+        <link rel="stylesheet" href="\(hljsCSS)">
+        <script defer src="\(markedJS)"></script>
+        <script defer src="\(hljsJS)"></script>
         """
         if math {
+            let katexCSS = asset("https://cdn.jsdelivr.net/npm/katex@\(katexVersion)/dist/katex.min.css", "katex/katex.min.css")
+            let katexJS = asset("https://cdn.jsdelivr.net/npm/katex@\(katexVersion)/dist/katex.min.js", "katex/katex.min.js")
+            let autoRender = asset("https://cdn.jsdelivr.net/npm/katex@\(katexVersion)/dist/contrib/auto-render.min.js", "katex/auto-render.min.js")
             head += """
 
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@\(katexVersion)/dist/katex.min.css">
-            <script defer src="https://cdn.jsdelivr.net/npm/katex@\(katexVersion)/dist/katex.min.js"></script>
-            <script defer src="https://cdn.jsdelivr.net/npm/katex@\(katexVersion)/dist/contrib/auto-render.min.js"></script>
+            <link rel="stylesheet" href="\(katexCSS)">
+            <script defer src="\(katexJS)"></script>
+            <script defer src="\(autoRender)"></script>
             """
         }
         if mermaid {
+            let mermaidJS = asset("https://cdn.jsdelivr.net/npm/mermaid@\(mermaidVersion)/dist/mermaid.min.js", "mermaid.min.js")
             head += """
 
-            <script defer src="https://cdn.jsdelivr.net/npm/mermaid@\(mermaidVersion)/dist/mermaid.min.js"></script>
+            <script defer src="\(mermaidJS)"></script>
             """
         }
 

@@ -42,7 +42,8 @@ struct ReaderView: View {
         ReaderHTML.document(
             markdown: content, title: file.name, theme: theme,
             fontScale: fontScale, maxWidth: maxWidth,
-            restoreFraction: positions.position(for: file.relPath))
+            restoreFraction: positions.position(for: file.relPath),
+            assetBase: readerAssetBase)
     }
 
     var body: some View {

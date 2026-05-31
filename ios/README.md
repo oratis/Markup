@@ -62,7 +62,8 @@ See the design doc §18 for detail.
   bundled theme. The end-to-end companion loop. App builds & links for the iOS Simulator SDK.
 - [x] **M1** — high-fidelity reader (`ReaderHTML`: marked + conditional KaTeX/Mermaid/highlight,
   pinned to desktop versions) + GFM tables/task-list; task-list tap-to-toggle, reading-position
-  memory, text-size/width controls. _Remaining: offline-bundle the renderer assets (currently CDN)._
+  memory, text-size/width controls. **Renderer assets are bundled offline** (`ReaderAssets/`,
+  served via a `markupasset://` scheme handler) — no network needed to read.
 - [x] **M2** — file browser, Quick Open (fuzzy), full-text search (SQLite FTS5 + `tag:`/`path:`),
   wikilinks/backlinks, outline, tags. _Remaining: in-reader wikilink click-through._
 - [x] **M3** — native source editor (`UITextView`) + Markdown accessory bar + smart list

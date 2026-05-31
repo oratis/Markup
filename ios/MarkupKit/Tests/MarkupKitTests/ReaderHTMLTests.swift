@@ -62,4 +62,20 @@ struct ReaderHTMLDocumentTests {
         #expect(doc.contains("#1c1c1e"))          // dark background token
         #expect(doc.contains("github-dark.min.css"))
     }
+
+    @Test func assetBaseUsesBundledOfflineURLsNotCDN() {
+        let doc = ReaderHTML.document(
+            markdown: "$x$\n```mermaid\ngraph TD;A-->B\n```", title: "T", theme: .light,
+            assetBase: "markupasset:///")
+        #expect(doc.contains("markupasset:///marked.umd.js"))
+        #expect(doc.contains("markupasset:///highlight/highlight.min.js"))
+        #expect(doc.contains("markupasset:///katex/katex.min.css"))
+        #expect(doc.contains("markupasset:///mermaid.min.js"))
+        #expect(!doc.contains("jsdelivr"))
+    }
+
+    @Test func defaultStillUsesCDN() {
+        let doc = ReaderHTML.document(markdown: "# Hi", title: "T", theme: .light)
+        #expect(doc.contains("jsdelivr"))
+    }
 }
