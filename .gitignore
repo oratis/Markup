@@ -70,3 +70,4 @@ test-fixtures/
 # Large marketing video sources/outputs (keep local; GIF/stills are committed)
 docs/marketing/*.mp4
 docs/marketing/*.mov
+docs/marketing/.build/

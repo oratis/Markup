@@ -28,8 +28,8 @@
 - [ ] *(optional)* Record ~5–10s each of the features the launch video can't show — **press E to edit, ⌘P quick-open, ⌘⇧F search, graph view, one-click Export→HTML** — drop them in `docs/marketing/` and a session will splice them + matching VO into a full-feature cut.
 
 ## 🟡 Claude-can-do (polish; ask a session to pick these up)
-- [ ] **Fill the README "Screenshots" section** (still says "Coming soon"). Can extract 3–4 stills from `docs/marketing/Markup.mp4` (rendered doc, file-tree + tables, outline/backlinks panel) — or from new recordings.
-- [ ] **Save the launch-video recipe** into `docs/marketing/` (`make-cards.py` + `build2.sh`, **without the API key**) so the video is reproducible / re-cuttable.
+- [x] **README "Screenshots" filled** — 3 stills extracted from the recording → `docs/assets/screenshot-{read,vault,outline}.png`, wired into README.
+- [x] **Launch-video recipe saved** (key-free) → `docs/marketing/{build-launch-video.sh,make-cards.py,README.md}`; rerun with `EL_KEY=… bash docs/marketing/build-launch-video.sh`.
 - [ ] *(optional)* Chinese-VO version of the launch video; a vertical 9:16 Shorts cut; burned-in subtitles.
 - [ ] **Monitor the 9 open awesome-list PRs**; respond to any review. Resubmit `awesome-rust` once Markup ≥ 50★.
 

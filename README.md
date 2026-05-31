@@ -75,7 +75,17 @@ I wanted **Typora's writing feel** without the closed source and price, and **Ob
 
 ## Screenshots
 
-> _Coming soon — hero GIF + dark/light/graph stills._
+**Read — your Markdown rendered like a clean page**
+
+<img src="docs/assets/screenshot-read.png" alt="A note rendered as a clean document in Markup, with headings, prose, and KaTeX math" width="820">
+
+**A real vault — file tree, real documents, tables**
+
+<img src="docs/assets/screenshot-vault.png" alt="Markup showing the vault file tree alongside a rendered roadmap document with a status table" width="820">
+
+**Outline & backlinks keep long notes navigable**
+
+<img src="docs/assets/screenshot-outline.png" alt="Markup's three-pane layout: file tree, the rendered document, and the outline/backlinks side panel" width="820">
 
 ## Install
 
