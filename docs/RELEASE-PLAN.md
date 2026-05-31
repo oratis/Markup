@@ -1,6 +1,6 @@
 # Markup — Release Plan
 
-> Status: living document · last updated for **v0.5.2**
+> Status: living document · last updated for **v0.6.1**
 > Companion docs: [STATUS.md](./STATUS.md) · [design/03-roadmap.md](./design/03-roadmap.md) · [app-store/MAS-publishing-plan.md](./app-store/MAS-publishing-plan.md)
 
 This is the plan for *shipping* Markup: where it is now, how releases are
