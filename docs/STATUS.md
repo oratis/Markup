@@ -1,17 +1,24 @@
-# Status — Last updated 2026-05-13 (153 batches landed; v2 Canvas closed)
+# Status — Last updated 2026-05-31 (v0.6.1 shipped: signed + auto-updating)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
-`main` branch has 170+ commits across **153 feature batches** (v1
-B001–B135, v2 B201–B218), all CI-green. `main` is protected (linear
-history, required CI, no force-push, no deletion; admin can hotfix).
-`v0.6.0` is the latest released DMG — **signed with an Apple Developer ID
-and notarized** (opens without a Gatekeeper prompt); both arches built by CI
-from the six `APPLE_*` secrets. The app compiles, type-checks, lint-clean,
-**870 React tests + 35 Rust unit + 9 integration**, double-Codecov coverage
-upload, runs cleanly in dev.
+`main` branch is protected (linear history, required CI = Frontend + Rust,
+no force-push). **`v0.6.1` is the latest release** — dual-arch DMG **signed
+with an Apple Developer ID + notarized** (opens with no Gatekeeper prompt)
+**and self-updating** (Tauri signed updater; the release workflow publishes
+an Ed25519-signed `latest.json` feed per release). The app compiles,
+type-checks, lint-clean, **870 React tests + 35 Rust unit + 9 integration**,
+2 Playwright E2E, double-Codecov coverage upload, runs cleanly in dev.
+
+Since the 153-batch core (v1 B001–B135, v2 Canvas B201–B218): v0.5.3–v0.5.5
+shipped high-fidelity HTML/PDF export (syntect / KaTeX / Mermaid) + an
+`App.tsx`→hooks refactor + Playwright E2E; v0.6.0 added signing; v0.6.1
+added auto-update. **The only hard blocker for 1.0 is the MAS-vs-direct-only
+decision** (see [RELEASE-PLAN.md](./RELEASE-PLAN.md) §6) — MAS is code-ready,
+the rest is account-gated. An iOS companion (M0–M4 done) is on a parallel
+track via PRs.
 
 **Obsidian roadmap closed end-to-end:**
 - Tier-1 (must-have to be an Obsidian alternative): ✅ **5/5 complete**
