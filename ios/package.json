@@ -1,0 +1,9 @@
+{
+  "name": "markup-ios-build",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EAS build config for the native (SwiftUI) Markup iOS app. Not an Expo/RN app — EAS runs a custom build that archives the Xcode project (see .eas/build/production.yml).",
+  "devDependencies": {
+    "eas-cli": ">= 16.0.0"
+  }
+}

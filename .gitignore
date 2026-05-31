@@ -23,8 +23,17 @@ src-tauri/gen/
 .swiftpm/
 DerivedData/
 ios/**/build/
+# …but keep the EAS custom-build config (it lives under .eas/build/)
+!ios/.eas/build/
+!ios/.eas/build/**
 *.xcuserstate
 xcuserdata/
+
+# iOS release / EAS
+ios/node_modules/
+ios/.expo/
+*.xcarchive
+*.p8
 
 # logs
 npm-debug.log*
