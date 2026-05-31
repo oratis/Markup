@@ -39,6 +39,8 @@ Honest status: macOS-only, pre-1.0. The DMG is signed with an Apple
 Developer ID and notarized, so it opens without the Gatekeeper prompt. It
 was built largely with the help of Claude Code.
 
+40-second demo: https://youtu.be/X2_MDL9v7As
+
 Feedback very welcome — especially on the read-vs-edit model and anything
 that feels off in the first five minutes.
 ```
@@ -113,7 +115,9 @@ Markup：一款原生、开源、轻量的 macOS Markdown 阅读/编辑器
 - 中文输入顺滑；免费、开源（MIT）、无账号无遥测。
 
 目前 macOS 专属、1.0 之前，DMG 已用 Apple Developer ID 签名并公证，拖进
-「应用程序」即可正常打开。GitHub：github.com/oratis/Markup
+「应用程序」即可正常打开。
+40 秒演示：https://youtu.be/X2_MDL9v7As
+GitHub：github.com/oratis/Markup
 欢迎试用和反馈，觉得有用的话点个 star。
 ```
 
@@ -142,6 +146,7 @@ KaTeX、Mermaid、三主题。中文输入这块专门花时间打磨过。
 
 免费开源（MIT）。macOS 专属、1.0 之前，DMG 已签名并公证，开箱即用。
 
+40 秒演示：https://youtu.be/X2_MDL9v7As
 GitHub：https://github.com/oratis/Markup
 求 star 和反馈，尤其是「读 vs 改」这个模式好不好用。
 ```
@@ -158,6 +163,7 @@ It reads your .md like a web page, and you edit on demand. One click exports
 a high-fidelity HTML page — code highlighting, math, Mermaid intact.
 Tauri-light (~88MB), vault + backlinks + graph + full-text search, MIT.
 
+40s demo: youtu.be/X2_MDL9v7As
 ⭐ if you like it → github.com/oratis/Markup
 ```
 
@@ -186,5 +192,5 @@ One click exports any note to a high-fidelity HTML page (code highlighting,
 math, Mermaid intact) or PDF.
 Tauri (so ~88MB, not Electron), with a vault, backlinks, graph, and fast
 full-text search. MIT. macOS-only, pre-1.0, signed & notarized DMG.
-Feedback welcome: github.com/oratis/Markup
+40s demo: youtu.be/X2_MDL9v7As · Feedback welcome: github.com/oratis/Markup
 ```

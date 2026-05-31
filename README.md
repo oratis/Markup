@@ -5,14 +5,16 @@
 **A fast, native, open-source Markdown editor for macOS.**
 Read your Markdown like a beautiful web page — edit when you want.
 
-<img src="docs/assets/hero.gif" alt="Markup: reading Markdown rendered like a clean web page, with a vault file tree and light/dark themes" width="820">
+<a href="https://youtu.be/X2_MDL9v7As" title="Watch the 40-second demo on YouTube"><img src="docs/assets/hero.gif" alt="Markup: reading Markdown rendered like a clean web page, with a vault file tree and light/dark themes" width="820"></a>
+
+<sub>▶ <a href="https://youtu.be/X2_MDL9v7As"><b>Watch the 40-second demo</b></a></sub>
 
 [![CI](https://github.com/oratis/Markup/actions/workflows/ci.yml/badge.svg)](https://github.com/oratis/Markup/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/oratis/Markup?label=release)](https://github.com/oratis/Markup/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/oratis/Markup/total)](https://github.com/oratis/Markup/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-[**Download for macOS**](https://github.com/oratis/Markup/releases/latest) · [中文说明](#中文) · [Docs](./docs/README.md)
+[**Download for macOS**](https://github.com/oratis/Markup/releases/latest) · [▶ Demo](https://youtu.be/X2_MDL9v7As) · [中文说明](#中文) · [Docs](./docs/README.md)
 
 ⭐ **If Markup is useful to you, a star helps other people find it.**
 

@@ -1,5 +1,7 @@
 # YouTube metadata — Markup launch video
 
+> **Published:** https://youtu.be/X2_MDL9v7As — linked from the README (clickable hero GIF + "▶ Demo") and woven into the launch posts.
+
 Paste-ready. Video: `Markup-launch.mp4` (1280×720, ~37s, VO + music).
 Thumbnail: `../assets/youtube-thumbnail.png` (1280×720).
 Category: **Science & Technology**. Language: English. License: Standard YouTube.
