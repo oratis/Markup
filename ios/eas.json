@@ -1,0 +1,13 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "production": {
+      "ios": {
+        "config": "production.yml"
+      }
+    }
+  }
+}

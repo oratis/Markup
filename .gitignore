@@ -26,6 +26,12 @@ ios/**/build/
 *.xcuserstate
 xcuserdata/
 
+# iOS release / EAS
+ios/node_modules/
+ios/.expo/
+*.xcarchive
+*.p8
+
 # logs
 npm-debug.log*
 yarn-debug.log*

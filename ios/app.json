@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Markup",
+    "slug": "markup-ios",
+    "owner": "hakkoai",
+    "platforms": ["ios"],
+    "ios": {
+      "bundleIdentifier": "com.appkon.markup.ios"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_AFTER_eas_init"
+      }
+    }
+  }
+}
