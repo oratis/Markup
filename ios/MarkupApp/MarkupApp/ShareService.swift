@@ -38,8 +38,10 @@ final class PDFExporter: NSObject, WKNavigationDelegate {
 
     func export(content: String, theme: ReaderTheme, completion: @escaping (URL?) -> Void) {
         self.completion = completion
-        let html = ReaderHTML.document(markdown: content, title: title, theme: theme)
-        let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 612, height: 792))
+        let html = ReaderHTML.document(
+            markdown: content, title: title, theme: theme, assetBase: readerAssetBase)
+        let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 612, height: 792),
+                           configuration: makeReaderConfiguration())
         wv.navigationDelegate = self
         webView = wv
         wv.loadHTMLString(html, baseURL: nil)

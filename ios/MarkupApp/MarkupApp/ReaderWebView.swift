@@ -1,6 +1,57 @@
 import SwiftUI
 import WebKit
 
+/// Custom URL scheme that serves the bundled renderer assets (marked, KaTeX,
+/// Mermaid, highlight.js + fonts) so the reader works fully offline.
+let readerAssetScheme = "markupasset"
+let readerAssetBase = "markupasset:///"
+
+/// Serves files from the app bundle's `ReaderAssets/` folder over the custom
+/// scheme. Relative URLs inside the assets (e.g. KaTeX's `fonts/…`) resolve
+/// against the requesting asset, so the whole tree is reachable.
+final class ReaderAssetSchemeHandler: NSObject, WKURLSchemeHandler {
+    private let root = Bundle.main.resourceURL?.appendingPathComponent("ReaderAssets")
+
+    func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+        guard let url = task.request.url, let root else {
+            task.didFailWithError(URLError(.fileDoesNotExist)); return
+        }
+        var rel = url.path
+        if rel.hasPrefix("/") { rel.removeFirst() }
+        let fileURL = root.appendingPathComponent(rel).standardizedFileURL
+        guard fileURL.path.hasPrefix(root.standardizedFileURL.path),
+              let data = try? Data(contentsOf: fileURL) else {
+            task.didFailWithError(URLError(.fileDoesNotExist)); return
+        }
+        let response = URLResponse(
+            url: url, mimeType: Self.mime(fileURL.pathExtension),
+            expectedContentLength: data.count, textEncodingName: nil)
+        task.didReceive(response)
+        task.didReceive(data)
+        task.didFinish()
+    }
+
+    func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
+
+    private static func mime(_ ext: String) -> String {
+        switch ext.lowercased() {
+        case "js": return "text/javascript"
+        case "css": return "text/css"
+        case "woff2": return "font/woff2"
+        case "woff": return "font/woff"
+        case "ttf": return "font/ttf"
+        default: return "application/octet-stream"
+        }
+    }
+}
+
+/// A WebView configuration wired to serve bundled reader assets offline.
+func makeReaderConfiguration() -> WKWebViewConfiguration {
+    let config = WKWebViewConfiguration()
+    config.setURLSchemeHandler(ReaderAssetSchemeHandler(), forURLScheme: readerAssetScheme)
+    return config
+}
+
 /// Holds a weak reference to the live reader WebView so other views (e.g. the
 /// outline) can drive it — currently to scroll to a heading.
 @MainActor
@@ -24,7 +75,7 @@ struct ReaderWebView: UIViewRepresentable {
     var onToggleTask: (Int) -> Void = { _ in }
 
     func makeUIView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
+        let config = makeReaderConfiguration()
         let controller = WKUserContentController()
         controller.add(context.coordinator, name: "scroll")
         controller.add(context.coordinator, name: "task")
