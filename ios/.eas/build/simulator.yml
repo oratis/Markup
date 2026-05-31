@@ -1,0 +1,23 @@
+build:
+  name: Markup iOS — simulator (.app, no signing)
+  steps:
+    - eas/checkout
+    - run:
+        name: Build for iOS Simulator
+        working_directory: MarkupApp
+        command: |
+          set -euo pipefail
+          NUM="$(../scripts/derive-build-number.sh)"
+          xcodebuild \
+            -project MarkupApp.xcodeproj \
+            -scheme MarkupApp \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath "$HOME/markup-build/dd" \
+            CURRENT_PROJECT_VERSION="$NUM" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+    - eas/find_and_upload_build_artifacts:
+        inputs:
+          build_artifact_paths:
+            - "/Users/expo/markup-build/dd/Build/Products/Release-iphonesimulator/MarkupApp.app"

@@ -32,6 +32,7 @@ xcuserdata/
 # iOS release / EAS
 ios/node_modules/
 ios/.expo/
+ios/keys/
 *.xcarchive
 *.p8
 

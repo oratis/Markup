@@ -4,9 +4,26 @@
     "appVersionSource": "local"
   },
   "build": {
+    "preview-simulator": {
+      "ios": {
+        "config": "simulator.yml",
+        "simulator": true,
+        "image": "macos-sequoia-15.6-xcode-26.2"
+      }
+    },
     "production": {
       "ios": {
-        "config": "production.yml"
+        "config": "production.yml",
+        "credentialsSource": "remote",
+        "image": "macos-sequoia-15.6-xcode-26.2",
+        "resourceClass": "large"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "REPLACE_WITH_ASC_APP_ID"
       }
     }
   }
