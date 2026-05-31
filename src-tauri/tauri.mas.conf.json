@@ -4,5 +4,10 @@
     "macOS": {
       "entitlements": "Entitlements.mas.plist"
     }
+  },
+  "plugins": {
+    "updater": {
+      "active": false
+    }
   }
 }
