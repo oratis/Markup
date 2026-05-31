@@ -10,13 +10,13 @@ path to 1.0.
 
 ---
 
-## 1. Where we are — v0.5.2
+## 1. Where we are — v0.6.1
 
 | | |
 |---|---|
-| **Distribution** | Direct-download DMG on GitHub Releases, **dual-arch** (Apple Silicon + Intel), **unsigned** |
-| **Updates** | In-app banner that points to the latest GitHub release (direct build); compiled out of any MAS build |
-| **Mac App Store** | Technically ready (sandbox verified, security-scoped bookmarks, build script) — **not submitted** (account steps pending) |
+| **Distribution** | Direct-download DMG on GitHub Releases, **dual-arch** (Apple Silicon + Intel), **signed (Developer ID) + notarized** — opens with no Gatekeeper prompt |
+| **Updates** | **In-app signed auto-update** (Tauri updater + Ed25519-signed `latest.json`, shipped v0.6.1); compiled out of any MAS build |
+| **Mac App Store** | Code-ready (sandbox verified, security-scoped bookmarks, build script, privacy policy, MAS build re-verified on v0.6.1); **distribution certs' CSRs generated** — remaining steps account-gated (App ID, certs, profile, App Store Connect, Transporter upload) |
 | **Stack** | Tauri 2 (Rust) · Milkdown/ProseMirror WYSIWYG · CodeMirror 6 source · Tantivy search |
 
 ### Shipped so far
@@ -26,6 +26,11 @@ path to 1.0.
 - **v0.5.0** — WYSIWYG images (asset protocol), Chinese-IME line-break fix, `.md` open-with, browser preview fix; MAS groundwork.
 - **v0.5.1** — Fix the v0.5.0 IME per-keystroke newline regression; reopen-last-vault on launch (security-scoped bookmarks).
 - **v0.5.2** — DMG installer shows large, centered icons (dmgbuild headless layout).
+- **v0.5.3** — High-fidelity HTML/PDF export: syntect code highlighting, KaTeX math, Mermaid diagrams, heading anchors, theme-aware; `App.tsx` effects refactored into tested hooks + Playwright E2E.
+- **v0.5.4** — Fix "Open as HTML" (scoped the opener to the preview temp dir).
+- **v0.5.5** — Fix export list/task-list spacing (loose lists + inline checkboxes).
+- **v0.6.0** — **Signed + notarized** dual-arch DMGs (Apple Developer ID); Gatekeeper prompt gone.
+- **v0.6.1** — **Signed in-app auto-update** (updater feed `latest.json` published per release).
 
 ---
 
@@ -60,34 +65,39 @@ This is the flow used since v0.3.0 — keep to it.
 
 | Channel | State | Notes |
 |---|---|---|
-| **Direct DMG (unsigned)** | ✅ live | Gatekeeper blocks first launch → *System Settings → Privacy & Security → Open Anyway*. |
-| **Direct DMG (signed + notarized)** | ⏳ planned (v0.6.0) | Removes the Gatekeeper prompt. Needs Developer ID cert; pipeline in `scripts/sign-and-notarize.sh` + the release workflow's signing gate. |
-| **Mac App Store** | ⏳ ready, not submitted | Sandbox + bookmarks done; `scripts/build-mas.sh` produces the `.pkg`. Remaining work is account-gated (see §5). |
-| **Auto-update (in-place)** | 🔭 future | Today's banner is download-and-replace. Tauri's signed updater could make it one-click; needs the Ed25519 update key + `latest.json` per release. |
+| **Direct DMG (signed + notarized)** | ✅ live (v0.6.0+) | Opens with no Gatekeeper prompt. Developer ID cert (Team `9LH9NBX7P4`); release workflow's signing gate (`HAS_APPLE_SIGNING`). |
+| **Auto-update (in-place)** | ✅ live (v0.6.1+) | Tauri signed updater; the release workflow publishes an Ed25519-signed `latest.json` + `.app.tar.gz` per release. v0.6.0-and-earlier users update manually once. |
+| **Mac App Store** | ⏳ code-ready, not submitted | Sandbox + bookmarks + privacy policy done; `scripts/build-mas.sh` produces the `.pkg`; distribution-cert CSRs generated. Remaining work is account-gated (see §5). |
 
 ---
 
 ## 5. Roadmap
 
-### v0.5.x — stabilization (now)
-- [ ] Cosmetic: CJK composition phantom blank-line (WebKit-internal; best-effort CSS shipped in 0.5.2, confirm or accept).
-- [ ] Triage any field reports from the 0.5 line.
+### v0.6.0 — "Trustworthy install" (signing) ✅ DONE
+- [x] Provision **Developer ID Application** cert (Team `9LH9NBX7P4`).
+- [x] Wire the six Apple secrets into the release workflow's signing gate.
+- [x] Codesign (hardened runtime) + notarize + staple the direct DMGs.
+- [x] Update README: drop the "unsigned / Open Anyway" caveat.
 
-### v0.6.0 — "Trustworthy install" (signing)
-**Goal:** users can open Markup without the Gatekeeper scare.
-**Code is done; remaining steps are account-gated — full runbook: [app-store/signing-setup.md](./app-store/signing-setup.md).**
-- [ ] Provision **Developer ID Application** cert (account: wangharp@gmail.com).
-- [ ] Wire the six Apple secrets into the release workflow's signing gate (already coded — see `release.yml` `HAS_APPLE_SIGNING`).
-- [ ] Codesign (hardened runtime) + notarize + staple the direct DMGs.
-- [ ] Update README: drop the "unsigned / Open Anyway" caveat.
+### v0.6.1 — "Auto-update" ✅ DONE
+- [x] Generate Ed25519 update key; wire `TAURI_SIGNING_*` secrets.
+- [x] `updater.active = true` + pubkey in `tauri.conf.json`.
+- [x] Release workflow signs an `.app.tar.gz` per arch and publishes `latest.json`.
 
-### MAS launch — "On the store" (can run in parallel with v0.6)
-Owner = you (account-gated); I provide scripts + exact steps. Full runbook: [app-store/MAS-publishing-plan.md](./app-store/MAS-publishing-plan.md).
-- [ ] Register App ID (App Sandbox capability).
-- [ ] 3 certs (Apple Distribution + Installer) + Mac App Store provisioning profile.
-- [ ] App Store Connect record: Free tier, metadata, screenshots, privacy "Data Not Collected".
+### MAS launch — "On the store" (in progress; account-gated)
+Owner = you (account-gated); scripts + exact steps provided. Full runbook: [app-store/MAS-publishing-plan.md](./app-store/MAS-publishing-plan.md).
+- [x] Sandbox build re-verified on v0.6.1; entitlements embed correctly.
+- [x] Privacy policy published ([PRIVACY.md](../PRIVACY.md)); MAS build disables the updater.
+- [x] Distribution-cert CSRs generated (`~/markup-signing/mas/`).
+- [ ] Create the two MAS certs from the CSRs (Apple Distribution + Mac Installer Distribution).
+- [ ] Register App ID `com.appkon.markup` (App Sandbox) + Mac App Store provisioning profile.
+- [ ] App Store Connect record: Free tier, metadata, screenshots (1280×800+), privacy "Data Not Collected".
 - [ ] `MAS_APP_IDENTITY=… MAS_INSTALLER_IDENTITY=… MAS_PROFILE=… ./scripts/build-mas.sh` → `.pkg` → Transporter upload → submit for review.
 - [ ] Address review feedback; ship.
+
+### v0.5.x — stabilization ✅ DONE
+- [x] CJK composition phantom blank-line — best-effort CSS mitigation (cosmetic; not serialized).
+- [x] High-fidelity export + export fixes (v0.5.3–v0.5.5).
 
 ### v0.7.0 — feature batch (candidate themes, pick what matters)
 - [ ] Settings: default mode (Read/Edit) toggle, prose font/width controls (the redesign plan §M5 items).
@@ -97,19 +107,25 @@ Owner = you (account-gated); I provide scripts + exact steps. Full runbook: [app
 
 ### v1.0.0 — criteria
 Ship 1.0 when **all** hold:
-- [ ] Signed + notarized direct DMG (no Gatekeeper prompt). *(v0.6.0)*
-- [ ] Either: live on the Mac App Store, **or** a deliberate "direct-only" decision documented.
-- [ ] No known data-loss or input-corruption bugs (IME content is correct as of 0.5.1).
-- [ ] README screenshots + a real landing/marketing pass.
-- [ ] Crash-free across a week of daily use on a large vault.
+- [x] Signed + notarized direct DMG (no Gatekeeper prompt). *(v0.6.0)*
+- [ ] **DECISION NEEDED:** either live on the Mac App Store, **or** a deliberate "direct-only" decision documented here. (Code is MAS-ready; the rest is account-gated. Direct distribution already gives signed + notarized + auto-update, so "direct-only" is a legitimate 1.0 choice.)
+- [x] No known data-loss or input-corruption bugs (IME content correct since 0.5.1).
+- [x] README screenshots + a real landing/marketing pass (hero GIF, screenshots, launch video, social card).
+- [ ] Crash-free across a week of daily use on a large vault (ongoing observation).
+
+> **The only hard blocker left for 1.0 is the MAS-vs-direct-only decision.** Everything else is done or is passive observation.
 
 ---
 
 ## 6. Known issues / backlog
 - **CJK composition phantom blank-line** — purely visual (not serialized); WebKit contenteditable IME rendering. Best-effort CSS mitigation in 0.5.2.
-- **Unsigned DMG** — Gatekeeper prompt until v0.6.0 signing.
 - **Vault auto-reopen vs. sandbox** — works via security-scoped bookmarks (0.5.1); the direct build restores by path. External-disk vaults across reboots are the edge to watch.
-- **Pre-existing localStorage unit-test failures** — only in some local Node setups; CI (jsdom) is green. Not a release blocker; worth a test-env fix eventually.
+- **localStorage in local unit tests** — fixed: `src/test/setup.ts` installs an in-memory Storage polyfill when the host (e.g. Node 26 + jsdom) doesn't provide one. CI was already green.
+
+### Deferred features (post-1.0 candidates; none block 1.0)
+- Spell check (native NSSpellChecker bridge — the WebView `spellcheck` attribute is already wired).
+- Custom CSS theme import; `docx` export (pandoc); PDF inline preview; multi-window.
+- iOS companion M5 (TestFlight) / M6 (public) — separate track.
 
 ---
 
