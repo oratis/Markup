@@ -14,6 +14,9 @@ struct ReaderView: View {
     @State private var isEditing = false
     @State private var showConflict = false
     @State private var saveTask: Task<Void, Never>?
+    @State private var htmlReloadToken = 0
+
+    private var isHTML: Bool { FileKind.of(file.name) == .html }
 
     @StateObject private var proxy = WebViewProxy()
     @State private var showOutline = false
@@ -51,6 +54,15 @@ struct ReaderView: View {
             if isEditing {
                 SourceEditorView(text: $content)
                     .onChange(of: content) { _, _ in scheduleSave() }
+            } else if isHTML {
+                // Render the HTML file faithfully, with read access to the vault
+                // so relative CSS/images/links resolve.
+                ReaderWebView(
+                    fileURL: URL(fileURLWithPath: file.path),
+                    readAccessURL: vault.rootURL,
+                    loadToken: htmlReloadToken,
+                    proxy: proxy,
+                    onScroll: { positions.save($0, for: file.relPath) })
             } else {
                 ReaderWebView(
                     html: html,
@@ -87,14 +99,25 @@ struct ReaderView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Button {
-                if isEditing { saveNow() }
+                if isEditing {
+                    saveNow()
+                    if isHTML { htmlReloadToken += 1 }
+                }
                 isEditing.toggle()
             } label: {
                 Image(systemName: isEditing ? "book" : "pencil")
             }
             .accessibilityLabel(isEditing ? "Read" : "Edit")
         }
-        if !isEditing {
+        if !isEditing && isHTML {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { shareItem = ShareItem(url: URL(fileURLWithPath: file.path)) } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("Share")
+            }
+        }
+        if !isEditing && !isHTML {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { showOutline = true } label: { Image(systemName: "list.bullet.indent") }
                     .accessibilityLabel("Outline")

@@ -40,11 +40,14 @@ public final class IndexService {
     // MARK: - Indexing
 
     /// Index (or re-index) one document. Replaces any prior rows for `relPath`.
+    /// `title` overrides the derived title (e.g. an HTML `<title>`). For HTML,
+    /// pass the stripped plain text as `content` (the markdown scans then no-op).
     public func index(relPath: String, name: String, content: String,
-                      mtimeMs: Double = 0, size: Int = 0) throws {
+                      mtimeMs: Double = 0, size: Int = 0,
+                      title titleOverride: String? = nil) throws {
         try remove(relPath: relPath)
 
-        let title = firstHeadingText(content) ?? stripMarkdownExtension(name)
+        let title = titleOverride ?? firstHeadingText(content) ?? stripMarkdownExtension(name)
         try db.run(
             "INSERT INTO documents(rel_path,title,mtime,size,word_count) VALUES(?,?,?,?,?)",
             [.text(relPath), .text(title), .double(mtimeMs), .int(size), .int(countWords(content))])

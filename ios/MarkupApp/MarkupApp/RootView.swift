@@ -85,7 +85,7 @@ struct RootView: View {
                                 }
                             }
                         } icon: {
-                            Image(systemName: "doc.richtext")
+                            Image(systemName: FileKind.of(file.name) == .html ? "globe" : "doc.richtext")
                         }
                     }
                 }

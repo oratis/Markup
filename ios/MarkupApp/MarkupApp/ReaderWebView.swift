@@ -68,8 +68,14 @@ final class WebViewProxy: ObservableObject {
 /// Displays rendered HTML in a `WKWebView` and bridges scroll position and
 /// task-list taps back to native.
 struct ReaderWebView: UIViewRepresentable {
-    let html: String
-    let baseURL: URL?
+    var html: String = ""
+    var baseURL: URL? = nil
+    /// When set, the WebView loads this file directly (for `.html` documents),
+    /// granting read access to `readAccessURL` so relative CSS/images/links work.
+    var fileURL: URL? = nil
+    var readAccessURL: URL? = nil
+    /// Bump to force a reload of the same source (e.g. after editing an HTML file).
+    var loadToken: Int = 0
     var proxy: WebViewProxy? = nil
     var onScroll: (Double) -> Void = { _ in }
     var onToggleTask: (Int) -> Void = { _ in }
@@ -94,9 +100,15 @@ struct ReaderWebView: UIViewRepresentable {
         proxy?.webView = webView
         context.coordinator.onScroll = onScroll
         context.coordinator.onToggleTask = onToggleTask
-        if context.coordinator.lastHTML != html {
-            context.coordinator.lastHTML = html
-            webView.loadHTMLString(html, baseURL: baseURL)
+        let key = (fileURL.map { "file:" + $0.path } ?? html) + "#\(loadToken)"
+        if context.coordinator.lastHTML != key {
+            context.coordinator.lastHTML = key
+            if let fileURL {
+                webView.loadFileURL(
+                    fileURL, allowingReadAccessTo: readAccessURL ?? fileURL.deletingLastPathComponent())
+            } else {
+                webView.loadHTMLString(html, baseURL: baseURL)
+            }
         }
     }
 

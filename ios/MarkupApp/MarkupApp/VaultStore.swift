@@ -16,7 +16,7 @@ final class VaultStore {
     var indexReady = false
 
     private let bookmarkKey = "vault.rootBookmark"
-    private let markdownExtensions: Set<String> = ["md", "markdown", "mdx", "mkd"]
+    private let supportedExtensions = markupSupportedExtensions
 
     var rootName: String { rootURL?.lastPathComponent ?? "No folder" }
 
@@ -84,7 +84,7 @@ final class VaultStore {
         var found: [VaultFile] = []
         let rootPath = root.standardizedFileURL.path
         for case let url as URL in enumerator {
-            guard markdownExtensions.contains(url.pathExtension.lowercased()) else { continue }
+            guard supportedExtensions.contains(url.pathExtension.lowercased()) else { continue }
             let values = try? url.resourceValues(forKeys: Set(keys))
             if values?.isRegularFile == false { continue }
             let mtime = (values?.contentModificationDate?.timeIntervalSince1970 ?? 0) * 1000
@@ -116,10 +116,17 @@ final class VaultStore {
             guard let idx = try? IndexService() else { return }
             var n = 0
             for f in snapshot {
-                if let content = try? String(contentsOfFile: f.path, encoding: .utf8) {
-                    try? idx.index(
-                        relPath: f.relPath, name: f.name, content: content,
-                        mtimeMs: f.mtimeMs, size: f.size)
+                if let raw = try? String(contentsOfFile: f.path, encoding: .utf8) {
+                    if FileKind.of(f.name) == .html {
+                        // Index HTML by its visible text + <title> so it's searchable.
+                        try? idx.index(
+                            relPath: f.relPath, name: f.name, content: HTMLDoc.plainText(raw),
+                            mtimeMs: f.mtimeMs, size: f.size, title: HTMLDoc.title(raw))
+                    } else {
+                        try? idx.index(
+                            relPath: f.relPath, name: f.name, content: raw,
+                            mtimeMs: f.mtimeMs, size: f.size)
+                    }
                 }
                 n += 1
                 if n % 50 == 0 { await Task.yield() }
