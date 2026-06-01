@@ -3,9 +3,16 @@
     "name": "Markup",
     "slug": "markup",
     "owner": "hakkoai",
-    "platforms": ["ios"],
+    "platforms": [
+      "ios"
+    ],
     "ios": {
       "bundleIdentifier": "com.appkon.markup.ios"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "08c56f0c-ee56-47d7-9234-69469aec8793"
+      }
     }
   }
 }
