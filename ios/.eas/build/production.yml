@@ -1,24 +1,21 @@
 build:
   name: Markup iOS — App Store archive
-  # Custom EAS build for a NATIVE SwiftUI app (project at MarkupApp/, NOT the
-  # Expo ./ios/<App>.xcworkspace layout). EAS's iOS helpers
-  # (eas/configure_ios_credentials, generate_gymfile, run_fastlane) assume the
-  # Expo prebuild layout and don't fit, so we self-sign with an
-  # App Store Connect API key + xcodebuild -allowProvisioningUpdates.
+  # Native SwiftUI app (project at MarkupApp/). The app archives fine on EAS
+  # (verified via the diag profile). Signing uses the EAS-managed Distribution
+  # cert + App Store provisioning profile (set up via `eas credentials`),
+  # installed by eas/configure_ios_credentials, then built/exported with
+  # `fastlane gym` (robust signing/export). The .ipa is uploaded to TestFlight
+  # with the App Store Connect API key (altool).
   #
-  # Required EAS secrets (eas secret:create --scope project --name … --value …):
-  #   ASC_KEY_BASE64  – base64 of the App Store Connect API key .p8
-  #   ASC_KEY_ID      – the key id (e.g. ABCD1234EF)
-  #   ASC_ISSUER_ID   – the issuer UUID
-  #   APPLE_TEAM_ID   – 9LH9NBX7P4  (already set by Claude)
-  #
-  # Build number is DERIVED from MARKETING_VERSION (single source of truth);
-  # set IOS_BUILD_BUMP to rebuild the same semver with a fresh build number.
+  # Required EAS secrets: ASC_KEY_BASE64, ASC_KEY_ID, ASC_ISSUER_ID (for altool).
+  # Build number is derived from MARKETING_VERSION (+ IOS_BUILD_BUMP).
   steps:
     - eas/checkout
 
+    - eas/configure_ios_credentials
+
     - run:
-        name: Install App Store Connect API key
+        name: Install App Store Connect API key (for upload)
         command: |
           set -euo pipefail
           mkdir -p "$HOME/.appstoreconnect/private_keys"
@@ -26,51 +23,28 @@ build:
             > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
     - run:
-        name: Archive (App Store, Release)
+        name: Build IPA (fastlane gym, App Store)
         working_directory: MarkupApp
         command: |
           set -euo pipefail
           NUM="$(bash ../scripts/derive-build-number.sh)"
           echo "Build number: $NUM"
-          xcodebuild \
-            -project MarkupApp.xcodeproj \
-            -scheme MarkupApp \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$HOME/markup-build/Markup.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CURRENT_PROJECT_VERSION="$NUM" \
-            archive
-
-    - run:
-        name: Export signed IPA
-        working_directory: MarkupApp
-        command: |
-          set -euo pipefail
-          xcodebuild -exportArchive \
-            -archivePath "$HOME/markup-build/Markup.xcarchive" \
-            -exportPath "$HOME/markup-build/export" \
-            -exportOptionsPlist ExportOptions.plist \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          fastlane gym \
+            --project MarkupApp.xcodeproj \
+            --scheme MarkupApp \
+            --configuration Release \
+            --export_method app-store \
+            --output_directory ../build \
+            --output_name Markup.ipa \
+            --xcargs "CURRENT_PROJECT_VERSION=$NUM"
 
     - run:
         name: Upload to TestFlight
+        working_directory: MarkupApp
         command: |
           set -euo pipefail
-          IPA="$(ls "$HOME/markup-build/export/"*.ipa | head -1)"
-          echo "Uploading $IPA to App Store Connect…"
-          xcrun altool --upload-app -f "$IPA" -t ios \
+          xcrun altool --upload-app -f "../build/Markup.ipa" -t ios \
             --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
 
-    - eas/find_and_upload_build_artifacts:
-        inputs:
-          build_artifact_paths: "/Users/expo/markup-build/export/*.ipa"
-  # After this: the build appears in App Store Connect → TestFlight (~5-10 min
-  # processing). Requires the app record to already exist in App Store Connect.
+    - eas/find_and_upload_build_artifacts
+  # → build appears in App Store Connect → TestFlight (~5-10 min processing).

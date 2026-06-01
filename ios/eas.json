@@ -22,6 +22,7 @@
       "ios": {
         "config": "production.yml",
         "credentialsSource": "remote",
+        "applicationArchivePath": "build/Markup.ipa",
         "image": "macos-sequoia-15.6-xcode-26.2",
         "resourceClass": "large"
       }
