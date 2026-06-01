@@ -392,6 +392,17 @@ describe("app store", () => {
       expect(tab?.kind).toBe("markdown");
     });
 
+    it("marks a .html tab with kind=html on open", () => {
+      const { openLoadedFile } = useAppStore.getState();
+      openLoadedFile({
+        path: "/notes/page.html",
+        content: "<h1>Hi</h1>",
+        mtime_ms: 100,
+      });
+      const tab = useAppStore.getState().tabs.find((x) => x.path === "/notes/page.html");
+      expect(tab?.kind).toBe("html");
+    });
+
     it("matches the .canvas extension case-insensitively", () => {
       const { openLoadedFile } = useAppStore.getState();
       openLoadedFile({

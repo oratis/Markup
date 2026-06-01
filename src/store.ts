@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { isCanvasPath } from "./lib/canvas-path";
+import { isCanvasPath, isHtmlPath } from "./lib/canvas-path";
 import { t } from "./lib/i18n";
 import type { LoadedFile } from "./lib/types";
 
@@ -8,7 +8,7 @@ import type { LoadedFile } from "./lib/types";
  *  `"canvas"` routes to the Canvas whiteboard (see CanvasView, Phase 2).
  *  Optional in the type so existing code that constructs Tab objects
  *  without specifying a kind keeps working with the markdown default. */
-export type TabKind = "markdown" | "canvas";
+export type TabKind = "markdown" | "canvas" | "html";
 
 export type SaveStatus = "saved" | "dirty" | "saving" | "error";
 /** "auto" resolves to light or dark via prefers-color-scheme. */
@@ -315,7 +315,11 @@ export const useAppStore = create<AppState>((set) => ({
       const id = loaded.path;
       const existing = state.tabs.find((t) => t.id === id);
       if (existing) return { activeTabId: id };
-      const kind: TabKind = isCanvasPath(loaded.path) ? "canvas" : "markdown";
+      const kind: TabKind = isCanvasPath(loaded.path)
+        ? "canvas"
+        : isHtmlPath(loaded.path)
+          ? "html"
+          : "markdown";
       const tab: Tab = {
         id,
         path: loaded.path,

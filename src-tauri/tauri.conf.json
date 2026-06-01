@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' tauri:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: tauri: http://asset.localhost https://asset.localhost; font-src 'self' data:; connect-src 'self' tauri: ipc: ws://localhost:1421",
+      "csp": "default-src 'self' tauri:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: tauri: http://asset.localhost https://asset.localhost; font-src 'self' data:; frame-src 'self' asset: http://asset.localhost https://asset.localhost; connect-src 'self' tauri: ipc: ws://localhost:1421",
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
@@ -60,6 +60,13 @@
         "description": "Markdown document",
         "role": "Editor",
         "rank": "Owner"
+      },
+      {
+        "ext": ["html", "htm"],
+        "name": "HTML",
+        "description": "HTML document",
+        "role": "Editor",
+        "rank": "Alternate"
       }
     ]
   },

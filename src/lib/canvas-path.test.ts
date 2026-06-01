@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCanvasPath, isMarkdownPath } from "./canvas-path";
+import { isCanvasPath, isHtmlPath, isMarkdownPath } from "./canvas-path";
 
 describe("isCanvasPath", () => {
   it("matches .canvas (lowercase)", () => {
@@ -37,6 +37,22 @@ describe("isCanvasPath", () => {
   it("treats a leading-dot file as no extension", () => {
     expect(isCanvasPath(".canvas")).toBe(false);
     expect(isCanvasPath("/dir/.canvas")).toBe(false);
+  });
+});
+
+describe("isHtmlPath", () => {
+  it("matches .html and .htm case-insensitively", () => {
+    expect(isHtmlPath("/notes/page.html")).toBe(true);
+    expect(isHtmlPath("page.htm")).toBe(true);
+    expect(isHtmlPath("Page.HTML")).toBe(true);
+  });
+
+  it("rejects markdown, canvas and unrelated extensions", () => {
+    expect(isHtmlPath("note.md")).toBe(false);
+    expect(isHtmlPath("board.canvas")).toBe(false);
+    expect(isHtmlPath("a.txt")).toBe(false);
+    expect(isHtmlPath(null)).toBe(false);
+    expect(isHtmlPath("")).toBe(false);
   });
 });
 

@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { isCanvasPath } from "../lib/canvas-path";
+import { isCanvasPath, isHtmlPath } from "../lib/canvas-path";
 import { useT } from "../lib/i18n";
 import { listVaultFiles, readFile, renameFile, trashFile } from "../lib/tauri";
 import { type VaultFile, useAppStore } from "../store";
@@ -182,15 +182,27 @@ export function FileTree() {
                   className={`shrink-0 w-3 text-center ${
                     isCanvasPath(file.path)
                       ? "text-amber-600 dark:text-amber-400 opacity-90"
-                      : "opacity-50"
+                      : isHtmlPath(file.path)
+                        ? "text-sky-600 dark:text-sky-400 opacity-90"
+                        : "opacity-50"
                   }`}
                   aria-hidden="true"
                   data-testid={
-                    isCanvasPath(file.path) ? "filetree-canvas-icon" : "filetree-md-icon"
+                    isCanvasPath(file.path)
+                      ? "filetree-canvas-icon"
+                      : isHtmlPath(file.path)
+                        ? "filetree-html-icon"
+                        : "filetree-md-icon"
                   }
-                  title={isCanvasPath(file.path) ? "Canvas" : "Markdown"}
+                  title={
+                    isCanvasPath(file.path)
+                      ? "Canvas"
+                      : isHtmlPath(file.path)
+                        ? "HTML"
+                        : "Markdown"
+                  }
                 >
-                  {isCanvasPath(file.path) ? "◈" : "·"}
+                  {isCanvasPath(file.path) ? "◈" : isHtmlPath(file.path) ? "◍" : "·"}
                 </span>
                 {isRenaming ? (
                   <input

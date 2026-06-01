@@ -39,13 +39,22 @@ fn looks_like_canvas(path: &Path) -> bool {
     )
 }
 
+fn looks_like_html(path: &Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_ascii_lowercase()),
+        Some(ext) if matches!(ext.as_str(), "html" | "htm")
+    )
+}
+
 /// Return true for any file extension the editor knows how to load.
-/// Currently: Markdown variants (md / markdown / mdx / mkd) and
-/// Obsidian Canvas files (.canvas). Other extensions are rejected at
-/// the read boundary so a stray ".pdf" can't slip into a tab buffer
+/// Currently: Markdown variants (md / markdown / mdx / mkd), Obsidian Canvas
+/// files (.canvas), and HTML documents (.html / .htm). Other extensions are
+/// rejected at the read boundary so a stray ".pdf" can't slip into a tab buffer
 /// where the editor would mis-render it.
 fn looks_like_editable(path: &Path) -> bool {
-    looks_like_markdown(path) || looks_like_canvas(path)
+    looks_like_markdown(path) || looks_like_canvas(path) || looks_like_html(path)
 }
 
 #[tauri::command]
@@ -54,6 +63,7 @@ pub async fn open_file(app: tauri::AppHandle) -> AppResult<Option<LoadedFile>> {
     app.dialog()
         .file()
         .add_filter("Markdown", &["md", "markdown", "mdx", "mkd"])
+        .add_filter("HTML", &["html", "htm"])
         .add_filter("Canvas", &["canvas"])
         .pick_file(move |maybe_path| {
             let _ = tx.send(maybe_path);

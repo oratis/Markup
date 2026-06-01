@@ -23,6 +23,12 @@ export function isCanvasPath(path: string | null | undefined): boolean {
   return extOf(path) === "canvas";
 }
 
+/** True when the path is a standalone HTML document (`.html` / `.htm`). */
+export function isHtmlPath(path: string | null | undefined): boolean {
+  const ext = extOf(path);
+  return ext === "html" || ext === "htm";
+}
+
 /** Markdown extensions Markup treats as text editor content. Matches
  *  the Rust-side gate in src-tauri/src/commands.rs::looks_like_markdown. */
 const MARKDOWN_EXTS: ReadonlySet<string> = new Set(["md", "markdown", "mdx", "mkd"]);

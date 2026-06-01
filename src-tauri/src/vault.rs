@@ -72,13 +72,19 @@ impl VaultState {
         }
 
         let index = Arc::new(MarkupIndex::open_or_create(&index_dir)?);
-        let files = scanner::scan_markdown_files(&root)?;
+        let files = scanner::scan_indexable_files(&root)?;
 
         // Bulk index. Keep memory bounded by reading files one at a time.
+        // HTML is stripped to visible text so it's searchable like markdown.
         for path in &files {
             let content = std::fs::read_to_string(path).unwrap_or_default();
+            let body = if scanner::is_html(path) {
+                scanner::strip_html(&content)
+            } else {
+                content
+            };
             let mtime = file_mtime_ms(path);
-            index.upsert_file(path, &content, mtime).await?;
+            index.upsert_file(path, &body, mtime).await?;
         }
         index.commit().await?;
 
@@ -141,22 +147,17 @@ async fn handle_changes(
     for change in changes {
         match change {
             VaultChange::Upserted(path) => {
-                if !crate::scanner::is_markdown(path) {
-                    continue;
+                if crate::scanner::is_indexable(path) {
+                    upsert_indexable(index, path).await?;
                 }
-                let content = std::fs::read_to_string(path).unwrap_or_default();
-                let mtime = file_mtime_ms(path);
-                index.upsert_file(path, &content, mtime).await?;
             }
             VaultChange::Removed(path) => {
                 index.remove_file(path).await?;
             }
             VaultChange::Renamed(from, to) => {
                 index.remove_file(from).await?;
-                if crate::scanner::is_markdown(to) {
-                    let content = std::fs::read_to_string(to).unwrap_or_default();
-                    let mtime = file_mtime_ms(to);
-                    index.upsert_file(to, &content, mtime).await?;
+                if crate::scanner::is_indexable(to) {
+                    upsert_indexable(index, to).await?;
                 }
             }
         }
@@ -164,6 +165,19 @@ async fn handle_changes(
     index.commit().await?;
     let _ = app.emit("vault-changed", ());
     Ok(())
+}
+
+/// Read a file and upsert its searchable body into the index (HTML stripped to
+/// visible text, markdown verbatim).
+async fn upsert_indexable(index: &MarkupIndex, path: &Path) -> AppResult<()> {
+    let content = std::fs::read_to_string(path).unwrap_or_default();
+    let body = if crate::scanner::is_html(path) {
+        crate::scanner::strip_html(&content)
+    } else {
+        content
+    };
+    let mtime = file_mtime_ms(path);
+    index.upsert_file(path, &body, mtime).await
 }
 
 pub fn file_mtime_ms(path: &Path) -> i64 {
