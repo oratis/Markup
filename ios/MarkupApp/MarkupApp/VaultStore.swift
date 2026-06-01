@@ -20,6 +20,20 @@ final class VaultStore {
 
     var rootName: String { rootURL?.lastPathComponent ?? "No folder" }
 
+    /// A readable, `/`-joined path for the open vault, cleaning the iCloud
+    /// container prefix (e.g. "iCloud Drive/Workspace/Notes").
+    var rootDisplayPath: String {
+        guard let url = rootURL else { return "" }
+        let p = url.path
+        if let r = p.range(of: "com~apple~CloudDocs/") {
+            return "iCloud Drive/" + String(p[r.upperBound...])
+        }
+        if let r = p.range(of: "/Mobile Documents/") {
+            return String(p[r.upperBound...])
+        }
+        return url.pathComponents.filter { $0 != "/" }.joined(separator: "/")
+    }
+
     /// Re-open the previously chosen folder on launch.
     func restore() {
         guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return }
@@ -115,9 +129,19 @@ final class VaultStore {
         }
     }
 
-    /// Read a file's text content, or `nil` on failure.
+    /// Read a file's text content, or `nil` on failure. If the file is an
+    /// iCloud placeholder that isn't downloaded yet, trigger a download and
+    /// wait briefly (the synced-vault "open the Mac's files" path).
     func content(of file: VaultFile) -> String? {
-        try? String(contentsOf: URL(fileURLWithPath: file.path), encoding: .utf8)
+        let url = URL(fileURLWithPath: file.path)
+        if let text = try? String(contentsOf: url, encoding: .utf8) { return text }
+        try? FileManager.default.startDownloadingUbiquitousItem(at: url)
+        let deadline = Date().addingTimeInterval(2.5)
+        while Date() < deadline {
+            if let text = try? String(contentsOf: url, encoding: .utf8) { return text }
+            Thread.sleep(forTimeInterval: 0.15)
+        }
+        return nil
     }
 
     /// Current on-disk modification time in ms (for the save-time conflict guard).
