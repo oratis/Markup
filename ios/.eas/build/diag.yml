@@ -1,0 +1,34 @@
+build:
+  name: Markup iOS — diagnostics
+  steps:
+    - eas/checkout
+    - run:
+        name: collect diagnostics
+        command: |
+          set +e
+          OUT="$PWD/diag.txt"
+          {
+            echo "### pwd"; pwd
+            echo "### ls -la (cwd)"; ls -la
+            echo "### find xcodeproj / Package.swift (depth 4)"
+            find . -maxdepth 4 \( -name "*.xcodeproj" -o -name "Package.swift" \) 2>/dev/null
+            echo "### xcodebuild -version"; xcodebuild -version
+            echo "### showsdks (ios)"; xcodebuild -showsdks 2>&1 | grep -i ios
+            echo "### installed iOS sim runtimes"; xcrun simctl list runtimes 2>&1 | grep -i ios
+            PROJDIR="MarkupApp"; [ -d "$PROJDIR" ] || PROJDIR="ios/MarkupApp"
+            echo "### PROJDIR=$PROJDIR exists=$([ -d "$PROJDIR" ] && echo yes || echo NO)"
+            echo "### xcodebuild -list"
+            ( cd "$PROJDIR" && xcodebuild -list -project MarkupApp.xcodeproj 2>&1 )
+            echo "### derive-build-number"
+            ( cd "$PROJDIR" && bash ../scripts/derive-build-number.sh 2>&1 )
+            echo "### ARCHIVE ATTEMPT (no signing) — last 80 lines"
+            ( cd "$PROJDIR" && xcodebuild \
+                -project MarkupApp.xcodeproj -scheme MarkupApp -configuration Release \
+                -destination 'generic/platform=iOS' \
+                -archivePath "$HOME/x.xcarchive" \
+                CODE_SIGNING_ALLOWED=NO archive 2>&1 | tail -80 )
+          } > "$OUT" 2>&1
+          echo "----- diag.txt -----"; cat "$OUT"
+    - eas/find_and_upload_build_artifacts:
+        inputs:
+          build_artifact_paths: "diag.txt"

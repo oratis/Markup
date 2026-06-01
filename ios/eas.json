@@ -4,6 +4,13 @@
     "appVersionSource": "local"
   },
   "build": {
+    "diag": {
+      "ios": {
+        "config": "diag.yml",
+        "image": "macos-sequoia-15.6-xcode-26.2",
+        "resourceClass": "large"
+      }
+    },
     "preview-simulator": {
       "ios": {
         "config": "simulator.yml",
