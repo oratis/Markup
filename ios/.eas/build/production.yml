@@ -60,8 +60,17 @@ build:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
+    - run:
+        name: Upload to TestFlight
+        command: |
+          set -euo pipefail
+          IPA="$(ls "$HOME/markup-build/export/"*.ipa | head -1)"
+          echo "Uploading $IPA to App Store Connect…"
+          xcrun altool --upload-app -f "$IPA" -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
     - eas/find_and_upload_build_artifacts:
         inputs:
           build_artifact_paths: "/Users/expo/markup-build/export/*.ipa"
-  # → then: `eas submit --platform ios --latest`  (uploads to App Store Connect)
-  #   and: `python3 scripts/add-to-external-testing.py`  (promote to external)
+  # After this: the build appears in App Store Connect → TestFlight (~5-10 min
+  # processing). Requires the app record to already exist in App Store Connect.
