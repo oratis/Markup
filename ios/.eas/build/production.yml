@@ -43,7 +43,6 @@ build:
 
     - eas/find_and_upload_build_artifacts:
         inputs:
-          build_artifact_paths:
-            - "/Users/expo/markup-build/export/*.ipa"
+          build_artifact_paths: "/Users/expo/markup-build/export/*.ipa"
   # → then: `eas submit --platform ios --latest`  (uploads to App Store Connect)
   #   and: `python3 scripts/add-to-external-testing.py`  (promote to external)
