@@ -1,26 +1,36 @@
 build:
   name: Markup iOS — App Store archive
-  # Custom EAS build for a NATIVE SwiftUI app (not Expo/RN): the EAS macOS
-  # worker runs xcodebuild on the Xcode project. Signing is EAS-MANAGED
-  # (eas.json production profile sets `credentialsSource: remote`), so the
-  # Apple Distribution cert + App Store provisioning profile come from Expo —
-  # set up once with `eas credentials`. No API key needed in the build itself;
-  # the App Store Connect API key is only used later by `eas submit`.
+  # Custom EAS build for a NATIVE SwiftUI app (project at MarkupApp/, NOT the
+  # Expo ./ios/<App>.xcworkspace layout). EAS's iOS helpers
+  # (eas/configure_ios_credentials, generate_gymfile, run_fastlane) assume the
+  # Expo prebuild layout and don't fit, so we self-sign with an
+  # App Store Connect API key + xcodebuild -allowProvisioningUpdates.
   #
-  # The build number (CFBundleVersion) is DERIVED from MARKETING_VERSION by
-  # scripts/derive-build-number.sh (single source of truth). Set IOS_BUILD_BUMP
-  # to rebuild the same semver with a fresh build number.
+  # Required EAS secrets (eas secret:create --scope project --name … --value …):
+  #   ASC_KEY_BASE64  – base64 of the App Store Connect API key .p8
+  #   ASC_KEY_ID      – the key id (e.g. ABCD1234EF)
+  #   ASC_ISSUER_ID   – the issuer UUID
+  #   APPLE_TEAM_ID   – 9LH9NBX7P4  (already set by Claude)
+  #
+  # Build number is DERIVED from MARKETING_VERSION (single source of truth);
+  # set IOS_BUILD_BUMP to rebuild the same semver with a fresh build number.
   steps:
     - eas/checkout
 
-    - eas/configure_ios_credentials
+    - run:
+        name: Install App Store Connect API key
+        command: |
+          set -euo pipefail
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_KEY_BASE64" | base64 --decode \
+            > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
     - run:
         name: Archive (App Store, Release)
         working_directory: MarkupApp
         command: |
           set -euo pipefail
-          NUM="$(../scripts/derive-build-number.sh)"
+          NUM="$(bash ../scripts/derive-build-number.sh)"
           echo "Build number: $NUM"
           xcodebuild \
             -project MarkupApp.xcodeproj \
@@ -28,6 +38,11 @@ build:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$HOME/markup-build/Markup.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CURRENT_PROJECT_VERSION="$NUM" \
             archive
 
@@ -39,7 +54,11 @@ build:
           xcodebuild -exportArchive \
             -archivePath "$HOME/markup-build/Markup.xcarchive" \
             -exportPath "$HOME/markup-build/export" \
-            -exportOptionsPlist ExportOptions.plist
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
     - eas/find_and_upload_build_artifacts:
         inputs:
