@@ -29,12 +29,78 @@ pub fn is_canvas(path: &Path) -> bool {
     )
 }
 
+/// Standalone HTML documents (`.html` / `.htm`). Markup opens and renders these.
+#[inline]
+pub fn is_html(path: &Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_ascii_lowercase()),
+        Some(ext) if ext == "html" || ext == "htm"
+    )
+}
+
 /// Files the vault sidebar / QuickOpen should surface. Wider than
-/// `is_markdown` (which gates the Tantivy text index) — canvases are
-/// listable as files but their JSON isn't body-indexed.
+/// `is_markdown` (which gates the Tantivy text index) — canvases and HTML are
+/// listable as files; canvas JSON isn't body-indexed.
 #[inline]
 pub fn is_listable(path: &Path) -> bool {
-    is_markdown(path) || is_canvas(path)
+    is_markdown(path) || is_canvas(path) || is_html(path)
+}
+
+/// Files whose text is full-text indexed: markdown + HTML (HTML is stripped to
+/// visible text first). Canvas JSON is excluded so it doesn't pollute search.
+#[inline]
+pub fn is_indexable(path: &Path) -> bool {
+    is_markdown(path) || is_html(path)
+}
+
+/// Strip HTML to visible text for full-text indexing: drop `<script>` / `<style>`
+/// blocks and all tags, decode a few common entities, collapse whitespace.
+pub fn strip_html(html: &str) -> String {
+    let lower = html.to_ascii_lowercase();
+    let mut out = String::with_capacity(html.len());
+    let mut chars = html.char_indices();
+    while let Some((i, c)) = chars.next() {
+        if c == '<' {
+            let block = if lower[i..].starts_with("<script") {
+                Some("</script>")
+            } else if lower[i..].starts_with("<style") {
+                Some("</style>")
+            } else {
+                None
+            };
+            if let Some(close) = block {
+                if let Some(rel) = lower[i..].find(close) {
+                    let end = i + rel + close.len();
+                    out.push(' ');
+                    for (j, _) in chars.by_ref() {
+                        if j + 1 >= end {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                break;
+            }
+            out.push(' ');
+            for (_, cc) in chars.by_ref() {
+                if cc == '>' {
+                    break;
+                }
+            }
+            continue;
+        }
+        out.push(c);
+    }
+    let decoded = out
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&nbsp;", " ");
+    decoded.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Should this directory entry be skipped during a vault walk?
@@ -56,6 +122,12 @@ pub fn scan_markdown_files(root: &Path) -> AppResult<Vec<PathBuf>> {
 /// so canvas JSON doesn't pollute body search.
 pub fn scan_vault_files(root: &Path) -> AppResult<Vec<PathBuf>> {
     scan_filtered(root, is_listable)
+}
+
+/// Walk `root` and return every file whose text should be full-text indexed
+/// (markdown + HTML).
+pub fn scan_indexable_files(root: &Path) -> AppResult<Vec<PathBuf>> {
+    scan_filtered(root, is_indexable)
 }
 
 fn scan_filtered(root: &Path, accept: fn(&Path) -> bool) -> AppResult<Vec<PathBuf>> {
@@ -107,6 +179,45 @@ mod tests {
         assert!(is_listable(Path::new("a.md")));
         assert!(is_listable(Path::new("a.canvas")));
         assert!(!is_listable(Path::new("a.txt")));
+    }
+
+    #[test]
+    fn detects_html_files() {
+        assert!(is_html(Path::new("page.html")));
+        assert!(is_html(Path::new("PAGE.HTM")));
+        assert!(!is_html(Path::new("a.md")));
+        // listable + indexable accept HTML; canvas is listable but not indexable.
+        assert!(is_listable(Path::new("a.html")));
+        assert!(is_indexable(Path::new("a.html")));
+        assert!(is_indexable(Path::new("a.md")));
+        assert!(!is_indexable(Path::new("a.canvas")));
+    }
+
+    #[test]
+    fn strip_html_keeps_visible_text_only() {
+        let html = "<html><head><style>.x{color:red}</style><title>T</title></head>\
+                    <body><h1>Hello</h1><p>world &amp; more</p>\
+                    <script>alert(1)</script></body></html>";
+        let text = strip_html(html);
+        assert!(text.contains("Hello"));
+        assert!(text.contains("world & more"));
+        assert!(!text.contains("alert"));
+        assert!(!text.contains("color:red"));
+        assert!(!text.contains('<'));
+    }
+
+    #[test]
+    fn scan_indexable_includes_html_excludes_canvas() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(root.join("note.md"), "").unwrap();
+        fs::write(root.join("page.html"), "<p>hi</p>").unwrap();
+        fs::write(root.join("board.canvas"), "{}").unwrap();
+        let mut found = scan_indexable_files(root).unwrap();
+        found.sort();
+        let mut expected = vec![root.join("note.md"), root.join("page.html")];
+        expected.sort();
+        assert_eq!(found, expected);
     }
 
     #[test]

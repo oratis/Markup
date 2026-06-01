@@ -3,7 +3,7 @@ import { disposeCanvasStore } from "../lib/canvas-registry";
 
 interface TabLike {
   id: string;
-  kind?: "markdown" | "canvas";
+  kind?: "markdown" | "canvas" | "html";
 }
 
 /**

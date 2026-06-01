@@ -6,6 +6,7 @@ import { MarkupEditor } from "./components/Editor";
 import { FileTree } from "./components/FileTree";
 import { FindBar } from "./components/FindBar";
 import { GraphView } from "./components/GraphView";
+import { HtmlView } from "./components/HtmlView";
 import { Onboarding } from "./components/Onboarding";
 import { PropertiesEditor } from "./components/PropertiesEditor";
 import { QuickOpen } from "./components/QuickOpen";
@@ -3016,6 +3017,15 @@ export function App() {
         >
           {tab?.kind === "canvas" ? (
             <CanvasView />
+          ) : tab?.kind === "html" ? (
+            <HtmlView
+              path={tab.path ?? tab.id}
+              content={initialValue}
+              fileKey={fileKey}
+              readMode={readMode && !sourceMode}
+              isDark={isDark}
+              onChange={handleEditorChange}
+            />
           ) : (
             <>
               {!sourceMode && <PropertiesEditor />}
