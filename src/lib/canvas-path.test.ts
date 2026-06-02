@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { isCanvasPath, isHtmlPath, isMarkdownPath } from "./canvas-path";
+import { isCanvasPath, isEditablePath, isHtmlPath, isMarkdownPath } from "./canvas-path";
+
+describe("isEditablePath", () => {
+  it("accepts markdown, canvas, and html", () => {
+    for (const p of [
+      "a.md",
+      "a.markdown",
+      "a.mdx",
+      "a.mkd",
+      "b.canvas",
+      "c.html",
+      "c.htm",
+    ]) {
+      expect(isEditablePath(p)).toBe(true);
+    }
+  });
+  it("rejects non-editable files dropped on the window", () => {
+    for (const p of [
+      "img.png",
+      "doc.pdf",
+      "notes.txt",
+      "data.json",
+      "/dir/.hidden",
+      null,
+    ]) {
+      expect(isEditablePath(p)).toBe(false);
+    }
+  });
+});
 
 describe("isCanvasPath", () => {
   it("matches .canvas (lowercase)", () => {
