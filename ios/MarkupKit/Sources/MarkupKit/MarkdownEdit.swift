@@ -92,4 +92,113 @@ public enum MarkdownEdit {
         }
         return .none
     }
+
+    /// The auto-closing partner for an opening character, or `nil` if the
+    /// character doesn't auto-close. Mirrors the desktop `cm-auto-close`
+    /// pairs: `()`, `[]`, `{}`, and the symmetric `` ` ``.
+    public static func autoClosePartner(for open: Character) -> Character? {
+        switch open {
+        case "(": return ")"
+        case "[": return "]"
+        case "{": return "}"
+        case "`": return "`"
+        default: return nil
+        }
+    }
+
+    /// Pure model of typing an auto-closing character at a collapsed caret:
+    /// inserts `open` + its partner and leaves the caret between them. Returns
+    /// `nil` when `open` isn't an auto-closing character (caller inserts it
+    /// normally). A non-empty selection should be handled by `wrap` instead.
+    public static func autoClose(_ text: String, location: Int, open: Character) -> TextEdit? {
+        guard let close = autoClosePartner(for: open) else { return nil }
+        let ns = text as NSString
+        let pair = String(open) + String(close)
+        let newText = ns.replacingCharacters(
+            in: NSRange(location: location, length: 0), with: pair)
+        return TextEdit(text: newText, location: location + 1, length: 0)
+    }
+}
+
+/// Pretty-printing for GFM pipe tables: pads every column to its widest cell
+/// so the source stays readable. Pure and deterministic — used by the editor's
+/// "format table" action. Ports the intent of the desktop `cm-table-format`.
+public enum MarkdownTable {
+
+    /// Is this a plausible GFM table (a header row, a `---|---` delimiter row,
+    /// then zero+ body rows)? Cheap structural check, not a full parse.
+    public static func looksLikeTable(_ text: String) -> Bool {
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        guard lines.count >= 2 else { return false }
+        guard lines[0].contains("|") else { return false }
+        return isDelimiterRow(lines[1])
+    }
+
+    private static func isDelimiterRow(_ line: String) -> Bool {
+        let cells = splitCells(line)
+        guard !cells.isEmpty else { return false }
+        return cells.allSatisfy { cell in
+            let t = cell.trimmingCharacters(in: .whitespaces)
+            return !t.isEmpty && t.allSatisfy { $0 == "-" || $0 == ":" }
+        }
+    }
+
+    /// Split a table row into trimmed cell strings, dropping the optional
+    /// leading/trailing pipe.
+    static func splitCells(_ line: String) -> [String] {
+        var s = line.trimmingCharacters(in: .whitespaces)
+        if s.hasPrefix("|") { s.removeFirst() }
+        if s.hasSuffix("|") { s.removeLast() }
+        return s.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    /// Re-align a table's columns. Each column is padded to the width of its
+    /// widest cell; the delimiter row preserves `:` alignment markers. Leaves
+    /// non-table input unchanged.
+    public static func format(_ text: String) -> String {
+        guard looksLikeTable(text) else { return text }
+        let rawLines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let trailingNewline = text.hasSuffix("\n")
+        let lines = trailingNewline ? Array(rawLines.dropLast()) : rawLines
+
+        var rows = lines.map { splitCells($0) }
+        let cols = rows.map(\.count).max() ?? 0
+        for i in rows.indices {
+            while rows[i].count < cols { rows[i].append("") }
+        }
+
+        // Column widths from header + body (skip the delimiter row at index 1).
+        var widths = [Int](repeating: 3, count: cols) // min 3 so "---" fits
+        for (r, row) in rows.enumerated() where r != 1 {
+            for c in 0..<cols {
+                widths[c] = max(widths[c], row[c].count)
+            }
+        }
+
+        func renderRow(_ row: [String]) -> String {
+            let padded = (0..<cols).map { c -> String in
+                let cell = row[c]
+                return cell + String(repeating: " ", count: max(0, widths[c] - cell.count))
+            }
+            return "| " + padded.joined(separator: " | ") + " |"
+        }
+
+        func renderDelimiter(_ row: [String]) -> String {
+            let padded = (0..<cols).map { c -> String in
+                let marker = row[c]
+                let left = marker.hasPrefix(":")
+                let right = marker.hasSuffix(":")
+                let dashes = max(3, widths[c]) - (left ? 1 : 0) - (right ? 1 : 0)
+                return (left ? ":" : "") + String(repeating: "-", count: max(1, dashes))
+                    + (right ? ":" : "")
+            }
+            return "| " + padded.joined(separator: " | ") + " |"
+        }
+
+        var out: [String] = []
+        for (r, row) in rows.enumerated() {
+            out.append(r == 1 ? renderDelimiter(row) : renderRow(row))
+        }
+        return out.joined(separator: "\n") + (trailingNewline ? "\n" : "")
+    }
 }

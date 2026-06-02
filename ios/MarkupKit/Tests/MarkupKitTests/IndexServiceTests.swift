@@ -44,6 +44,22 @@ struct IndexServiceTests {
         #expect(try idx.search("mark").map(\.path).contains("Projects/Markup.md"))
     }
 
+    @Test func searchReturnsSnippetAroundMatch() throws {
+        let idx = try seeded()
+        let hit = try #require(try idx.search("editor").first { $0.path == "Projects/Markup.md" })
+        // The matched term is wrapped in the «…» markers and the excerpt
+        // carries surrounding context from the body.
+        #expect(hit.snippet.contains("«editor»") || hit.snippet.localizedCaseInsensitiveContains("editor"))
+        #expect(!hit.snippet.isEmpty)
+    }
+
+    @Test func recencyListingHasNoSnippet() throws {
+        let idx = try seeded()
+        // An operator-only query (no free text) lists by recency — no excerpt.
+        let hits = try idx.search("tag:rust")
+        #expect(hits.allSatisfy { $0.snippet.isEmpty })
+    }
+
     @Test func tagOperatorFilters() throws {
         let idx = try seeded()
         let hits = try idx.search("tag:project")
