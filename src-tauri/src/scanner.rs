@@ -103,6 +103,31 @@ pub fn strip_html(html: &str) -> String {
     decoded.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+/// Extract the document title from an HTML `<title>…</title>`, decoding a few
+/// common entities and collapsing whitespace. Returns `None` when there is no
+/// non-empty title (the caller then falls back to the filename).
+pub fn html_title(html: &str) -> Option<String> {
+    let lower = html.to_ascii_lowercase();
+    let open = lower.find("<title")?;
+    // Skip to the end of the opening tag (handles attributes like `<title foo>`).
+    let after_open = open + lower[open..].find('>')? + 1;
+    let rel_close = lower[after_open..].find("</title>")?;
+    let raw = &html[after_open..after_open + rel_close];
+    let decoded = raw
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&nbsp;", " ");
+    let collapsed = decoded.split_whitespace().collect::<Vec<_>>().join(" ");
+    if collapsed.is_empty() {
+        None
+    } else {
+        Some(collapsed)
+    }
+}
+
 /// Should this directory entry be skipped during a vault walk?
 fn skip_dir(name: &str) -> bool {
     matches!(
@@ -204,6 +229,24 @@ mod tests {
         assert!(!text.contains("alert"));
         assert!(!text.contains("color:red"));
         assert!(!text.contains('<'));
+    }
+
+    #[test]
+    fn html_title_extracts_and_decodes() {
+        let html = "<html><head><title> Tom &amp;  Jerry </title></head><body>x</body></html>";
+        assert_eq!(html_title(html).as_deref(), Some("Tom & Jerry"));
+    }
+
+    #[test]
+    fn html_title_handles_attributes_and_case() {
+        let html = "<HTML><HEAD><TITLE dir=\"ltr\">My Page</TITLE></HEAD></HTML>";
+        assert_eq!(html_title(html).as_deref(), Some("My Page"));
+    }
+
+    #[test]
+    fn html_title_none_when_missing_or_empty() {
+        assert_eq!(html_title("<html><body>no title</body></html>"), None);
+        assert_eq!(html_title("<title>   </title>"), None);
     }
 
     #[test]

@@ -82,8 +82,25 @@ impl MarkupIndex {
         content: &str,
         mtime_ms: i64,
     ) -> AppResult<()> {
+        self.upsert_file_titled(path, content, mtime_ms, None)
+            .await
+    }
+
+    /// Like [`upsert_file`], but with an explicit title override (e.g. an HTML
+    /// `<title>`). An empty / `None` override falls back to the derived title.
+    pub async fn upsert_file_titled(
+        &self,
+        path: &Path,
+        content: &str,
+        mtime_ms: i64,
+        title_override: Option<&str>,
+    ) -> AppResult<()> {
         let path_str = path.to_string_lossy().into_owned();
-        let title = derive_title(path, content);
+        let title = title_override
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| derive_title(path, content));
 
         let writer = self.writer.lock().await;
         writer.delete_term(Term::from_field_text(self.schema.path, &path_str));
@@ -224,5 +241,38 @@ mod tests {
         assert!(hits.is_empty(), "old version should be gone");
         let hits = idx.search("different", 10).unwrap();
         assert_eq!(hits.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn title_override_wins_over_derived() {
+        let tmp = tempdir().unwrap();
+        let idx = MarkupIndex::open_or_create(tmp.path()).unwrap();
+        // HTML stripped body has no `# H1`; without an override the title would
+        // fall back to the filename ("page"). The <title> override takes over.
+        idx.upsert_file_titled(
+            Path::new("/notes/page.html"),
+            "Welcome to the docs site",
+            1,
+            Some("Docs Home"),
+        )
+        .await
+        .unwrap();
+        idx.commit().await.unwrap();
+        let hits = idx.search("docs", 10).unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "Docs Home");
+    }
+
+    #[tokio::test]
+    async fn empty_title_override_falls_back_to_filename() {
+        let tmp = tempdir().unwrap();
+        let idx = MarkupIndex::open_or_create(tmp.path()).unwrap();
+        idx.upsert_file_titled(Path::new("/notes/page.html"), "body words here", 1, Some("  "))
+            .await
+            .unwrap();
+        idx.commit().await.unwrap();
+        let hits = idx.search("words", 10).unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "page");
     }
 }

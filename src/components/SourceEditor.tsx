@@ -1,4 +1,5 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { html } from "@codemirror/lang-html";
 import { markdown } from "@codemirror/lang-markdown";
 import {
   bracketMatching,
@@ -36,9 +37,17 @@ interface SourceEditorProps {
   fileKey: string;
   onChange: (next: string) => void;
   isDark?: boolean;
+  /** Syntax-highlighting language for the source. Defaults to markdown. */
+  language?: "markdown" | "html";
 }
 
-export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorProps) {
+export function SourceEditor({
+  value,
+  fileKey,
+  onChange,
+  isDark,
+  language = "markdown",
+}: SourceEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const wrapCompartmentRef = useRef<Compartment | null>(null);
@@ -69,17 +78,19 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
     // tied to the file (ie. recreated on fileKey change). Line numbers
     // + their active-line gutter live in their own Compartment so the
     // user can flip them on / off without recreating the editor.
+    const langExt = language === "html" ? html() : markdown();
     const heavyExts = isHuge
       ? []
       : [
           highlightActiveLine(),
-          markdown(),
+          langExt,
           syntaxHighlighting(defaultHighlightStyle),
           codeFolding(),
           foldGutter(),
           bracketMatching(),
           autoClosePairs(),
-          wikilinkTrigger(),
+          // Wikilink autocompletion is a markdown affordance only.
+          ...(language === "html" ? [] : [wikilinkTrigger()]),
         ];
 
     const state = EditorState.create({
@@ -182,9 +193,9 @@ export function SourceEditor({ value, fileKey, onChange, isDark }: SourceEditorP
       view.destroy();
       viewRef.current = null;
     };
-    // Recreate on file or theme change to avoid mismatched extensions.
+    // Recreate on file, theme or language change to avoid mismatched extensions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileKey, isDark]);
+  }, [fileKey, isDark, language]);
 
   // Live-toggle soft line wrapping without recreating the editor.
   useEffect(() => {
