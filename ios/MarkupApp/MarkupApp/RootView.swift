@@ -149,7 +149,10 @@ struct RootView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let file = selection, let content = vault.content(of: file) {
+        if let file = selection, FileKind.of(file.name) == .canvas {
+            CanvasPlaceholderView(file: file)
+                .id(file.relPath)
+        } else if let file = selection, let content = vault.content(of: file) {
             ReaderView(file: file, content: content, vault: vault, onOpen: open)
                 .id(file.relPath)
         } else if selection != nil {

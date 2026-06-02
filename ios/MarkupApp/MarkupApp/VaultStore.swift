@@ -24,7 +24,7 @@ final class VaultStore {
     }
 
     private let bookmarkKey = "vault.rootBookmark"
-    private let supportedExtensions = markupSupportedExtensions
+    private let listableExtensions = markupListableExtensions
 
     var rootName: String { rootURL?.lastPathComponent ?? "No folder" }
 
@@ -92,7 +92,7 @@ final class VaultStore {
         var found: [VaultFile] = []
         let rootPath = root.standardizedFileURL.path
         for case let url as URL in enumerator {
-            guard supportedExtensions.contains(url.pathExtension.lowercased()) else { continue }
+            guard listableExtensions.contains(url.pathExtension.lowercased()) else { continue }
             let values = try? url.resourceValues(forKeys: Set(keys))
             if values?.isRegularFile == false { continue }
             let mtime = (values?.contentModificationDate?.timeIntervalSince1970 ?? 0) * 1000
@@ -126,6 +126,8 @@ final class VaultStore {
             guard let idx = try? IndexService() else { return }
             var n = 0
             for f in snapshot {
+                // Canvas files are listed but never body-indexed (opaque JSON).
+                if FileKind.of(f.name) == .canvas { n += 1; continue }
                 if let raw = try? String(contentsOfFile: f.path, encoding: .utf8) {
                     if FileKind.of(f.name) == .html {
                         // Index HTML by its visible text + <title> so it's searchable.

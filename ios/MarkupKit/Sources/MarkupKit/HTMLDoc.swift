@@ -4,20 +4,31 @@ import Foundation
 public enum FileKind: Sendable {
     case markdown
     case html
+    /// An Obsidian-style `.canvas` — listed and preserved untouched, but not
+    /// rendered or body-indexed on iOS (a desktop feature; §11 placeholder).
+    case canvas
 
     public static func of(_ name: String) -> FileKind? {
         switch (name as NSString).pathExtension.lowercased() {
         case "md", "markdown", "mdx", "mkd": return .markdown
         case "html", "htm": return .html
+        case "canvas": return .canvas
         default: return nil
         }
     }
 }
 
-/// File extensions Markup opens (Markdown + HTML).
+/// File extensions whose *text* Markup opens and full-text-indexes
+/// (Markdown + HTML).
 public let markupSupportedExtensions: Set<String> = [
     "md", "markdown", "mdx", "mkd", "html", "htm",
 ]
+
+/// File extensions the vault *lists*. Wider than the indexed set: `.canvas`
+/// files appear (with a "desktop only" placeholder) but are never body-indexed
+/// or modified, preserving round-trip safety with the desktop app.
+public let markupListableExtensions: Set<String> =
+    markupSupportedExtensions.union(["canvas"])
 
 /// Lightweight HTML inspection — enough to title and full-text-index an `.html`
 /// file without a full parser. Used so HTML documents are searchable and named

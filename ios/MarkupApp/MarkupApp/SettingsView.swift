@@ -48,6 +48,7 @@ struct SettingsView: View {
                 Section("About") {
                     LabeledContent("Version", value: appVersion)
                     Link("Markup on GitHub", destination: URL(string: "https://github.com/oratis/Markup")!)
+                    Link("Get Markup for Mac", destination: URL(string: "https://github.com/oratis/Markup/releases")!)
                     Text("Private by default — no account, no telemetry.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }

@@ -10,7 +10,11 @@ struct FileRow: View {
     var showIcon: Bool = false
 
     private var iconName: String {
-        FileKind.of(file.name) == .html ? "globe" : "doc.richtext"
+        switch FileKind.of(file.name) {
+        case .html: return "globe"
+        case .canvas: return "rectangle.3.group"
+        default: return "doc.richtext"
+        }
     }
 
     private var subtitle: String? {
@@ -110,6 +114,41 @@ struct SearchView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
         }
+    }
+}
+
+/// Shown when a `.canvas` file is selected: Canvas is a desktop-only feature,
+/// so iOS preserves the file untouched and points the user to Markup for Mac.
+struct CanvasPlaceholderView: View {
+    let file: VaultFile
+
+    private var counts: CanvasInfo.Counts {
+        let text = (try? String(contentsOfFile: file.path, encoding: .utf8)) ?? ""
+        return CanvasInfo.counts(fromJSON: text)
+    }
+
+    var body: some View {
+        let c = counts
+        VStack(spacing: 12) {
+            Image(systemName: "rectangle.3.group")
+                .font(.system(size: 44))
+                .foregroundStyle(.secondary)
+            Text(file.name).font(.headline)
+            Text("Canvas is a desktop feature. Open this file in Markup for Mac to view and edit it.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Text("\(c.nodes) node\(c.nodes == 1 ? "" : "s") · \(c.edges) edge\(c.edges == 1 ? "" : "s")")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Link("Get Markup for Mac",
+                 destination: URL(string: "https://github.com/oratis/Markup")!)
+                .font(.callout)
+                .padding(.top, 4)
+        }
+        .padding(40)
+        .navigationTitle(file.name)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

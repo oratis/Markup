@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import MarkupKit
 
 /// One note: reads as a rendered page, or edits as native Markdown source.
@@ -129,6 +130,9 @@ struct ReaderView: View {
                     Button { shareHTML() } label: { Label("Share as HTML", systemImage: "safari") }
                     Button { sharePDF() } label: { Label("Export PDF", systemImage: "doc.richtext") }
                     Button { shareMarkdown() } label: { Label("Share Markdown", systemImage: "doc.plaintext") }
+                    Divider()
+                    Button { copyHTML() } label: { Label("Copy as HTML", systemImage: "doc.on.doc") }
+                    Button { copyMarkdown() } label: { Label("Copy Markdown", systemImage: "doc.on.clipboard") }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
@@ -202,6 +206,15 @@ struct ReaderView: View {
         if let url = ShareService.writeMarkdown(content: content, title: file.name) {
             shareItem = ShareItem(url: url)
         }
+    }
+
+    private func copyHTML() {
+        UIPasteboard.general.string = ReaderHTML.document(
+            markdown: content, title: file.name, theme: theme)
+    }
+
+    private func copyMarkdown() {
+        UIPasteboard.general.string = content
     }
 
     private func sharePDF() {
