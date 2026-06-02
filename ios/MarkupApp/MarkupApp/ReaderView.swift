@@ -108,6 +108,7 @@ struct ReaderView: View {
                 Image(systemName: isEditing ? "book" : "pencil")
             }
             .accessibilityLabel(isEditing ? "Read" : "Edit")
+            .keyboardShortcut("e", modifiers: .command)
         }
         if !isEditing && isHTML {
             ToolbarItem(placement: .topBarTrailing) {
@@ -121,6 +122,7 @@ struct ReaderView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { showOutline = true } label: { Image(systemName: "list.bullet.indent") }
                     .accessibilityLabel("Outline")
+                    .keyboardShortcut("o", modifiers: [.command, .option])
                 Button { showBacklinks = true } label: { Image(systemName: "link") }
                     .accessibilityLabel("Backlinks")
                 Menu {

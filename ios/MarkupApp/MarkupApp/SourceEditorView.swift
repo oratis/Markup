@@ -8,8 +8,9 @@ struct SourceEditorView: UIViewRepresentable {
     @Binding var text: String
 
     func makeUIView(context: Context) -> UITextView {
-        let tv = UITextView()
+        let tv = MarkupTextView()
         tv.delegate = context.coordinator
+        tv.editCoordinator = context.coordinator
         tv.font = .monospacedSystemFont(ofSize: 16, weight: .regular)
         tv.autocapitalizationType = .sentences
         tv.smartQuotesType = .no
@@ -37,12 +38,31 @@ struct SourceEditorView: UIViewRepresentable {
 
         func textViewDidChange(_ tv: UITextView) { parentText.wrappedValue = tv.text }
 
-        // Smart list continuation on Return.
+        // Auto-close brackets, type-over, and smart list continuation on Return.
         func textView(
             _ tv: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String
         ) -> Bool {
-            guard text == "\n" else { return true }
+            // Never interfere with IME composition (e.g. Chinese input) — a
+            // deliberate advantage of the native editor over a WebView one.
+            if tv.markedTextRange != nil { return true }
+
             let ns = tv.text as NSString
+            if range.length == 0, text.count == 1, let ch = text.first {
+                // Type over an auto-inserted closing character instead of
+                // doubling it: `()` + `)` → step past, not `())`.
+                if ")]}`".contains(ch), range.location < ns.length,
+                   ns.substring(with: NSRange(location: range.location, length: 1)) == text {
+                    tv.selectedRange = NSRange(location: range.location + 1, length: 0)
+                    return false
+                }
+                // Auto-close an opening bracket, caret left between the pair.
+                if let edit = MarkdownEdit.autoClose(tv.text, location: range.location, open: ch) {
+                    apply(edit)
+                    return false
+                }
+            }
+
+            guard text == "\n" else { return true }
             let lineRange = ns.lineRange(for: NSRange(location: range.location, length: 0))
             var line = ns.substring(with: lineRange)
             if line.hasSuffix("\n") { line = String(line.dropLast()) }
@@ -97,6 +117,7 @@ struct SourceEditorView: UIViewRepresentable {
                 ("tablecells", { [weak self] in
                     self?.insert("\n| Col | Col |\n| --- | --- |\n|  |  |\n", caret: nil)
                 }),
+                ("wand.and.stars", { [weak self] in self?.formatTableAtCaret() }),
             ]
             for (symbol, action) in items {
                 let button = UIButton(type: .system)
@@ -142,5 +163,57 @@ struct SourceEditorView: UIViewRepresentable {
             let (l, _) = selection()
             apply(MarkdownEdit.toggleLinePrefix(tv.text, location: l, prefix: prefix))
         }
+
+        // MARK: - Hardware-keyboard actions (iPad)
+
+        func boldSelection() { wrap("**", "**") }
+        func italicSelection() { wrap("*", "*") }
+        func codeSelection() { wrap("`", "`") }
+
+        /// Re-align the GFM table the caret sits in. No-op if not in a table.
+        func formatTableAtCaret() {
+            guard let tv = textView else { return }
+            let ns = tv.text as NSString
+            let caret = min(tv.selectedRange.location, ns.length)
+            let here = ns.lineRange(for: NSRange(location: caret, length: 0))
+            var start = here.location
+            var end = here.location + here.length
+            while start > 0 {
+                let prev = ns.lineRange(for: NSRange(location: start - 1, length: 0))
+                if ns.substring(with: prev).contains("|") { start = prev.location } else { break }
+            }
+            while end < ns.length {
+                let next = ns.lineRange(for: NSRange(location: end, length: 0))
+                if ns.substring(with: next).contains("|") { end = next.location + next.length }
+                else { break }
+            }
+            let blockRange = NSRange(location: start, length: end - start)
+            let block = ns.substring(with: blockRange)
+            let formatted = MarkdownTable.format(block)
+            guard formatted != block else { return }
+            let newText = ns.replacingCharacters(in: blockRange, with: formatted)
+            tv.text = newText
+            tv.selectedRange = NSRange(
+                location: min(caret, (newText as NSString).length), length: 0)
+            parentText.wrappedValue = newText
+        }
     }
+}
+
+/// `UITextView` that adds Markdown hardware-keyboard shortcuts (⌘B / ⌘I / ⌘`)
+/// routed to the editor coordinator, for iPad keyboard users.
+final class MarkupTextView: UITextView {
+    weak var editCoordinator: SourceEditorView.Coordinator?
+
+    override var keyCommands: [UIKeyCommand]? {
+        [
+            UIKeyCommand(input: "b", modifierFlags: .command, action: #selector(cmdBold)),
+            UIKeyCommand(input: "i", modifierFlags: .command, action: #selector(cmdItalic)),
+            UIKeyCommand(input: "`", modifierFlags: .command, action: #selector(cmdCode)),
+        ]
+    }
+
+    @objc private func cmdBold() { editCoordinator?.boldSelection() }
+    @objc private func cmdItalic() { editCoordinator?.italicSelection() }
+    @objc private func cmdCode() { editCoordinator?.codeSelection() }
 }
