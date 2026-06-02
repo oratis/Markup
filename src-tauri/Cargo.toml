@@ -1,6 +1,6 @@
 [package]
 name = "markup"
-version = "0.6.1"
+version = "0.6.2"
 description = "High-performance Markdown editor for macOS"
 authors = ["appkon"]
 edition = "2021"

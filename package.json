@@ -1,7 +1,7 @@
 {
   "name": "markup",
   "private": true,
-  "version": "0.6.1",
+  "version": "0.6.2",
   "type": "module",
   "description": "High-performance Markdown editor for macOS — Typora-spirit clone",
   "scripts": {

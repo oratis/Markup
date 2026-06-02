@@ -12,7 +12,7 @@ import { diagram } from "@milkdown/plugin-diagram";
 import { history } from "@milkdown/plugin-history";
 import { indent } from "@milkdown/plugin-indent";
 import { listener, listenerCtx } from "@milkdown/plugin-listener";
-import { math } from "@milkdown/plugin-math";
+import { katexOptionsCtx, math } from "@milkdown/plugin-math";
 import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
 import { Slice } from "@milkdown/prose/model";
@@ -77,6 +77,11 @@ function WysiwygEditor({
           ...prev,
           editable: () => !readModeRef.current,
         }));
+        // Render KaTeX errors inline (red) instead of throwing. A `$…$` span
+        // that captures prose (e.g. currency text with `\*`) would otherwise
+        // throw an uncaught parse error during ProseMirror render and blank
+        // the whole app. throwOnError:false keeps a bad equation local.
+        ctx.set(katexOptionsCtx.key, { throwOnError: false });
         ctx.get(listenerCtx).markdownUpdated((_, markdown, prevMarkdown) => {
           // Suppress store updates mid-IME-composition: each store write
           // triggers a React re-render that reflows the editor line and
