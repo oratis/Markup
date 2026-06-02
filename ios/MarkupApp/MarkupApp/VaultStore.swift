@@ -14,6 +14,14 @@ final class VaultStore {
     /// Search/links/tags/outline index. Built off the scan; nil until ready.
     var index: IndexService?
     var indexReady = false
+    /// Progress of the current index build (for the "Indexing N notes…" UI).
+    var indexedCount = 0
+    var indexTotal = 0
+
+    /// A short label for the in-progress index build.
+    var indexProgressLabel: String {
+        indexTotal > 0 ? "Indexing \(indexedCount) of \(indexTotal)…" : "Indexing…"
+    }
 
     private let bookmarkKey = "vault.rootBookmark"
     private let supportedExtensions = markupSupportedExtensions
@@ -112,6 +120,8 @@ final class VaultStore {
     private func rebuildIndex() {
         let snapshot = files
         indexReady = false
+        indexedCount = 0
+        indexTotal = snapshot.count
         Task { @MainActor in
             guard let idx = try? IndexService() else { return }
             var n = 0
@@ -129,8 +139,12 @@ final class VaultStore {
                     }
                 }
                 n += 1
-                if n % 50 == 0 { await Task.yield() }
+                if n % 50 == 0 {
+                    self.indexedCount = n
+                    await Task.yield()
+                }
             }
+            self.indexedCount = n
             self.index = idx
             self.indexReady = true
         }
