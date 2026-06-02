@@ -74,28 +74,27 @@ struct RootView: View {
             Section {
                 ForEach(vault.files) { file in
                     NavigationLink(value: file) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(file.name)
-                                if file.relPath != file.name {
-                                    Text(file.relPath)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                        } icon: {
-                            Image(systemName: FileKind.of(file.name) == .html ? "globe" : "doc.richtext")
-                        }
+                        FileRow(file: file, showIcon: true)
                     }
                 }
             } header: {
-                // Vault path, expressed with "/".
-                Text(vault.rootDisplayPath)
-                    .font(.caption2)
-                    .textCase(nil)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                VStack(alignment: .leading, spacing: 4) {
+                    // Vault path, expressed with "/".
+                    Text(vault.rootDisplayPath)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    if !vault.indexReady {
+                        // Index build progress (design §6.1 "Indexing N notes…").
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.mini)
+                            Text(vault.indexProgressLabel)
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                .textCase(nil)
             }
         }
     }

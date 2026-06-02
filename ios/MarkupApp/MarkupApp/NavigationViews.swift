@@ -1,15 +1,36 @@
 import SwiftUI
 import MarkupKit
 
-/// A compact row for a vault file (name + relative path).
+/// A compact row for a vault file: kind icon + name, with a secondary line
+/// of relative path · relative modified time.
 struct FileRow: View {
     let file: VaultFile
+    /// Show the kind icon (file list). Off in already-scoped contexts
+    /// (Quick Open / tag drill-downs) where the leading glyph adds noise.
+    var showIcon: Bool = false
+
+    private var iconName: String {
+        FileKind.of(file.name) == .html ? "globe" : "doc.richtext"
+    }
+
+    private var subtitle: String? {
+        var parts: [String] = []
+        if file.relPath != file.name { parts.append(file.relPath) }
+        if file.mtimeMs > 0 { parts.append(RelTime.string(file.mtimeMs)) }
+        return parts.isEmpty ? nil : parts.joined(separator: "  ·  ")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(file.name)
-            if file.relPath != file.name {
-                Text(file.relPath).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(file.name)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                }
             }
+        } icon: {
+            if showIcon { Image(systemName: iconName) }
         }
     }
 }
@@ -64,7 +85,13 @@ struct SearchView: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(hit.title)
-                        Text(hit.path).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                        if !hit.snippet.isEmpty {
+                            Text(highlightedSnippet(hit.snippet))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        Text(hit.path).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
                     }
                 }
             }
@@ -84,6 +111,27 @@ struct SearchView: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
         }
     }
+}
+
+/// Turn an FTS snippet (matched terms wrapped in `«…»`) into an AttributedString
+/// that renders the matches in bold, with the markers removed.
+func highlightedSnippet(_ raw: String) -> AttributedString {
+    var result = AttributedString()
+    var rest = Substring(raw)
+    while let open = rest.firstIndex(of: "«") {
+        result += AttributedString(rest[rest.startIndex..<open])
+        let afterOpen = rest.index(after: open)
+        if let close = rest[afterOpen...].firstIndex(of: "»") {
+            var match = AttributedString(rest[afterOpen..<close])
+            match.font = .caption.bold()
+            result += match
+            rest = rest[rest.index(after: close)...]
+        } else {
+            rest = rest[afterOpen...]
+        }
+    }
+    result += AttributedString(rest)
+    return result
 }
 
 /// Tag browser → notes carrying a tag.
