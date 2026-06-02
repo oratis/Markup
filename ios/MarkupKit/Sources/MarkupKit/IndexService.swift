@@ -96,14 +96,16 @@ public final class IndexService {
         var hits: [SearchHit] = []
         if let match {
             let s = try db.prepare("""
-            SELECT d.rel_path, d.title, d.mtime, bm25(fts) AS rank
+            SELECT d.rel_path, d.title, d.mtime, bm25(fts) AS rank,
+                   snippet(fts, 2, '«', '»', '…', 10) AS excerpt
             FROM fts JOIN documents d ON d.rel_path = fts.rel_path
             WHERE fts MATCH ? ORDER BY rank LIMIT ?
             """)
             s.bindAll([.text(match), .int(limit)])
             while s.step() {
                 hits.append(SearchHit(
-                    path: s.text(0), title: s.text(1), mtimeMs: s.double(2), score: -s.double(3)))
+                    path: s.text(0), title: s.text(1), mtimeMs: s.double(2),
+                    score: -s.double(3), snippet: s.text(4)))
             }
         } else {
             // No free text → list by recency (operators still filter below).

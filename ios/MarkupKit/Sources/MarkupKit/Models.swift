@@ -44,13 +44,19 @@ public struct SearchHit: Equatable, Sendable, Identifiable {
     public var title: String
     public var mtimeMs: Double
     public var score: Double
+    /// A short body excerpt around the match, with matched terms wrapped in
+    /// `«…»` markers. Empty for non-text (recency) listings.
+    public var snippet: String
 
     public var id: String { path }
 
-    public init(path: String, title: String, mtimeMs: Double, score: Double) {
+    public init(
+        path: String, title: String, mtimeMs: Double, score: Double, snippet: String = ""
+    ) {
         self.path = path
         self.title = title
         self.mtimeMs = mtimeMs
         self.score = score
+        self.snippet = snippet
     }
 }
