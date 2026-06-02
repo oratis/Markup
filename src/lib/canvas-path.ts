@@ -36,3 +36,10 @@ const MARKDOWN_EXTS: ReadonlySet<string> = new Set(["md", "markdown", "mdx", "mk
 export function isMarkdownPath(path: string | null | undefined): boolean {
   return MARKDOWN_EXTS.has(extOf(path));
 }
+
+/** True when Markup can open this path in a tab — Markdown, Canvas, or HTML.
+ *  Mirrors the Rust read gate (commands.rs::looks_like_editable). Used to
+ *  filter files dropped onto the window. */
+export function isEditablePath(path: string | null | undefined): boolean {
+  return isMarkdownPath(path) || isCanvasPath(path) || isHtmlPath(path);
+}

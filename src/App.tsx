@@ -31,6 +31,7 @@ import { useScrollMemory } from "./hooks/useScrollMemory";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { useSettingsPersistence } from "./hooks/useSettingsPersistence";
 import { useUiPrefPersistence } from "./hooks/useUiPrefPersistence";
+import { useWindowFileDrop } from "./hooks/useWindowFileDrop";
 import { getActiveSourceView } from "./lib/active-source-view";
 import {
   onFileSaved as blockFileSaved,
@@ -332,6 +333,27 @@ export function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Open Markdown / Canvas / HTML files dragged onto the window (works with
+  // or without a vault — the dropped files open as tabs directly).
+  const openDroppedFiles = useCallback(
+    async (paths: string[]) => {
+      let opened = 0;
+      for (const p of paths) {
+        try {
+          const loaded = await readFile(p);
+          openLoadedFile(loaded);
+          pushRecentFile(p);
+          opened += 1;
+        } catch (e) {
+          console.warn("drop-open failed:", p, e);
+        }
+      }
+      if (opened > 0) showToast(tr("toast.opened", opened));
+    },
+    [openLoadedFile, pushRecentFile, tr],
+  );
+  useWindowFileDrop(openDroppedFiles);
 
   function dismissOnboarding() {
     try {
