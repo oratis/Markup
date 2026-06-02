@@ -40,6 +40,12 @@ export function HtmlView({
     );
   }
   return (
-    <SourceEditor value={content} fileKey={fileKey} onChange={onChange} isDark={isDark} />
+    <SourceEditor
+      value={content}
+      fileKey={fileKey}
+      onChange={onChange}
+      isDark={isDark}
+      language="html"
+    />
   );
 }

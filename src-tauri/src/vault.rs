@@ -78,13 +78,15 @@ impl VaultState {
         // HTML is stripped to visible text so it's searchable like markdown.
         for path in &files {
             let content = std::fs::read_to_string(path).unwrap_or_default();
-            let body = if scanner::is_html(path) {
-                scanner::strip_html(&content)
+            let (body, title) = if scanner::is_html(path) {
+                (scanner::strip_html(&content), scanner::html_title(&content))
             } else {
-                content
+                (content, None)
             };
             let mtime = file_mtime_ms(path);
-            index.upsert_file(path, &body, mtime).await?;
+            index
+                .upsert_file_titled(path, &body, mtime, title.as_deref())
+                .await?;
         }
         index.commit().await?;
 
@@ -171,13 +173,18 @@ async fn handle_changes(
 /// visible text, markdown verbatim).
 async fn upsert_indexable(index: &MarkupIndex, path: &Path) -> AppResult<()> {
     let content = std::fs::read_to_string(path).unwrap_or_default();
-    let body = if crate::scanner::is_html(path) {
-        crate::scanner::strip_html(&content)
+    let (body, title) = if crate::scanner::is_html(path) {
+        (
+            crate::scanner::strip_html(&content),
+            crate::scanner::html_title(&content),
+        )
     } else {
-        content
+        (content, None)
     };
     let mtime = file_mtime_ms(path);
-    index.upsert_file(path, &body, mtime).await
+    index
+        .upsert_file_titled(path, &body, mtime, title.as_deref())
+        .await
 }
 
 pub fn file_mtime_ms(path: &Path) -> i64 {
