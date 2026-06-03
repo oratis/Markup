@@ -17,6 +17,9 @@ struct SourceEditorView: UIViewRepresentable {
         controller?.insertWikilink = { [weak coordinator = context.coordinator] name in
             coordinator?.completeWikilink(name)
         }
+        controller?.insertText = { [weak coordinator = context.coordinator] snippet in
+            coordinator?.insertAtCaret(snippet)
+        }
         tv.font = .monospacedSystemFont(ofSize: 16, weight: .regular)
         tv.autocapitalizationType = .sentences
         tv.smartQuotesType = .no
@@ -164,6 +167,7 @@ struct SourceEditorView: UIViewRepresentable {
                     self?.insert("\n| Col | Col |\n| --- | --- |\n|  |  |\n", caret: nil)
                 }),
                 ("wand.and.stars", { [weak self] in self?.formatTableAtCaret() }),
+                ("photo", { [weak self] in self?.controller?.imagePickerRequested = true }),
             ]
             for (symbol, action) in items {
                 let button = UIButton(type: .system)
@@ -215,6 +219,13 @@ struct SourceEditorView: UIViewRepresentable {
         func boldSelection() { wrap("**", "**") }
         func italicSelection() { wrap("*", "*") }
         func codeSelection() { wrap("`", "`") }
+
+        /// Insert raw text at the caret (replacing any selection).
+        func insertAtCaret(_ snippet: String) {
+            guard let tv = textView else { return }
+            let (l, len) = selection()
+            apply(MarkdownEdit.insert(tv.text, location: l, length: len, snippet: snippet))
+        }
 
         /// Re-align the GFM table the caret sits in. No-op if not in a table.
         func formatTableAtCaret() {

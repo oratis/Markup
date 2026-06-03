@@ -186,4 +186,24 @@ final class VaultStore {
             return false
         }
     }
+
+    /// Save image `data` into the vault's `assets/` folder under a unique name
+    /// and return the vault-relative path (e.g. `assets/img-1a2b3c4d.png`) for
+    /// a Markdown `![](…)` reference, or `nil` on failure.
+    func writeAsset(_ data: Data, ext: String) -> String? {
+        guard let root = rootURL else { return nil }
+        let assets = root.appendingPathComponent("assets", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(
+                at: assets, withIntermediateDirectories: true)
+            let safeExt = ext.isEmpty ? "png" : ext.lowercased()
+            let name = "img-\(UUID().uuidString.prefix(8)).\(safeExt)"
+            try data.write(to: assets.appendingPathComponent(name), options: .atomic)
+            scan() // surface the new asset in the index/listing
+            return "assets/\(name)"
+        } catch {
+            errorMessage = "Couldn't save image."
+            return nil
+        }
+    }
 }

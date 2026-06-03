@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import PhotosUI
 import MarkupKit
 
 /// One note: reads as a rendered page, or edits as native Markdown source.
@@ -21,6 +22,7 @@ struct ReaderView: View {
 
     @StateObject private var proxy = WebViewProxy()
     @State private var editor = EditorController()
+    @State private var pickedImage: PhotosPickerItem?
     @State private var showOutline = false
     @State private var showBacklinks = false
     @State private var shareItem: ShareItem?
@@ -57,6 +59,12 @@ struct ReaderView: View {
                 SourceEditorView(text: $content, controller: editor)
                     .onChange(of: content) { _, _ in scheduleSave() }
                     .safeAreaInset(edge: .bottom, spacing: 0) { wikilinkSuggestions }
+                    .photosPicker(
+                        isPresented: Binding(
+                            get: { editor.imagePickerRequested },
+                            set: { editor.imagePickerRequested = $0 }),
+                        selection: $pickedImage, matching: .images)
+                    .onChange(of: pickedImage) { _, item in insertPickedImage(item) }
             } else if isHTML {
                 // Render the HTML file faithfully, with read access to the vault
                 // so relative CSS/images/links resolve.
@@ -203,6 +211,23 @@ struct ReaderView: View {
                 }
                 .background(.regularMaterial)
             }
+        }
+    }
+
+    // MARK: - Image insert
+
+    /// Load the picked photo, copy it into the vault's `assets/`, and insert a
+    /// Markdown image reference at the caret.
+    private func insertPickedImage(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        Task {
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                let ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "png"
+                if let rel = vault.writeAsset(data, ext: ext) {
+                    editor.insertText?("![](\(rel))")
+                }
+            }
+            pickedImage = nil
         }
     }
 
