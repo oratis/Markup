@@ -117,30 +117,20 @@ pub async fn rename_file(from: String, to: String) -> AppResult<()> {
     Ok(())
 }
 
-/// Move a file to the user's Trash. macOS-only — uses NSFileManager via
-/// `osascript` to keep dependencies trivial. Note: this requires the user
-/// to grant Automation access to System Events on first use.
+/// Move a file to the user's Trash via the OS-native API (the `trash` crate —
+/// NSFileManager on macOS). No osascript round-trip, so there's no Automation-
+/// access prompt and no AppleScript string to escape.
 #[tauri::command]
 pub async fn trash_file(path: String) -> AppResult<()> {
     let p = PathBuf::from(&path);
     if !p.exists() {
         return Err(AppError::Other(format!("not found: {path}")));
     }
-    // Use AppleScript to move to Trash. POSIX path handles arbitrary chars.
-    let script = format!(
-        "tell application \"Finder\" to delete POSIX file \"{}\"",
-        path.replace('\\', "\\\\").replace('"', "\\\"")
-    );
-    let status = tokio::process::Command::new("osascript")
-        .arg("-e")
-        .arg(&script)
-        .status()
-        .await?;
-    if !status.success() {
-        return Err(AppError::Other(format!(
-            "osascript trash failed (status: {status})"
-        )));
-    }
+    // `trash::delete` is blocking — run it off the async runtime.
+    tokio::task::spawn_blocking(move || trash::delete(&p))
+        .await
+        .map_err(|e| AppError::Other(format!("trash join: {e}")))?
+        .map_err(|e| AppError::Other(format!("trash failed: {e}")))?;
     Ok(())
 }
 
@@ -688,6 +678,14 @@ mod ext_tests {
             .expect("a normal subdir write should succeed");
         assert!(rel.starts_with("assets"), "rel path was {rel}");
         assert!(dir.path().join(&rel).exists());
+    }
+
+    #[tokio::test]
+    async fn trash_file_errors_on_a_missing_path() {
+        // The happy path actually trashes a file (left to the `trash` crate);
+        // here we just assert the guard rejects a non-existent path.
+        let res = trash_file("/no/such/markup-test-file.md".to_string()).await;
+        assert!(matches!(res, Err(AppError::Other(_))));
     }
 }
 

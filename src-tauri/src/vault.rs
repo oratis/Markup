@@ -111,12 +111,14 @@ impl VaultState {
 
         let count = files.len();
         let index_for_watcher = index.clone();
+        let root_for_watcher = root.clone();
         let watcher = crate::watcher::watch_vault(&root, move |changes| {
             let app = app.clone();
             let index = index_for_watcher.clone();
+            let root = root_for_watcher.clone();
             // Move event handling off the watcher thread.
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = handle_changes(&app, &index, &changes).await {
+                if let Err(e) = handle_changes(&app, &index, &root, &changes).await {
                     tracing::warn!("handle_changes error: {e}");
                 }
             });
@@ -163,12 +165,15 @@ impl VaultState {
 async fn handle_changes(
     app: &AppHandle,
     index: &MarkupIndex,
+    root: &Path,
     changes: &[VaultChange],
 ) -> AppResult<()> {
     for change in changes {
         match change {
             VaultChange::Upserted(path) => {
-                if crate::scanner::is_indexable(path) {
+                if crate::scanner::is_indexable(path)
+                    && !crate::scanner::is_within_skipped_dir(root, path)
+                {
                     upsert_indexable(index, path).await?;
                 }
             }
@@ -177,7 +182,9 @@ async fn handle_changes(
             }
             VaultChange::Renamed(from, to) => {
                 index.remove_file(from).await?;
-                if crate::scanner::is_indexable(to) {
+                if crate::scanner::is_indexable(to)
+                    && !crate::scanner::is_within_skipped_dir(root, to)
+                {
                     upsert_indexable(index, to).await?;
                 }
             }
