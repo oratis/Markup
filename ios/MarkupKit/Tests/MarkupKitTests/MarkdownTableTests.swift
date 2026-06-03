@@ -21,6 +21,30 @@ struct AutoCloseTests {
     }
 }
 
+@Suite("MarkdownEdit.wikilinkQuery")
+struct WikilinkQueryTests {
+    @Test func emptyRightAfterOpen() {
+        // "[[" then caret → empty query (show all).
+        #expect(MarkdownEdit.wikilinkQuery(in: "see [[", caret: 6) == "")
+    }
+
+    @Test func partialQuery() {
+        #expect(MarkdownEdit.wikilinkQuery(in: "see [[road", caret: 10) == "road")
+        // With autoclosed "]]" after the caret it still reads the partial.
+        #expect(MarkdownEdit.wikilinkQuery(in: "see [[road]]", caret: 10) == "road")
+    }
+
+    @Test func nilWhenClosedOrNoOpen() {
+        #expect(MarkdownEdit.wikilinkQuery(in: "see [[road]] x", caret: 14) == nil)
+        #expect(MarkdownEdit.wikilinkQuery(in: "plain text", caret: 10) == nil)
+    }
+
+    @Test func nilAcrossNewlineOrSecondOpen() {
+        #expect(MarkdownEdit.wikilinkQuery(in: "[[a\nb", caret: 5) == nil)
+        #expect(MarkdownEdit.wikilinkQuery(in: "[[a[[b", caret: 6) == "b")
+    }
+}
+
 @Suite("MarkdownTable.format")
 struct MarkdownTableTests {
     @Test func detectsTable() {

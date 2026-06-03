@@ -20,6 +20,7 @@ struct ReaderView: View {
     private var isHTML: Bool { FileKind.of(file.name) == .html }
 
     @StateObject private var proxy = WebViewProxy()
+    @State private var editor = EditorController()
     @State private var showOutline = false
     @State private var showBacklinks = false
     @State private var shareItem: ShareItem?
@@ -53,8 +54,9 @@ struct ReaderView: View {
     var body: some View {
         Group {
             if isEditing {
-                SourceEditorView(text: $content)
+                SourceEditorView(text: $content, controller: editor)
                     .onChange(of: content) { _, _ in scheduleSave() }
+                    .safeAreaInset(edge: .bottom, spacing: 0) { wikilinkSuggestions }
             } else if isHTML {
                 // Render the HTML file faithfully, with read access to the vault
                 // so relative CSS/images/links resolve.
@@ -156,6 +158,50 @@ struct ReaderView: View {
                 } label: {
                     Image(systemName: "textformat.size")
                 }
+            }
+        }
+    }
+
+    // MARK: - Inline [[ wikilink autocomplete
+
+    /// Up to 6 fuzzy-ranked notes for the active `[[` query.
+    private func wikilinkMatches(_ q: String) -> [VaultFile] {
+        let query = q.lowercased()
+        let candidates = vault.files.filter { FileKind.of($0.name) != .canvas }
+        if query.isEmpty { return Array(candidates.prefix(6)) }
+        return candidates
+            .map { ($0, scoreSubsequence($0.relPath.lowercased(), query)) }
+            .filter { $0.1 > -.infinity }
+            .sorted { $0.1 > $1.1 }
+            .prefix(6)
+            .map { $0.0 }
+    }
+
+    @ViewBuilder
+    private var wikilinkSuggestions: some View {
+        if let q = editor.wikilinkQuery {
+            let matches = wikilinkMatches(q)
+            if !matches.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(matches) { f in
+                            let title = (f.name as NSString).deletingPathExtension
+                            Button { editor.insertWikilink?(title) } label: {
+                                Label(title, systemImage: "doc.text")
+                                    .font(.callout)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .background(.quaternary, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Insert link to \(title)")
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                }
+                .background(.regularMaterial)
             }
         }
     }

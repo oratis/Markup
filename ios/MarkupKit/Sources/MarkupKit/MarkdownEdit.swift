@@ -93,6 +93,24 @@ public enum MarkdownEdit {
         return .none
     }
 
+    /// The partial query typed inside an open `[[` ending at `caret` (a UTF-16
+    /// offset), or `nil` when the caret isn't within a single-line, unclosed
+    /// wikilink. Drives the inline `[[` autocomplete. E.g. `"road"` for
+    /// `…see [[road|` and `""` right after `[[`.
+    public static func wikilinkQuery(in text: String, caret: Int) -> String? {
+        let ns = text as NSString
+        guard caret >= 2, caret <= ns.length else { return nil }
+        let open = ns.range(
+            of: "[[", options: .backwards, range: NSRange(location: 0, length: caret))
+        guard open.location != NSNotFound else { return nil }
+        let after = open.location + open.length
+        let between = ns.substring(with: NSRange(location: after, length: caret - after))
+        if between.contains("]]") || between.contains("\n") || between.contains("[[") {
+            return nil
+        }
+        return between
+    }
+
     /// The auto-closing partner for an opening character, or `nil` if the
     /// character doesn't auto-close. Mirrors the desktop `cm-auto-close`
     /// pairs: `()`, `[]`, `{}`, and the symmetric `` ` ``.
