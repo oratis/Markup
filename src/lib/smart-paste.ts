@@ -45,10 +45,15 @@ export function installSmartPaste(target: HTMLElement, opts: InstallOpts): () =>
 
     const selected = opts.getSelectionText();
     if (!selected) return;
+    // A selection spanning lines can't be valid link text — let native paste run.
+    if (/[\r\n]/.test(selected)) return;
 
     e.preventDefault();
     e.stopPropagation();
-    const md = `[${selected}](${text.trim()})`;
+    // Escape `[`/`]` in the link text so a selection like `foo]bar` doesn't
+    // break out of the `[…]` and produce malformed markdown.
+    const linkText = selected.replace(/[[\]]/g, "\\$&");
+    const md = `[${linkText}](${text.trim()})`;
     opts.insertLink(md);
   };
 
