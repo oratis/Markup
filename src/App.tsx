@@ -39,6 +39,7 @@ import {
 } from "./lib/block-index-store";
 import { toggleBookmark } from "./lib/bookmarks";
 import { IS_MAS_BUILD } from "./lib/build-flags";
+import { getCanvasStore } from "./lib/canvas-registry";
 import {
   cycleHeadingLevel,
   dedupLines,
@@ -1109,6 +1110,14 @@ export function App() {
     try {
       const loaded = await readFile(cur.path);
       state.reloadActiveFromDisk(loaded.content, loaded.mtime_ms);
+      // Canvas tabs render from a separate per-tab store, not tab.content.
+      // Without resetting it the reload is invisible AND the next node nudge
+      // autosaves the stale in-memory doc back over the disk edit (the tab's
+      // mtime token was just refreshed, so the write-guard passes). reset()
+      // exists for exactly this — wire it up.
+      if (cur.kind === "canvas") {
+        getCanvasStore(cur.id)?.reset(loaded.content);
+      }
       setExternalMtime(null);
       showToast(tr("toast.reloaded"));
     } catch (e) {
@@ -1861,6 +1870,12 @@ export function App() {
                       : c,
                   ),
                 }));
+                // Canvas tabs render from a separate per-tab store — reset it
+                // so the reload is visible and stale content can't autosave
+                // back over the disk edit. No-op when no store exists yet.
+                if (tx.kind === "canvas") {
+                  getCanvasStore(tx.id)?.reset(loaded.content);
+                }
                 reloaded += 1;
               } catch {
                 failed += 1;
