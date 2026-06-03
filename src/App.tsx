@@ -393,6 +393,9 @@ export function App() {
   const showToolbar = useAppStore((s) => s.showToolbar);
   const showTabBar = useAppStore((s) => s.showTabBar);
   const vaultSort = useAppStore((s) => s.vaultSort);
+  const dailyNotesFolder = useAppStore((s) => s.dailyNotesFolder);
+  const dailyNotesFormat = useAppStore((s) => s.dailyNotesFormat);
+  const dailyNotesTemplate = useAppStore((s) => s.dailyNotesTemplate);
   useSettingsPersistence({
     fontSize,
     proseMaxWidth,
@@ -410,6 +413,11 @@ export function App() {
     showToolbar,
     showTabBar,
     vaultSort,
+    // These three were missing from the persisted bag — set in Settings, they
+    // survived the session but reverted to defaults on relaunch.
+    dailyNotesFolder,
+    dailyNotesFormat,
+    dailyNotesTemplate,
   });
 
   // Push recent file when active tab changes to a real file. Mirror to
@@ -792,8 +800,14 @@ export function App() {
       if (state.trimOnSave && content !== t.content) {
         // Push the trimmed content back into the store so the editor reflects
         // the on-disk version; SourceEditor's reconcile effect picks it up.
+        // Guard on `tx.content === t.content`: if the user typed during the
+        // awaited write, overwriting with the trimmed *snapshot* would destroy
+        // that in-flight edit. Skipping it leaves the newer content in place;
+        // the re-armed autosave timer trims + saves it next.
         useAppStore.setState((s) => ({
-          tabs: s.tabs.map((tx) => (tx.id === t.id ? { ...tx, content } : tx)),
+          tabs: s.tabs.map((tx) =>
+            tx.id === t.id && tx.content === t.content ? { ...tx, content } : tx,
+          ),
         }));
       }
       setActiveMtime(newMtime);
@@ -825,7 +839,9 @@ export function App() {
         if (r.status === "fulfilled") {
           return {
             ...tx,
-            content: trim ? payloads[i] : tx.content,
+            // Don't overwrite with the trimmed snapshot if the user edited
+            // during the write (preserve the in-flight edit).
+            content: trim && tx.content === dirty[i].content ? payloads[i] : tx.content,
             status: "saved",
             mtimeMs: r.value,
             errorMessage: null,
@@ -890,7 +906,9 @@ export function App() {
           savedCount += 1;
           return {
             ...tx,
-            content: trim ? payloads[i] : tx.content,
+            // Don't overwrite with the trimmed snapshot if the user edited
+            // during the write (preserve the in-flight edit).
+            content: trim && tx.content === dirty[i].content ? payloads[i] : tx.content,
             status: "saved",
             mtimeMs: r.value,
             errorMessage: null,

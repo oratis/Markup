@@ -18,6 +18,9 @@ export interface PersistedSettings {
   showToolbar: boolean;
   showTabBar: boolean;
   vaultSort: string;
+  dailyNotesFolder: string;
+  dailyNotesFormat: string;
+  dailyNotesTemplate: string;
 }
 
 /**
@@ -59,5 +62,8 @@ export function useSettingsPersistence(settings: PersistedSettings) {
     settings.showToolbar,
     settings.showTabBar,
     settings.vaultSort,
+    settings.dailyNotesFolder,
+    settings.dailyNotesFormat,
+    settings.dailyNotesTemplate,
   ]);
 }
