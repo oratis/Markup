@@ -56,6 +56,8 @@ enum L {
     case appearance, readerTheme, readingWidth, vault, folder, notes, index, ready, building, reindex
     case about, version, onGitHub, getMac, privacyLine, language, languageSystem
     case canvasTitle, canvasBody, nodesEdgesFmt
+    case onboardTitle1, onboardBody1, onboardTitle2, onboardBody2
+    case onboardTitle3, onboardBody3, onboardNext, onboardStart
 
     var en: String {
         switch self {
@@ -122,6 +124,16 @@ enum L {
         case .canvasBody:
             return "Open this file in Markup for Mac to view and edit it."
         case .nodesEdgesFmt: return "%d node(s) · %d edge(s)"
+        case .onboardTitle1: return "Read your Markdown like a page"
+        case .onboardBody1:
+            return "Open a folder of notes and read them beautifully rendered — code, math, diagrams, tables."
+        case .onboardTitle2: return "Bring your own folder"
+        case .onboardBody2:
+            return "Point Markup at an iCloud Drive or Files folder — the same vault you use on your Mac. Nothing to import."
+        case .onboardTitle3: return "Private by default"
+        case .onboardBody3: return "No account, no telemetry. Your notes stay on your device and your iCloud."
+        case .onboardNext: return "Next"
+        case .onboardStart: return "Open a Folder"
         }
     }
 
@@ -188,6 +200,14 @@ enum L {
         case .canvasTitle: return "Canvas 是桌面端功能"
         case .canvasBody: return "请在 Mac 版 Markup 中打开此文件以查看和编辑。"
         case .nodesEdgesFmt: return "%d 个节点 · %d 条连线"
+        case .onboardTitle1: return "像读一页纸那样读 Markdown"
+        case .onboardBody1: return "打开一个笔记文件夹，精美渲染地阅读——代码、公式、图表、表格。"
+        case .onboardTitle2: return "用你自己的文件夹"
+        case .onboardBody2: return "让 Markup 指向 iCloud 云盘或「文件」中的文件夹——与 Mac 端共用同一个仓库,无需导入。"
+        case .onboardTitle3: return "默认隐私"
+        case .onboardBody3: return "无账户、无遥测。你的笔记只留在本机和你的 iCloud。"
+        case .onboardNext: return "下一步"
+        case .onboardStart: return "打开文件夹"
         }
     }
 }
