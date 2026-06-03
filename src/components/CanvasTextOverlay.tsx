@@ -74,8 +74,7 @@ function CanvasTextOverlayInner({ node, store, onClose }: Props) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // commit reads refs, no deps needed
-    // biome-ignore lint/correctness/useExhaustiveDependencies: refs only.
+    // Mount-once: commit() only reads refs (latestRef) + stable props.
   }, []);
 
   // Focus the editor on mount so the user can type immediately.

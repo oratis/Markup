@@ -218,7 +218,11 @@ function coerceNode(raw: unknown, index: number, errors: string[]): CanvasNode |
     node.backgroundStyle = raw.backgroundStyle;
   }
 
-  // Preserve unknown fields verbatim.
+  // Preserve unknown fields verbatim. Known fields with an invalid value
+  // (e.g. a non-string color, an unrecognised side/end enum) are
+  // deliberately dropped above — that's value sanitisation, distinct from
+  // the forwards-compat preservation of genuinely-new keys here. See the
+  // "drops an invalid fromSide silently" test.
   for (const [k, v] of Object.entries(raw)) {
     if (!KNOWN_NODE_KEYS.has(k)) node[k] = v;
   }
@@ -262,6 +266,8 @@ function coerceEdge(raw: unknown, index: number, errors: string[]): CanvasEdge |
   if (typeof raw.label === "string") edge.label = raw.label;
   if (typeof raw.color === "string") edge.color = raw.color;
 
+  // Preserve unknown fields verbatim; invalid values of known fields are
+  // deliberately dropped above (see coerceNode).
   for (const [k, v] of Object.entries(raw)) {
     if (!KNOWN_EDGE_KEYS.has(k)) edge[k] = v;
   }
