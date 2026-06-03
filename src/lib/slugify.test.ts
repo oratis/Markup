@@ -37,3 +37,14 @@ describe("firstHeadingText", () => {
     expect(firstHeadingText("#foo bar")).toBeNull();
   });
 });
+
+describe("slugifyForFilename — astral truncation (regression)", () => {
+  it("does not split a surrogate pair at the cap", () => {
+    // max=2 over code points ["a","😀","b"] → "a😀" with the emoji intact.
+    // A code-unit slice(0,2) would emit "a" + a lone high surrogate.
+    const s = slugifyForFilename("a😀b", 2);
+    expect(s).toBe("a😀");
+    // No unpaired high surrogate.
+    expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(s)).toBe(false);
+  });
+});

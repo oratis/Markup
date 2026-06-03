@@ -4,10 +4,14 @@
  * characters with `-`. Returns an empty string when the input is blank.
  */
 export function slugifyForFilename(input: string, max = 80): string {
-  return input
-    .replace(/^#+\s+/, "")
-    .trim()
+  const cleaned = input.replace(/^#+\s+/, "").trim();
+  // Truncate by code point, not code unit — a plain `.slice(0, max)` can sever
+  // a surrogate pair and emit a lone surrogate (an invalid character that
+  // corrupts the resulting filename) when an emoji/astral char straddles the
+  // cap.
+  return [...cleaned]
     .slice(0, max)
+    .join("")
     .replace(/[/\\:*?"<>|]/g, "-");
 }
 
