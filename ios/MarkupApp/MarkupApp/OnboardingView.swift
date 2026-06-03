@@ -6,6 +6,7 @@ import SwiftUI
 struct OnboardingView: View {
     var onOpenFolder: () -> Void
     @State private var page = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private struct Card: Identifiable {
         let id = UUID()
@@ -31,7 +32,7 @@ struct OnboardingView: View {
 
             Button {
                 if page < cards.count - 1 {
-                    withAnimation { page += 1 }
+                    if reduceMotion { page += 1 } else { withAnimation { page += 1 } }
                 } else {
                     onOpenFolder()
                 }
