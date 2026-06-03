@@ -16,6 +16,14 @@ final class EditorController {
     /// active `[[…]]` at the caret.
     var insertWikilink: ((String) -> Void)?
 
+    /// The partial tag typed after an inline `#`, or `nil` when the caret isn't
+    /// inside a tag. Drives the `#` tag-suggestions overlay.
+    var tagQuery: String?
+
+    /// Set by the editor coordinator: complete the active `#…` tag at the caret
+    /// with the chosen tag name.
+    var insertTag: ((String) -> Void)?
+
     /// Set true by the accessory "image" button; ReaderView presents a photo
     /// picker, writes the image into the vault, then calls `insertText`.
     var imagePickerRequested = false

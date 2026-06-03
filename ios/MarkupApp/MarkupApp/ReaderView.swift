@@ -58,7 +58,7 @@ struct ReaderView: View {
             if isEditing {
                 SourceEditorView(text: $content, controller: editor)
                     .onChange(of: content) { _, _ in scheduleSave() }
-                    .safeAreaInset(edge: .bottom, spacing: 0) { wikilinkSuggestions }
+                    .safeAreaInset(edge: .bottom, spacing: 0) { editorSuggestions }
                     .photosPicker(
                         isPresented: Binding(
                             get: { editor.imagePickerRequested },
@@ -185,33 +185,65 @@ struct ReaderView: View {
             .map { $0.0 }
     }
 
+    /// Up to 6 tags matching the active `#` query (prefix, then by frequency).
+    private func tagMatches(_ q: String) -> [String] {
+        let all = ((try? vault.index?.allTags()) ?? []).map(\.tag)
+        let query = q.lowercased()
+        if query.isEmpty { return Array(all.prefix(6)) }
+        return all.filter { $0.lowercased().contains(query) }.prefix(6).map { $0 }
+    }
+
+    /// A horizontal strip of suggestion chips above the keyboard: `[[` note
+    /// links take precedence, else `#` tags.
     @ViewBuilder
-    private var wikilinkSuggestions: some View {
+    private var editorSuggestions: some View {
         if let q = editor.wikilinkQuery {
             let matches = wikilinkMatches(q)
             if !matches.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(matches) { f in
-                            let title = (f.name as NSString).deletingPathExtension
-                            Button { editor.insertWikilink?(title) } label: {
-                                Label(title, systemImage: "doc.text")
-                                    .font(.callout)
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 7)
-                                    .background(.quaternary, in: Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Insert link to \(title)")
-                        }
+                suggestionStrip(matches.map { (f: VaultFile) in
+                    let title = (f.name as NSString).deletingPathExtension
+                    return Chip(id: f.relPath, label: title, icon: "doc.text") {
+                        editor.insertWikilink?(title)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                }
-                .background(.regularMaterial)
+                })
+            }
+        } else if let q = editor.tagQuery {
+            let matches = tagMatches(q)
+            if !matches.isEmpty {
+                suggestionStrip(matches.map { tag in
+                    Chip(id: tag, label: tag, icon: "number") { editor.insertTag?(tag) }
+                })
             }
         }
+    }
+
+    private struct Chip: Identifiable {
+        let id: String
+        let label: String
+        let icon: String
+        let action: () -> Void
+    }
+
+    private func suggestionStrip(_ chips: [Chip]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(chips) { chip in
+                    Button(action: chip.action) {
+                        Label(chip.label, systemImage: chip.icon)
+                            .font(.callout)
+                            .lineLimit(1)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(.quaternary, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Insert \(chip.label)")
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+        .background(.regularMaterial)
     }
 
     // MARK: - Image insert
