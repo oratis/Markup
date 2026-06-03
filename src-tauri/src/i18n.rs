@@ -15,6 +15,9 @@ pub enum Locale {
 }
 
 impl Locale {
+    // Intentionally infallible (unknown → detect()), so the std `FromStr`
+    // trait — which forces a `Result` — would be a worse fit than this name.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s {
             "zh" => Self::Zh,
