@@ -14,6 +14,14 @@ describe("serializeSettings", () => {
     expect(json).toContain("\n");
     expect(json).toContain("  ");
   });
+
+  it("round-trips a custom CSS snippet", () => {
+    const css = ".milkdown .editor h1 { color: teal; }";
+    const parsed = parseSettings(
+      JSON.parse(serializeSettings({ ...DEFAULT_SETTINGS, customCss: css })),
+    );
+    expect(parsed?.customCss).toBe(css);
+  });
 });
 
 describe("parseSettings", () => {

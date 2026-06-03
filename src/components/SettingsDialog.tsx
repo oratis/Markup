@@ -31,6 +31,7 @@ export function SettingsDialog({ onClose }: Props) {
   const dailyNotesFolder = useAppStore((s) => s.dailyNotesFolder);
   const dailyNotesFormat = useAppStore((s) => s.dailyNotesFormat);
   const dailyNotesTemplate = useAppStore((s) => s.dailyNotesTemplate);
+  const customCss = useAppStore((s) => s.customCss);
   const [draft, setDraft] = useState<Settings>({
     fontSize,
     proseMaxWidth,
@@ -51,6 +52,7 @@ export function SettingsDialog({ onClose }: Props) {
     dailyNotesFolder,
     dailyNotesFormat,
     dailyNotesTemplate,
+    customCss,
   });
 
   function commit(patch: Partial<Settings>) {
@@ -214,6 +216,17 @@ export function SettingsDialog({ onClose }: Props) {
                 {draft.showLineNumbers ? t("settings.on") : t("settings.off")}
               </span>
             </label>
+          </Row>
+
+          <Row label={t("settings.customCss")} hint={t("settings.customCssHint")}>
+            <textarea
+              value={draft.customCss}
+              onChange={(e) => commit({ customCss: e.target.value })}
+              placeholder=".milkdown .editor h1 { color: teal; }"
+              spellCheck={false}
+              rows={4}
+              className="flex-1 px-2 py-1 rounded border border-black/10 dark:border-white/20 bg-transparent outline-none focus:border-blue-500 font-mono text-[11px] resize-y"
+            />
           </Row>
         </div>
 

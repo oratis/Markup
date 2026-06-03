@@ -100,6 +100,9 @@ interface AppState {
   dailyNotesFormat: string;
   /** Vault-relative path to a markdown template applied to new daily notes. */
   dailyNotesTemplate: string;
+  /** User CSS snippet injected to restyle the reader (Obsidian "CSS snippet"
+   * style). Empty = none. The author scopes their own selectors. */
+  customCss: string;
 
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
@@ -183,6 +186,7 @@ export interface Settings {
   dailyNotesFolder: string;
   dailyNotesFormat: string;
   dailyNotesTemplate: string;
+  customCss: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -205,6 +209,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dailyNotesFolder: "journal",
   dailyNotesFormat: "YYYY-MM-DD",
   dailyNotesTemplate: "",
+  customCss: "",
 };
 
 const SCRATCH_PREFIX = "scratch:";
@@ -313,6 +318,7 @@ export const useAppStore = create<AppState>((set) => ({
   dailyNotesFolder: DEFAULT_SETTINGS.dailyNotesFolder,
   dailyNotesFormat: DEFAULT_SETTINGS.dailyNotesFormat,
   dailyNotesTemplate: DEFAULT_SETTINGS.dailyNotesTemplate,
+  customCss: DEFAULT_SETTINGS.customCss,
 
   openLoadedFile: (loaded) =>
     set((state) => {
@@ -642,6 +648,7 @@ export const useAppStore = create<AppState>((set) => ({
       const dailyNotesFolder = (patch.dailyNotesFolder ?? state.dailyNotesFolder).trim();
       const dailyNotesFormat = (patch.dailyNotesFormat ?? state.dailyNotesFormat).trim();
       const dailyNotesTemplate = patch.dailyNotesTemplate ?? state.dailyNotesTemplate;
+      const customCss = patch.customCss ?? state.customCss;
       return {
         fontSize,
         proseMaxWidth,
@@ -662,6 +669,7 @@ export const useAppStore = create<AppState>((set) => ({
         dailyNotesFolder,
         dailyNotesFormat: dailyNotesFormat || "YYYY-MM-DD",
         dailyNotesTemplate,
+        customCss,
       };
     }),
 

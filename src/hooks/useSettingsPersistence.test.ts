@@ -22,6 +22,7 @@ const base: PersistedSettings = {
   dailyNotesFolder: "journal",
   dailyNotesFormat: "YYYY-MM-DD",
   dailyNotesTemplate: "",
+  customCss: "",
 };
 
 afterEach(() => {
