@@ -180,25 +180,29 @@ struct SourceEditorView: UIViewRepresentable {
                 stack.heightAnchor.constraint(equalToConstant: 36),
             ])
 
-            let items: [(String, () -> Void)] = [
-                ("number", { [weak self] in self?.toggleLine("# ") }),
-                ("bold", { [weak self] in self?.wrap("**", "**") }),
-                ("italic", { [weak self] in self?.wrap("*", "*") }),
-                ("chevron.left.forwardslash.chevron.right", { [weak self] in self?.wrap("`", "`") }),
-                ("link", { [weak self] in self?.insert("[]()", caret: 1) }),
-                ("text.badge.link", { [weak self] in self?.insert("[[]]", caret: 2) }),
-                ("list.bullet", { [weak self] in self?.toggleLine("- ") }),
-                ("checklist", { [weak self] in self?.toggleLine("- [ ] ") }),
-                ("text.quote", { [weak self] in self?.toggleLine("> ") }),
-                ("tablecells", { [weak self] in
+            // (SF Symbol, VoiceOver label, action)
+            let items: [(String, String, () -> Void)] = [
+                ("number", "Heading", { [weak self] in self?.toggleLine("# ") }),
+                ("bold", "Bold", { [weak self] in self?.wrap("**", "**") }),
+                ("italic", "Italic", { [weak self] in self?.wrap("*", "*") }),
+                ("chevron.left.forwardslash.chevron.right", "Inline code",
+                 { [weak self] in self?.wrap("`", "`") }),
+                ("link", "Link", { [weak self] in self?.insert("[]()", caret: 1) }),
+                ("text.badge.link", "Wikilink", { [weak self] in self?.insert("[[]]", caret: 2) }),
+                ("list.bullet", "Bullet list", { [weak self] in self?.toggleLine("- ") }),
+                ("checklist", "Checklist", { [weak self] in self?.toggleLine("- [ ] ") }),
+                ("text.quote", "Quote", { [weak self] in self?.toggleLine("> ") }),
+                ("tablecells", "Insert table", { [weak self] in
                     self?.insert("\n| Col | Col |\n| --- | --- |\n|  |  |\n", caret: nil)
                 }),
-                ("wand.and.stars", { [weak self] in self?.formatTableAtCaret() }),
-                ("photo", { [weak self] in self?.controller?.imagePickerRequested = true }),
+                ("wand.and.stars", "Format table", { [weak self] in self?.formatTableAtCaret() }),
+                ("photo", "Insert image",
+                 { [weak self] in self?.controller?.imagePickerRequested = true }),
             ]
-            for (symbol, action) in items {
+            for (symbol, label, action) in items {
                 let button = UIButton(type: .system)
                 button.setImage(UIImage(systemName: symbol), for: .normal)
+                button.accessibilityLabel = label
                 button.addAction(UIAction { _ in action() }, for: .touchUpInside)
                 button.widthAnchor.constraint(equalToConstant: 42).isActive = true
                 stack.addArrangedSubview(button)

@@ -31,6 +31,33 @@ struct ReaderView: View {
     @AppStorage("reader.theme") private var themeRaw = ReaderTheme.light.rawValue
     @AppStorage("reader.fontScale") private var fontScale = 1.0
     @AppStorage("reader.maxWidth") private var maxWidth = 720
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The user's manual reader scale folded with the system Dynamic Type
+    /// size, so the rendered page respects accessibility text settings (§15).
+    private var effectiveFontScale: Double {
+        fontScale * Self.dynamicTypeFactor(dynamicTypeSize)
+    }
+
+    /// Body-text scale of a Dynamic Type size relative to the default
+    /// (`.large` = 1.0). Approximates Apple's UIFontMetrics scaling.
+    static func dynamicTypeFactor(_ size: DynamicTypeSize) -> Double {
+        switch size {
+        case .xSmall: return 0.82
+        case .small: return 0.88
+        case .medium: return 0.94
+        case .large: return 1.0
+        case .xLarge: return 1.12
+        case .xxLarge: return 1.24
+        case .xxxLarge: return 1.35
+        case .accessibility1: return 1.5
+        case .accessibility2: return 1.7
+        case .accessibility3: return 1.9
+        case .accessibility4: return 2.1
+        case .accessibility5: return 2.3
+        @unknown default: return 1.0
+        }
+    }
 
     private let positions = ReadingPositionStore.shared
 
@@ -48,7 +75,7 @@ struct ReaderView: View {
     private var html: String {
         ReaderHTML.document(
             markdown: content, title: file.name, theme: theme,
-            fontScale: fontScale, maxWidth: maxWidth,
+            fontScale: effectiveFontScale, maxWidth: maxWidth,
             restoreFraction: positions.position(for: file.relPath),
             assetBase: readerAssetBase)
     }
