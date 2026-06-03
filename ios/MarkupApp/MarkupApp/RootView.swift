@@ -54,7 +54,7 @@ struct RootView: View {
     private var sidebar: some View {
         Group {
             if vault.rootURL == nil {
-                emptyState
+                OnboardingView(onOpenFolder: { showPicker = true })
             } else if vault.files.isEmpty {
                 ContentUnavailableView(
                     t(.noMarkdownTitle),
@@ -120,29 +120,6 @@ struct RootView: View {
                     .accessibilityLabel(t(.openFolder))
             }
         }
-    }
-
-    // Compact, top-aligned empty state.
-    private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "books.vertical")
-                .font(.title)
-                .foregroundStyle(.secondary)
-            Text(t(.openVault))
-                .font(.headline)
-            Text(t(.openVaultBody))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button(t(.openAFolder)) { showPicker = true }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .padding(.top, 2)
-            Spacer()
-        }
-        .padding(.horizontal, 28)
-        .padding(.top, 28)
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Detail
