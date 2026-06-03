@@ -3,11 +3,16 @@
  *  StatusBar so it has direct tests and can be reused by other features
  *  (e.g. selection word count, reading-time estimation). */
 export function countWords(text: string): number {
-  const cjk = (text.match(/[㐀-鿿豈-﫿]/g) ?? []).length;
-  const nonCjk = text.replace(/[㐀-鿿豈-﫿]/g, " ");
+  // CJK ideographs (Ext-A + Unified + Compatibility) PLUS Japanese kana and
+  // Korean Hangul — these scripts have no inter-word spaces, so without them a
+  // whole kana/Hangul sentence would count as a single word.
+  const cjk = (text.match(CJK_RE) ?? []).length;
+  const nonCjk = text.replace(CJK_RE, " ");
   const words = nonCjk.trim().length === 0 ? 0 : nonCjk.trim().split(/\s+/).length;
   return cjk + words;
 }
+
+const CJK_RE = /[㐀-鿿豈-﫿぀-ヿ가-힯]/g;
 
 const ENCODER = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
 
