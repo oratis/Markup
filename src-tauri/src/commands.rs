@@ -302,6 +302,29 @@ window.addEventListener("DOMContentLoaded", async function () {{
     out
 }
 
+/// Sanitise comrak's rendered body before it's wrapped into a standalone
+/// export / browser-preview document. comrak runs with `unsafe_` (raw HTML
+/// passthrough), so a `.md` file's `<script>` / `onerror=` / `javascript:`
+/// reaches the output verbatim — and the export opens in an *external* browser
+/// where there is no CSP to stop it. ammonia (an allowlist HTML5 sanitiser)
+/// removes scripts, event handlers, and dangerous URL schemes while keeping the
+/// rich markup the export depends on: syntect inline `style` colours,
+/// `data-math-style` math nodes, `class="mermaid"` diagram blocks, task-list
+/// `<input>`s, and heading `id`s. The KaTeX / Mermaid CDN `<script>`s live in
+/// the document `<head>` (build_head_assets), NOT in this body, so they survive.
+fn sanitize_export_html(html: &str) -> String {
+    let mut builder = ammonia::Builder::default();
+    builder
+        .add_tags(["input"])
+        // class / id / style on any element. `style` passes through un-parsed —
+        // acceptable for a static, script-free document (no JS to weaponise it).
+        .add_generic_attributes(["class", "id", "style"])
+        // data-math-style (and any future renderer data-* hooks).
+        .add_generic_attribute_prefixes(["data-"])
+        .add_tag_attributes("input", ["type", "checked", "disabled"]);
+    builder.clean(html).to_string()
+}
+
 /// Render markdown to standalone HTML using one of the named themes.
 /// `theme` accepts "github" (default), "plain", or "tufte".
 ///
@@ -353,7 +376,12 @@ pub(crate) fn render_markdown_document(
     let mut plugins = comrak::Plugins::default();
     plugins.render.codefence_syntax_highlighter = Some(&highlighter);
 
-    let body = comrak::markdown_to_html_with_plugins(content, &opts, &plugins);
+    let raw_body = comrak::markdown_to_html_with_plugins(content, &opts, &plugins);
+    // Strip any script / event-handler / dangerous-URL the user's raw HTML
+    // carried through comrak's unsafe_ mode, BEFORE the body is wrapped into a
+    // file opened in a CSP-less external browser. The sanitiser preserves the
+    // math/diagram/syntect markup, so feature-detection runs on the result.
+    let body = sanitize_export_html(&raw_body);
 
     let needs_math = body.contains("data-math-style");
     let needs_mermaid = body.contains(r#"class="mermaid""#);
@@ -807,6 +835,76 @@ mod render_tests {
         // loose-list items and keeping the task checkbox inline.
         assert!(COMMON_CSS.contains("li > p"));
         assert!(COMMON_CSS.contains(".task-list-item > input[type=\"checkbox\"] + p"));
+    }
+
+    // ---- export HTML sanitisation (comrak runs unsafe_; the body is cleaned) ----
+
+    #[test]
+    fn render_strips_user_script_tags() {
+        let html = run_render("before\n\n<script>alert(1)</script>\n\nafter", None, None);
+        assert!(!html.contains("alert(1)"), "script payload survived: {html}");
+        assert!(html.contains("before") && html.contains("after"));
+    }
+
+    #[test]
+    fn render_strips_event_handlers_and_dangerous_urls() {
+        let html = run_render(
+            "<img src=x onerror=\"alert(1)\">\n\n<a href=\"javascript:alert(1)\">x</a>",
+            None,
+            None,
+        );
+        assert!(!html.contains("onerror"), "event handler survived: {html}");
+        assert!(
+            !html.to_lowercase().contains("javascript:"),
+            "js: url survived: {html}"
+        );
+    }
+
+    #[test]
+    fn render_keeps_benign_raw_html_and_links() {
+        let html = run_render(
+            "**bold**, a [link](https://example.com), and <kbd>Esc</kbd>.",
+            None,
+            None,
+        );
+        assert!(html.contains("<strong>bold</strong>"), "html: {html}");
+        assert!(html.contains(r#"href="https://example.com""#), "html: {html}");
+        assert!(html.contains("<kbd>Esc</kbd>"), "benign raw HTML dropped: {html}");
+    }
+
+    #[test]
+    fn render_preserves_rich_markup_through_the_sanitiser() {
+        // syntect inline styles
+        let code = run_render("```rust\nfn main() {}\n```", None, None);
+        assert!(code.contains("style=\"color:"), "syntect styles dropped: {code}");
+        // math node + its CDN assets still inject (detection runs post-sanitise)
+        let math = run_render("Inline $a^2$ here", None, None);
+        assert!(math.contains(r#"data-math-style="inline""#), "math node: {math}");
+        assert!(math.contains("katex.render"), "katex assets: {math}");
+        // mermaid block + assets
+        let dia = run_render("```mermaid\ngraph LR\nA-->B\n```", None, None);
+        assert!(dia.contains(r#"<pre class="mermaid">"#), "mermaid block: {dia}");
+        assert!(dia.contains("mermaid.esm.min.mjs"), "mermaid assets: {dia}");
+        // task-list input + heading anchor id
+        let task = run_render("# Hi There\n\n- [x] done", None, None);
+        assert!(task.contains(r#"type="checkbox""#), "task input: {task}");
+        assert!(task.contains(r#"id="hi-there""#), "heading anchor: {task}");
+    }
+
+    #[test]
+    fn sanitize_export_html_direct() {
+        let dirty = concat!(
+            "<p>hi</p><script>evil()</script>",
+            r#"<span style="color:red" class="c" data-math-style="inline">m</span>"#,
+            r#"<input type="checkbox" disabled>"#,
+        );
+        let clean = sanitize_export_html(dirty);
+        assert!(!clean.contains("evil()") && !clean.to_lowercase().contains("<script"));
+        assert!(clean.contains("style=\"color:red\""));
+        assert!(clean.contains("class=\"c\""));
+        assert!(clean.contains(r#"data-math-style="inline""#));
+        assert!(clean.contains(r#"type="checkbox""#));
+        assert!(clean.contains("<p>hi</p>"));
     }
 }
 
