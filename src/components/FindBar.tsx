@@ -39,21 +39,15 @@ export function FindBar({ sourceMode, onClose }: Props) {
 
   function findNext(backwards = false) {
     if (!query) return;
-    // window.find supports caseSensitive natively but not regex. For
-    // regex mode we synthesise a search by jumping to the first match
-    // beyond the current selection's offset in tab.content.
-    if (useRegex && tab) {
-      try {
-        const re = new RegExp(query, caseSensitive ? "g" : "gi");
-        // Best-effort: find any match. window selection -> position is
-        // unreliable across editors, so we just home in on the first one.
-        const m = re.exec(tab.content);
-        setMissing(m === null);
-        return;
-      } catch {
-        setMissing(true);
-        return;
-      }
+    // window.find navigates the rendered DOM but can't take a regex. So in
+    // regex mode we can't step through matches in the WYSIWYG view — the count
+    // badge reports how many exist, and Replace still works (on the source).
+    // Step-through regex navigation here needs a redesign (the find surface is
+    // the rendered DOM while replace/count are the markdown source); source
+    // mode already gets CodeMirror's native regex search.
+    if (useRegex) {
+      setMissing(total === 0);
+      return;
     }
     // @ts-expect-error — window.find is non-standard but works in WebKit/Tauri
     const found: boolean = window.find(query, caseSensitive, backwards, true);
@@ -218,7 +212,9 @@ export function FindBar({ sourceMode, onClose }: Props) {
               onClose();
             } else if (e.key === "Enter") {
               e.preventDefault();
-              handleReplaceAll();
+              // Enter replaces ONCE — matching the adjacent "Replace" button.
+              // (Replace-All stays an explicit click, not a stray Enter.)
+              handleReplaceOnce();
             }
           }}
           placeholder={t("find.replacePlaceholder")}
