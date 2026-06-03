@@ -39,6 +39,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Markdown parser (Rust-side, for indexing snippets and exports)
 comrak = { version = "0.40", default-features = false, features = ["syntect"] }
 
+# HTML sanitiser for the export/preview pipeline. comrak runs with unsafe_
+# (raw HTML passthrough), so the rendered body is cleaned of <script>, event
+# handlers, and dangerous URL schemes before being wrapped into a standalone
+# document that opens in an external browser (where there is no CSP).
+ammonia = "4"
+
 # Security-scoped bookmark persistence (base64-encode the bookmark blob)
 base64 = "0.22"
 
