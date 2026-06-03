@@ -98,6 +98,7 @@ import {
 } from "./lib/link-index-store";
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { trimTrailingWhitespace } from "./lib/save-prep";
+import { createSaveScheduler, planSaveFinalize } from "./lib/save-scheduler";
 import { readSession } from "./lib/session";
 import { parseSettings, serializeSettings } from "./lib/settings-io";
 import { shiftAllHeadings } from "./lib/shift-headings";
@@ -166,7 +167,7 @@ export function App() {
 
   const updateActiveContent = useAppStore((s) => s.updateActiveContent);
   const setActiveStatus = useAppStore((s) => s.setActiveStatus);
-  const setActiveMtime = useAppStore((s) => s.setActiveMtime);
+  const patchTab = useAppStore((s) => s.patchTab);
   const setVault = useAppStore((s) => s.setVault);
   const setVaultFiles = useAppStore((s) => s.setVaultFiles);
   const openLoadedFile = useAppStore((s) => s.openLoadedFile);
@@ -208,7 +209,11 @@ export function App() {
   const [externalMtime, setExternalMtime] = useState<number | null>(null);
 
   const editorScrollRef = useRef<HTMLElement | null>(null);
-  const saveTimerRef = useRef<number | null>(null);
+  // One debounced save timer PER tab id — editing/switching another tab no
+  // longer cancels a pending save or fires it on the wrong tab.
+  const saveSchedulerRef = useRef(createSaveScheduler());
+  // Cancel any pending autosaves when the app unmounts.
+  useEffect(() => () => saveSchedulerRef.current.cancelAll(), []);
 
   // Keep the link / tag / heading / block index stores in sync with the
   // active vault, and dispose per-canvas stores when their tabs close.
@@ -783,42 +788,45 @@ export function App() {
     };
   }, [tab?.id, sourceMode]);
 
-  const performSave = useCallback(async () => {
-    const state = useAppStore.getState();
-    const t = state.activeTabId
-      ? state.tabs.find((x) => x.id === state.activeTabId)
-      : null;
-    if (!t || !t.path) return;
-    setActiveStatus("saving");
-    try {
-      const content = state.trimOnSave ? trimTrailingWhitespace(t.content) : t.content;
-      const newMtime = await writeFile(t.path, content, t.mtimeMs);
-      indexFileSaved(t.path, content);
-      tagFileSaved(t.path, content);
-      headingFileSaved(t.path, content);
-      blockFileSaved(t.path, content);
-      if (state.trimOnSave && content !== t.content) {
-        // Push the trimmed content back into the store so the editor reflects
-        // the on-disk version; SourceEditor's reconcile effect picks it up.
-        // Guard on `tx.content === t.content`: if the user typed during the
-        // awaited write, overwriting with the trimmed *snapshot* would destroy
-        // that in-flight edit. Skipping it leaves the newer content in place;
-        // the re-armed autosave timer trims + saves it next.
-        useAppStore.setState((s) => ({
-          tabs: s.tabs.map((tx) =>
-            tx.id === t.id && tx.content === t.content ? { ...tx, content } : tx,
-          ),
-        }));
+  const performSave = useCallback(
+    async (tabId?: string) => {
+      const state = useAppStore.getState();
+      const id = tabId ?? state.activeTabId;
+      // Save the tab we were asked to (the one that was edited), NOT whichever
+      // tab happens to be active when a debounced timer fires.
+      const t = id ? state.tabs.find((x) => x.id === id) : null;
+      if (!t || !t.path) return;
+      patchTab(t.id, { status: "saving", errorMessage: null });
+      try {
+        const written = state.trimOnSave ? trimTrailingWhitespace(t.content) : t.content;
+        const newMtime = await writeFile(t.path, written, t.mtimeMs);
+        indexFileSaved(t.path, written);
+        tagFileSaved(t.path, written);
+        headingFileSaved(t.path, written);
+        blockFileSaved(t.path, written);
+        const cur = useAppStore.getState().tabs.find((x) => x.id === t.id);
+        if (!cur) return;
+        // Finalise — but never clobber an edit the user typed during the write.
+        patchTab(
+          t.id,
+          planSaveFinalize({
+            snapshotContent: t.content,
+            currentContent: cur.content,
+            written,
+            newMtime,
+            trim: state.trimOnSave,
+          }),
+        );
+        // The reload prompt tracks the ACTIVE tab's on-disk state; only clear it
+        // when we actually saved the active tab.
+        if (t.id === useAppStore.getState().activeTabId) setExternalMtime(null);
+      } catch (err) {
+        console.error("write_file failed", err);
+        patchTab(t.id, { status: "error", errorMessage: String(err) });
       }
-      setActiveMtime(newMtime);
-      setActiveStatus("saved");
-      // Remember mtime so vault-changed events from our own save don't trigger reload prompt
-      setExternalMtime(null);
-    } catch (err) {
-      console.error("write_file failed", err);
-      setActiveStatus("error", String(err));
-    }
-  }, [setActiveStatus, setActiveMtime]);
+    },
+    [patchTab],
+  );
 
   const saveAllSilent = useCallback(async () => {
     const state = useAppStore.getState();
@@ -938,10 +946,14 @@ export function App() {
         ? state.tabs.find((x) => x.id === state.activeTabId)
         : null;
       if (!active?.path) return;
-      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-      const delay = useAppStore.getState().autosaveMs;
-      if (delay <= 0) return; // autosave disabled — only ⌘S saves
-      saveTimerRef.current = window.setTimeout(performSave, delay);
+      const id = active.id;
+      const delay = state.autosaveMs;
+      if (delay <= 0) {
+        saveSchedulerRef.current.cancel(id); // autosave disabled — only ⌘S saves
+        return;
+      }
+      // Debounce a save bound to THIS tab id.
+      saveSchedulerRef.current.schedule(id, delay, () => performSave(id));
     },
     [updateActiveContent, performSave],
   );
@@ -1260,9 +1272,14 @@ export function App() {
           if (a) closeTab(a);
           break;
         }
-        case "save":
-          performSave();
+        case "save": {
+          const a = useAppStore.getState().activeTabId;
+          if (a) {
+            saveSchedulerRef.current.cancel(a);
+            performSave(a);
+          }
           break;
+        }
         case "save_as":
           handleSaveAs();
           break;
@@ -1381,11 +1398,11 @@ export function App() {
       // Save (potentially Save As)
       if (matchesShortcut(e, "save")) {
         e.preventDefault();
-        if (saveTimerRef.current !== null) {
-          window.clearTimeout(saveTimerRef.current);
-          saveTimerRef.current = null;
+        const a = useAppStore.getState().activeTabId;
+        if (a) {
+          saveSchedulerRef.current.cancel(a); // flush the pending debounce
+          performSave(a);
         }
-        performSave();
         return;
       }
       if (matchesShortcut(e, "saveAll")) {
