@@ -52,3 +52,20 @@ describe("countMatches — regex", () => {
     expect(countMatches(huge, "a", true, true)).toBe(9999);
   });
 });
+
+describe("countMatches — zero-width regex matches (regression)", () => {
+  it("counts an anchored zero-width match once, like String.match", () => {
+    expect(countMatches("abc", "^", false, true)).toBe(1);
+    expect(countMatches("abc", "$", false, true)).toBe(1);
+  });
+  it("counts word boundaries like native match", () => {
+    expect(countMatches("ab cd", "\\b", false, true)).toBe(
+      "ab cd".match(/\b/g)?.length ?? 0,
+    );
+  });
+  it("matches native on a star pattern", () => {
+    expect(countMatches("xabc", "x*", false, true)).toBe(
+      "xabc".match(/x*/g)?.length ?? 0,
+    );
+  });
+});

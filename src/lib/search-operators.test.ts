@@ -72,3 +72,21 @@ describe("pathMatches", () => {
     expect(pathMatches("/v/journal/2026.md", ["journal", "weekly"])).toBe(false);
   });
 });
+
+describe("parseQuery — operators only at token boundaries (regression)", () => {
+  it("does not treat tag: inside a word as an operator", () => {
+    const r = parseQuery("email user@tag:x");
+    expect(r.tags).toEqual([]);
+    expect(r.text).toBe("email user@tag:x");
+  });
+  it("parses a leading operator", () => {
+    expect(parseQuery("tag:foo bar")).toEqual({ tags: ["foo"], paths: [], text: "bar" });
+  });
+  it("parses an operator after whitespace", () => {
+    expect(parseQuery("bar path:journal/")).toEqual({
+      tags: [],
+      paths: ["journal/"],
+      text: "bar",
+    });
+  });
+});

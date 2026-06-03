@@ -23,7 +23,11 @@ export interface ParsedQuery {
   text: string;
 }
 
-const OPERATOR_RE = /\b(tag|path):(\S+)/gi;
+// Anchor at start-of-string or after whitespace — NOT \b, which fires inside
+// tokens (e.g. `user@tag:x` would be mis-parsed as a tag operator, eating the
+// literal text the user meant to search for). The leading separator is a
+// non-capturing group so $1/$2 stay (kind, value).
+const OPERATOR_RE = /(?:^|\s)(tag|path):(\S+)/gi;
 
 export function parseQuery(raw: string): ParsedQuery {
   if (!raw) return { tags: [], paths: [], text: "" };
