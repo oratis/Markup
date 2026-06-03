@@ -92,4 +92,22 @@ describe("installSmartPaste", () => {
     host.dispatchEvent(makePaste("https://x.example"));
     expect(insertLink).not.toHaveBeenCalled();
   });
+
+  it("escapes ] in the selection so the link text doesn't break", () => {
+    const host = document.createElement("div");
+    const insertLink = vi.fn().mockReturnValue(true);
+    installSmartPaste(host, { insertLink, getSelectionText: () => "foo]bar" });
+    host.dispatchEvent(makePaste("https://x.example"));
+    expect(insertLink).toHaveBeenCalledWith("[foo\\]bar](https://x.example)");
+  });
+
+  it("lets native paste run for a multi-line selection", () => {
+    const host = document.createElement("div");
+    const insertLink = vi.fn();
+    installSmartPaste(host, { insertLink, getSelectionText: () => "line1\nline2" });
+    const ev = makePaste("https://x.example");
+    host.dispatchEvent(ev);
+    expect(insertLink).not.toHaveBeenCalled();
+    expect(ev.defaultPrevented).toBe(false);
+  });
 });
