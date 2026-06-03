@@ -136,6 +136,21 @@ fn skip_dir(name: &str) -> bool {
     )
 }
 
+/// True when `path` lives inside a directory the vault walk skips (.git,
+/// node_modules, .obsidian, …), relative to `root`. The runtime watcher uses
+/// this so a file created under a skipped dir while the app is running isn't
+/// indexed — the initial scan already excludes those dirs, so without it the
+/// two paths disagree and vendored/template markdown pollutes search.
+pub fn is_within_skipped_dir(root: &Path, path: &Path) -> bool {
+    let Ok(rel) = path.strip_prefix(root) else {
+        return false; // not under the vault root — leave the decision to the caller
+    };
+    rel.components().any(|c| match c {
+        std::path::Component::Normal(name) => name.to_str().map(skip_dir).unwrap_or(false),
+        _ => false,
+    })
+}
+
 /// Walk `root` recursively and return absolute paths to every markdown file.
 /// Skips common build/VCS directories. Caller decides what to do with result.
 pub fn scan_markdown_files(root: &Path) -> AppResult<Vec<PathBuf>> {
@@ -295,5 +310,18 @@ mod tests {
         let mut expected_sorted = expected.clone();
         expected_sorted.sort();
         assert_eq!(found, expected_sorted);
+    }
+
+    #[test]
+    fn is_within_skipped_dir_matches_runtime_paths() {
+        let root = Path::new("/v");
+        assert!(is_within_skipped_dir(root, Path::new("/v/node_modules/a.md")));
+        assert!(is_within_skipped_dir(root, Path::new("/v/sub/.obsidian/b.md")));
+        assert!(!is_within_skipped_dir(root, Path::new("/v/notes/c.md")));
+        assert!(!is_within_skipped_dir(root, Path::new("/v/a.md")));
+        // Only the portion BELOW root is checked — a vault whose own path
+        // contains a skipped name is fine.
+        let nested = Path::new("/home/target/vault");
+        assert!(!is_within_skipped_dir(nested, Path::new("/home/target/vault/d.md")));
     }
 }

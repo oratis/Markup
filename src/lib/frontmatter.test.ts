@@ -158,4 +158,12 @@ describe("frontmatter — multi-line / escaped scalar round-trip (regression)", 
     const out = serializeFrontmatter({ s: 'a\tb "c"' }, "body");
     expect(parseFrontmatter(out).properties.s).toBe('a\tb "c"');
   });
+
+  it("inline array: an element ending in an escaped backslash still closes", () => {
+    // tags: ["a\\", b] — first element is the string `a\`. The old close-quote
+    // test misread `\\"` as an escaped quote and merged the rest of the array
+    // into one malformed element.
+    const doc = parseFrontmatter('---\ntags: ["a\\\\", b]\n---\n');
+    expect(doc.properties.tags).toEqual(["a\\", "b"]);
+  });
 });

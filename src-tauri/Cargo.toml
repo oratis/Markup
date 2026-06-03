@@ -42,6 +42,11 @@ comrak = { version = "0.40", default-features = false, features = ["syntect"] }
 # Security-scoped bookmark persistence (base64-encode the bookmark blob)
 base64 = "0.22"
 
+# Native "move to Trash" — replaces an osascript→Finder round-trip, so trashing
+# a file no longer needs an Automation-access prompt and there's no AppleScript
+# string to escape.
+trash = "5"
+
 # macOS security-scoped bookmarks — lets a sandboxed (Mac App Store) build
 # re-access the user's vault folder across launches. No-op on other OSes.
 [target.'cfg(target_os = "macos")'.dependencies]

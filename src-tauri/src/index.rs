@@ -198,12 +198,28 @@ fn derive_title(path: &Path, content: &str) -> String {
 }
 
 /// Convenience: where the index for a given vault lives.
+///
+/// Canonicalises the path first so `/vault` and `/vault/` (or a symlinked path)
+/// resolve to ONE index dir, and hashes it with FNV-1a — a *stable* hash.
+/// `std::collections::hash_map::DefaultHasher` is explicitly not guaranteed
+/// stable across Rust versions, so a toolchain bump would silently orphan the
+/// existing index dir and rebuild a fresh one.
 pub fn index_dir_for_vault(app_data_dir: &Path, vault_root: &Path) -> PathBuf {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    let mut h = DefaultHasher::new();
-    vault_root.hash(&mut h);
-    app_data_dir.join("index").join(format!("{:x}", h.finish()))
+    let canonical =
+        std::fs::canonicalize(vault_root).unwrap_or_else(|_| vault_root.to_path_buf());
+    app_data_dir
+        .join("index")
+        .join(format!("{:x}", fnv1a(canonical.to_string_lossy().as_bytes())))
+}
+
+/// FNV-1a 64-bit — small, dependency-free, and stable across toolchains.
+fn fnv1a(bytes: &[u8]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in bytes {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h
 }
 
 #[cfg(test)]
@@ -315,5 +331,18 @@ mod tests {
         let hits = idx.search("words", 10).unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].title, "page");
+    }
+
+    #[test]
+    fn index_dir_is_deterministic_and_slash_insensitive() {
+        let app = Path::new("/app");
+        let tmp = tempdir().unwrap();
+        let a = index_dir_for_vault(app, tmp.path());
+        // Stable: same path → same dir on repeat calls.
+        assert_eq!(a, index_dir_for_vault(app, tmp.path()));
+        // A trailing slash canonicalises to the same dir.
+        let with_slash = PathBuf::from(format!("{}/", tmp.path().display()));
+        assert_eq!(index_dir_for_vault(app, &with_slash), a);
+        assert!(a.starts_with("/app/index"));
     }
 }
