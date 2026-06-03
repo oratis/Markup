@@ -39,13 +39,34 @@ export interface ParsedFrontmatter {
   hadFrontmatter: boolean;
 }
 
+/** Reverse encodeScalar's double-quote escaping. Unknown escapes keep their
+ *  literal character (lenient, matches how the encoder only emits a small set). */
+function unescapeDoubleQuoted(s: string): string {
+  return s.replace(/\\(.)/g, (_, ch) => {
+    switch (ch) {
+      case "n":
+        return "\n";
+      case "r":
+        return "\r";
+      case "t":
+        return "\t";
+      default:
+        return ch; // \" → ", \\ → \, and any other \x → x
+    }
+  });
+}
+
 /** Try to convert a raw YAML scalar string into a typed value. Heuristic;
  *  preserves the original string when we can't be sure. */
 function decodeScalar(raw: string): FrontmatterScalar {
   const s = raw.trim();
   if (s === "" || s === "~" || s === "null") return null;
-  // Quoted strings — preserve as-is between the quotes.
-  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+  // Double-quoted strings: undo the escaping encodeScalar applies (so \n, \t,
+  // \" and \\ round-trip). Single-quoted: preserve verbatim between the quotes.
+  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+    return unescapeDoubleQuoted(s.slice(1, -1));
+  }
+  if (s.length >= 2 && s.startsWith("'") && s.endsWith("'")) {
     return s.slice(1, -1);
   }
   if (s === "true" || s === "yes") return true;
@@ -183,6 +204,7 @@ function encodeScalar(value: FrontmatterScalar): string {
   // Decide if quoting is necessary.
   const needsQuote =
     s !== s.trim() ||
+    /[\n\r\t]/.test(s) ||
     s.includes("#") ||
     s.includes(": ") ||
     s.startsWith("[") ||
@@ -201,8 +223,15 @@ function encodeScalar(value: FrontmatterScalar): string {
     /^-?\d+$/.test(s) ||
     /^-?\d+\.\d+$/.test(s);
   if (!needsQuote) return s;
-  // Double-quote and escape backslash + double-quote.
-  return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  // Double-quote and escape backslash, double-quote, and control chars. Without
+  // escaping a newline, a multi-line value would split across physical lines
+  // and its continuation would be silently dropped on the next parse.
+  return `"${s
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t")}"`;
 }
 
 /** Serialise the properties back into a string with the same body
