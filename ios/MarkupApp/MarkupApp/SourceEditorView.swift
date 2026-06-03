@@ -6,11 +6,17 @@ import MarkupKit
 /// of formatting actions and smart list continuation on Return.
 struct SourceEditorView: UIViewRepresentable {
     @Binding var text: String
+    /// Bridge for the inline `[[` wikilink picker (optional).
+    var controller: EditorController?
 
     func makeUIView(context: Context) -> UITextView {
         let tv = MarkupTextView()
         tv.delegate = context.coordinator
         tv.editCoordinator = context.coordinator
+        context.coordinator.controller = controller
+        controller?.insertWikilink = { [weak coordinator = context.coordinator] name in
+            coordinator?.completeWikilink(name)
+        }
         tv.font = .monospacedSystemFont(ofSize: 16, weight: .regular)
         tv.autocapitalizationType = .sentences
         tv.smartQuotesType = .no
@@ -33,10 +39,50 @@ struct SourceEditorView: UIViewRepresentable {
     final class Coordinator: NSObject, UITextViewDelegate {
         var parentText: Binding<String>
         weak var textView: UITextView?
+        var controller: EditorController?
 
         init(text: Binding<String>) { self.parentText = text }
 
-        func textViewDidChange(_ tv: UITextView) { parentText.wrappedValue = tv.text }
+        func textViewDidChange(_ tv: UITextView) {
+            parentText.wrappedValue = tv.text
+            updateWikilinkQuery(tv)
+        }
+
+        func textViewDidChangeSelection(_ tv: UITextView) {
+            updateWikilinkQuery(tv)
+        }
+
+        private func updateWikilinkQuery(_ tv: UITextView) {
+            guard let controller else { return }
+            let q = tv.selectedRange.length == 0
+                ? MarkdownEdit.wikilinkQuery(in: tv.text, caret: tv.selectedRange.location)
+                : nil
+            if controller.wikilinkQuery != q { controller.wikilinkQuery = q }
+        }
+
+        /// Insert the chosen note `name` into the open `[[…]]` at the caret,
+        /// leaving the caret just before the closing `]]` (adding `]]` if the
+        /// editor didn't auto-close it).
+        func completeWikilink(_ name: String) {
+            guard let tv = textView else { return }
+            let ns = tv.text as NSString
+            let caret = min(tv.selectedRange.location, ns.length)
+            let open = ns.range(
+                of: "[[", options: .backwards, range: NSRange(location: 0, length: caret))
+            guard open.location != NSNotFound else { return }
+            let after = open.location + open.length
+            var replacement = name
+            let tail = (after + (caret - after) + 2) <= ns.length
+                ? ns.substring(with: NSRange(location: caret, length: 2)) : ""
+            if tail != "]]" { replacement += "]]" }
+            let newText = ns.replacingCharacters(
+                in: NSRange(location: after, length: caret - after), with: replacement)
+            tv.text = newText
+            let caretAfter = after + (name as NSString).length
+            tv.selectedRange = NSRange(location: caretAfter, length: 0)
+            parentText.wrappedValue = newText
+            controller?.wikilinkQuery = nil
+        }
 
         // Auto-close brackets, type-over, and smart list continuation on Return.
         func textView(
