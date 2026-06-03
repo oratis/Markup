@@ -98,11 +98,11 @@ struct ReaderView: View {
         .sheet(isPresented: $showBacklinks) { BacklinksView(vault: vault, file: file, onOpen: onOpen) }
         .sheet(item: $shareItem) { ActivityView(items: [$0.url]) }
         .onDisappear { saveNow() }
-        .alert("This note changed on disk", isPresented: $showConflict) {
-            Button("Keep mine", role: .destructive) { forceWrite() }
-            Button("Reload", role: .cancel) { reloadFromDisk() }
+        .alert(t(.conflictTitle), isPresented: $showConflict) {
+            Button(t(.keepMine), role: .destructive) { forceWrite() }
+            Button(t(.reload), role: .cancel) { reloadFromDisk() }
         } message: {
-            Text("It was modified elsewhere (e.g. iCloud sync) since you opened it.")
+            Text(t(.conflictBody))
         }
     }
 
@@ -118,7 +118,7 @@ struct ReaderView: View {
             } label: {
                 Image(systemName: isEditing ? "book" : "pencil")
             }
-            .accessibilityLabel(isEditing ? "Read" : "Edit")
+            .accessibilityLabel(isEditing ? t(.read) : t(.edit))
             .keyboardShortcut("e", modifiers: .command)
         }
         if !isEditing && isHTML {
@@ -126,41 +126,41 @@ struct ReaderView: View {
                 Button { shareItem = ShareItem(url: URL(fileURLWithPath: file.path)) } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
-                .accessibilityLabel("Share")
+                .accessibilityLabel(t(.share))
             }
         }
         if !isEditing && !isHTML {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { showOutline = true } label: { Image(systemName: "list.bullet.indent") }
-                    .accessibilityLabel("Outline")
+                    .accessibilityLabel(t(.outline))
                     .keyboardShortcut("o", modifiers: [.command, .option])
                 Button { showBacklinks = true } label: { Image(systemName: "link") }
-                    .accessibilityLabel("Backlinks")
+                    .accessibilityLabel(t(.backlinks))
                 Menu {
-                    Button { shareHTML() } label: { Label("Share as HTML", systemImage: "safari") }
-                    Button { sharePDF() } label: { Label("Export PDF", systemImage: "doc.richtext") }
-                    Button { shareMarkdown() } label: { Label("Share Markdown", systemImage: "doc.plaintext") }
+                    Button { shareHTML() } label: { Label(t(.shareAsHTML), systemImage: "safari") }
+                    Button { sharePDF() } label: { Label(t(.exportPDF), systemImage: "doc.richtext") }
+                    Button { shareMarkdown() } label: { Label(t(.shareMarkdown), systemImage: "doc.plaintext") }
                     Divider()
-                    Button { copyHTML() } label: { Label("Copy as HTML", systemImage: "doc.on.doc") }
-                    Button { copyMarkdown() } label: { Label("Copy Markdown", systemImage: "doc.on.clipboard") }
+                    Button { copyHTML() } label: { Label(t(.copyAsHTML), systemImage: "doc.on.doc") }
+                    Button { copyMarkdown() } label: { Label(t(.copyMarkdown), systemImage: "doc.on.clipboard") }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
                 Menu {
-                    Picker("Theme", selection: $themeRaw) {
+                    Picker(t(.theme), selection: $themeRaw) {
                         ForEach(ReaderTheme.allCases, id: \.rawValue) { t in
                             Text(t.rawValue.capitalized).tag(t.rawValue)
                         }
                     }
-                    Section("Text size") {
+                    Section(t(.textSize)) {
                         Button { fontScale = min(2.0, fontScale + 0.1) } label: {
-                            Label("Larger", systemImage: "plus.magnifyingglass")
+                            Label(t(.larger), systemImage: "plus.magnifyingglass")
                         }
                         Button { fontScale = max(0.6, fontScale - 0.1) } label: {
-                            Label("Smaller", systemImage: "minus.magnifyingglass")
+                            Label(t(.smaller), systemImage: "minus.magnifyingglass")
                         }
                         Button { fontScale = 1.0 } label: {
-                            Label("Reset size", systemImage: "arrow.counterclockwise")
+                            Label(t(.resetSize), systemImage: "arrow.counterclockwise")
                         }
                     }
                 } label: {

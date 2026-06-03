@@ -5,6 +5,7 @@ import MarkupKit
 struct SettingsView: View {
     let vault: VaultStore
     @Environment(\.dismiss) private var dismiss
+    @Bindable private var loc = Localization.shared
 
     @AppStorage("reader.theme") private var themeRaw = ReaderTheme.light.rawValue
     @AppStorage("reader.fontScale") private var fontScale = 1.0
@@ -18,18 +19,18 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Appearance") {
-                    Picker("Reader theme", selection: $themeRaw) {
-                        ForEach(ReaderTheme.allCases, id: \.rawValue) { t in
-                            Text(t.rawValue.capitalized).tag(t.rawValue)
+                Section(t(.appearance)) {
+                    Picker(t(.readerTheme), selection: $themeRaw) {
+                        ForEach(ReaderTheme.allCases, id: \.rawValue) { th in
+                            Text(th.rawValue.capitalized).tag(th.rawValue)
                         }
                     }
                     VStack(alignment: .leading) {
-                        Text("Text size  \(Int(fontScale * 100))%")
+                        Text("\(t(.textSize))  \(Int(fontScale * 100))%")
                         Slider(value: $fontScale, in: 0.6...2.0, step: 0.1)
                     }
                     VStack(alignment: .leading) {
-                        Text("Reading width  \(maxWidth) pt")
+                        Text("\(t(.readingWidth))  \(maxWidth) pt")
                         Slider(
                             value: Binding(
                                 get: { Double(maxWidth) },
@@ -38,24 +39,33 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Vault") {
-                    LabeledContent("Folder", value: vault.rootName)
-                    LabeledContent("Notes", value: "\(vault.files.count)")
-                    LabeledContent("Index", value: vault.indexReady ? "Ready" : "Building…")
-                    Button("Reindex") { vault.scan() }
+                Section(t(.language)) {
+                    Picker(t(.language), selection: $loc.language) {
+                        Text(t(.languageSystem)).tag(AppLanguage.system)
+                        Text("English").tag(AppLanguage.en)
+                        Text("中文").tag(AppLanguage.zh)
+                    }
+                    .pickerStyle(.segmented)
                 }
 
-                Section("About") {
-                    LabeledContent("Version", value: appVersion)
-                    Link("Markup on GitHub", destination: URL(string: "https://github.com/oratis/Markup")!)
-                    Link("Get Markup for Mac", destination: URL(string: "https://github.com/oratis/Markup/releases")!)
-                    Text("Private by default — no account, no telemetry.")
+                Section(t(.vault)) {
+                    LabeledContent(t(.folder), value: vault.rootName)
+                    LabeledContent(t(.notes), value: "\(vault.files.count)")
+                    LabeledContent(t(.index), value: vault.indexReady ? t(.ready) : t(.building))
+                    Button(t(.reindex)) { vault.scan() }
+                }
+
+                Section(t(.about)) {
+                    LabeledContent(t(.version), value: appVersion)
+                    Link(t(.onGitHub), destination: URL(string: "https://github.com/oratis/Markup")!)
+                    Link(t(.getMac), destination: URL(string: "https://github.com/oratis/Markup/releases")!)
+                    Text(t(.privacyLine))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle(t(.settings))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } } }
         }
     }
 }
