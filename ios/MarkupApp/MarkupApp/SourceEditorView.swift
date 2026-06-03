@@ -20,6 +20,9 @@ struct SourceEditorView: UIViewRepresentable {
         controller?.insertText = { [weak coordinator = context.coordinator] snippet in
             coordinator?.insertAtCaret(snippet)
         }
+        controller?.insertTag = { [weak coordinator = context.coordinator] tag in
+            coordinator?.completeTag(tag)
+        }
         tv.font = .monospacedSystemFont(ofSize: 16, weight: .regular)
         tv.autocapitalizationType = .sentences
         tv.smartQuotesType = .no
@@ -57,10 +60,15 @@ struct SourceEditorView: UIViewRepresentable {
 
         private func updateWikilinkQuery(_ tv: UITextView) {
             guard let controller else { return }
-            let q = tv.selectedRange.length == 0
-                ? MarkdownEdit.wikilinkQuery(in: tv.text, caret: tv.selectedRange.location)
-                : nil
-            if controller.wikilinkQuery != q { controller.wikilinkQuery = q }
+            let collapsed = tv.selectedRange.length == 0
+            let caret = tv.selectedRange.location
+            let wq = collapsed ? MarkdownEdit.wikilinkQuery(in: tv.text, caret: caret) : nil
+            if controller.wikilinkQuery != wq { controller.wikilinkQuery = wq }
+            // A `[[` link takes precedence over a `#` tag (the `#` scanner
+            // would otherwise fire inside `[[#heading]]`).
+            let tq = (collapsed && wq == nil)
+                ? MarkdownEdit.tagQuery(in: tv.text, caret: caret) : nil
+            if controller.tagQuery != tq { controller.tagQuery = tq }
         }
 
         /// Insert the chosen note `name` into the open `[[…]]` at the caret,
@@ -85,6 +93,25 @@ struct SourceEditorView: UIViewRepresentable {
             tv.selectedRange = NSRange(location: caretAfter, length: 0)
             parentText.wrappedValue = newText
             controller?.wikilinkQuery = nil
+        }
+
+        /// Replace the active `#…` partial at the caret with the chosen `tag`,
+        /// leaving the caret right after it.
+        func completeTag(_ tag: String) {
+            guard let tv = textView else { return }
+            let ns = tv.text as NSString
+            let caret = min(tv.selectedRange.location, ns.length)
+            let hash = ns.range(
+                of: "#", options: .backwards, range: NSRange(location: 0, length: caret))
+            guard hash.location != NSNotFound else { return }
+            let after = hash.location + 1
+            let newText = ns.replacingCharacters(
+                in: NSRange(location: after, length: caret - after), with: tag)
+            tv.text = newText
+            let caretAfter = after + (tag as NSString).length
+            tv.selectedRange = NSRange(location: caretAfter, length: 0)
+            parentText.wrappedValue = newText
+            controller?.tagQuery = nil
         }
 
         // Auto-close brackets, type-over, and smart list continuation on Return.

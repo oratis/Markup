@@ -111,6 +111,34 @@ public enum MarkdownEdit {
         return between
     }
 
+    /// The partial tag typed after an inline `#` ending at `caret` (a UTF-16
+    /// offset), or `nil` when the caret isn't inside an inline tag. Drives the
+    /// `#` tag autocomplete. E.g. `"proj"` for `…done #proj|`, `""` right after
+    /// `#`. Excludes headings (`# Title` has a space after `#`) and mid-word
+    /// `#` (`a#b`).
+    public static func tagQuery(in text: String, caret: Int) -> String? {
+        let ns = text as NSString
+        guard caret >= 1, caret <= ns.length else { return nil }
+        let hash = ns.range(
+            of: "#", options: .backwards, range: NSRange(location: 0, length: caret))
+        guard hash.location != NSNotFound else { return nil }
+        // The `#` must begin a token: at the start or after whitespace.
+        if hash.location > 0 {
+            let before = ns.substring(with: NSRange(location: hash.location - 1, length: 1))
+            if before != " " && before != "\n" && before != "\t" { return nil }
+        }
+        let after = hash.location + 1
+        let partial = ns.substring(with: NSRange(location: after, length: caret - after))
+        // No whitespace or another `#` between the `#` and the caret (so a
+        // heading "# Title" — space right after `#` — is excluded).
+        for scalar in partial.unicodeScalars {
+            if scalar == " " || scalar == "\n" || scalar == "\t" || scalar == "#" {
+                return nil
+            }
+        }
+        return partial
+    }
+
     /// The auto-closing partner for an opening character, or `nil` if the
     /// character doesn't auto-close. Mirrors the desktop `cm-auto-close`
     /// pairs: `()`, `[]`, `{}`, and the symmetric `` ` ``.
