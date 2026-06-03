@@ -34,7 +34,12 @@ export function HtmlView({
       <iframe
         title="HTML preview"
         src={convertFileSrc(path)}
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+        // No `allow-scripts`: a .html file can be opened or dropped from
+        // anywhere (untrusted), and `allow-same-origin allow-scripts` together
+        // let its JS run with asset-origin access + network egress. Static
+        // rendering still resolves CSS / images / links faithfully — which is
+        // the point of the viewer — without executing the document's scripts.
+        sandbox="allow-same-origin allow-popups allow-forms"
         className="w-full h-full border-0 bg-white"
       />
     );
