@@ -38,10 +38,26 @@ export function replaceOnce(
   if (!needle) return { text: haystack, index: -1 };
   const cs = options.caseSensitive ?? false;
   const from = Math.max(0, options.fromIndex ?? 0);
-  const probe = cs ? haystack : haystack.toLowerCase();
-  const target = cs ? needle : needle.toLowerCase();
-  const idx = probe.indexOf(target, from);
-  if (idx < 0) return { text: haystack, index: -1 };
-  const text = haystack.slice(0, idx) + replacement + haystack.slice(idx + needle.length);
+  if (cs) {
+    const idx = haystack.indexOf(needle, from);
+    if (idx < 0) return { text: haystack, index: -1 };
+    const text =
+      haystack.slice(0, idx) + replacement + haystack.slice(idx + needle.length);
+    return { text, index: idx };
+  }
+  // Case-insensitive: find via a flag-`i` RegExp so the match index refers to
+  // the ORIGINAL string. The old approach searched in haystack.toLowerCase()
+  // and spliced the original at that index — broken when an earlier char's
+  // lowercase form has a different code-unit length (e.g. "İ" → "i̇"), which
+  // shifts every subsequent index and corrupts the splice.
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(escaped, "gi");
+  re.lastIndex = from;
+  const m = re.exec(haystack);
+  if (!m) return { text: haystack, index: -1 };
+  const idx = m.index;
+  // Slice by the matched length, not needle.length — case folding can change
+  // the span length.
+  const text = haystack.slice(0, idx) + replacement + haystack.slice(idx + m[0].length);
   return { text, index: idx };
 }

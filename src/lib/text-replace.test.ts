@@ -65,4 +65,11 @@ describe("replaceOnce", () => {
     expect(r.text).toBe("Foo X FOO");
     expect(r.index).toBe(4);
   });
+
+  it("case-insensitive splice stays aligned after a length-changing char", () => {
+    // "İ" (U+0130) lowercases to two code units. The old approach searched in
+    // haystack.toLowerCase() and spliced the original at that (shifted) index,
+    // eating characters. Correct result keeps everything but the match.
+    expect(replaceOnce("İhello foo world", "foo", "X").text).toBe("İhello X world");
+  });
 });
