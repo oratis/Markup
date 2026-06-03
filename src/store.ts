@@ -128,6 +128,10 @@ interface AppState {
   updateActiveContent: (content: string) => void;
   setActiveStatus: (status: SaveStatus, errorMessage?: string | null) => void;
   setActiveMtime: (mtimeMs: number) => void;
+  /** Merge a patch into a tab by id (any tab, not just the active one) — used
+   *  by the autosave path, which must finalise the tab it actually wrote, even
+   *  if the user has since switched away. */
+  patchTab: (id: string, patch: Partial<Tab>) => void;
   setActivePathAndName: (path: string, name: string, mtimeMs: number) => void;
   /** Replace active tab content + mtime in one shot, marking it saved.
    * Used when reloading from disk (so the content swap doesn't flip the
@@ -573,6 +577,11 @@ export const useAppStore = create<AppState>((set) => ({
         tabs: state.tabs.map((t) => (t.id === id ? { ...t, mtimeMs } : t)),
       };
     }),
+
+  patchTab: (id, patch) =>
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    })),
 
   setActivePathAndName: (path, name, mtimeMs) =>
     set((state) => {
