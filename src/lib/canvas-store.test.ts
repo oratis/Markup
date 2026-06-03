@@ -285,6 +285,41 @@ describe("selection (not recorded in history)", () => {
     store.removeEdge("e1");
     expect(store.getSnapshot().selection.has("e1")).toBe(false);
   });
+
+  // Regression: useSyncExternalStore reads getSnapshot() synchronously from
+  // inside the notify() the mutation fires, which caches the snapshot. If the
+  // selection is pruned AFTER the mutation, that cached snapshot stays pinned
+  // to the stale selection (deleted id still "selected") until the next
+  // notify. A subscriber that reads during notify reproduces it.
+  it("removeNode prunes selection in the snapshot read during notify", () => {
+    store.setSelection(["a", "b"]);
+    store.subscribe(() => {
+      store.getSnapshot();
+    });
+    store.removeNode("a");
+    expect(store.getSnapshot().selection.has("a")).toBe(false);
+    expect(Array.from(store.getSnapshot().selection)).toEqual(["b"]);
+  });
+
+  it("removeMany prunes selection in the snapshot read during notify", () => {
+    store.setSelection(["a", "b"]);
+    store.subscribe(() => {
+      store.getSnapshot();
+    });
+    store.removeMany(["a"]);
+    expect(store.getSnapshot().selection.has("a")).toBe(false);
+    expect(Array.from(store.getSnapshot().selection)).toEqual(["b"]);
+  });
+
+  it("removeEdge prunes selection in the snapshot read during notify", () => {
+    store.addEdge(edge("e1", "a", "b"));
+    store.setSelection(["e1"]);
+    store.subscribe(() => {
+      store.getSnapshot();
+    });
+    store.removeEdge("e1");
+    expect(store.getSnapshot().selection.has("e1")).toBe(false);
+  });
 });
 
 describe("undo / redo", () => {
