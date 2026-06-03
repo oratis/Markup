@@ -102,4 +102,13 @@ describe("buildGraphFromLinkIndex", () => {
     expect(nodes).toHaveLength(1);
     expect(nodes[0].label).toBe("orphan");
   });
+
+  it("does not emit a self-loop edge for a note linking to itself", () => {
+    const { nodes, edges } = buildGraphFromLinkIndex(
+      { "/v/A.md": [{ sourcePath: "/v/A.md" }] },
+      ["/v/A.md"],
+    );
+    expect(edges).toEqual([]);
+    expect(nodes.map((n) => n.id)).toContain("/v/A.md");
+  });
 });

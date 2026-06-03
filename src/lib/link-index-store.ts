@@ -135,10 +135,19 @@ export function onFileSaved(path: string, content: string): void {
 export function setVaultPaths(paths: string[]): void {
   allPaths = paths;
   pathsByBasename = buildBasenameMap(paths);
-  // Drop any backlink targets whose file no longer exists in the vault.
   const valid = new Set(paths);
   for (const target of Object.keys(index)) {
-    if (!valid.has(target)) delete index[target];
+    // Drop targets whose file is gone…
+    if (!valid.has(target)) {
+      delete index[target];
+      continue;
+    }
+    // …and refs whose SOURCE file is gone (deleted/renamed). Deletes flow
+    // through here, not onFileRemoved (which has no production caller), so
+    // without this, backlinks from a removed file linger forever.
+    const filtered = index[target].filter((r) => valid.has(r.sourcePath));
+    if (filtered.length === 0) delete index[target];
+    else if (filtered.length !== index[target].length) index[target] = filtered;
   }
   persist();
   notify();

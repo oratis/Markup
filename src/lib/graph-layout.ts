@@ -184,6 +184,10 @@ export function buildGraphFromLinkIndex(
     referenced.add(targetPath);
     for (const r of refs) {
       referenced.add(r.sourcePath);
+      // Skip self-links (a note linking to itself) — a source===target edge
+      // is a degenerate loop the layout can't place and the view renders as
+      // a stray dot.
+      if (r.sourcePath === targetPath) continue;
       const key = `${r.sourcePath}|${targetPath}`;
       const existing = edgeMap.get(key);
       if (existing) existing.weight = (existing.weight ?? 1) + 1;
