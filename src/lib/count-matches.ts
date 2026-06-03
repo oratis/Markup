@@ -17,15 +17,19 @@ export function countMatches(
     try {
       const re = new RegExp(query, caseSensitive ? "g" : "gi");
       let count = 0;
-      let prevLast = -1;
-      while (re.exec(text)) {
+      let m = re.exec(text);
+      while (m !== null) {
         count++;
         if (count >= 9999) break;
-        if (re.lastIndex === prevLast) {
-          if (re.lastIndex >= text.length) break;
+        // Zero-width match (anchors like ^ $ \b, lookaheads, x*): the engine
+        // leaves lastIndex at the match position, so the next exec would match
+        // the SAME spot again and double-count it. Advance past it so each
+        // position is counted once (matches String.match(/…/g).length).
+        if (m.index === re.lastIndex) {
           re.lastIndex++;
+          if (re.lastIndex > text.length) break;
         }
-        prevLast = re.lastIndex;
+        m = re.exec(text);
       }
       return count;
     } catch {
