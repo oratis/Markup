@@ -19,6 +19,9 @@ const base: PersistedSettings = {
   showToolbar: true,
   showTabBar: true,
   vaultSort: "name",
+  dailyNotesFolder: "journal",
+  dailyNotesFormat: "YYYY-MM-DD",
+  dailyNotesTemplate: "",
 };
 
 afterEach(() => {
@@ -37,11 +40,16 @@ describe("useSettingsPersistence", () => {
   });
 
   it("persists the full settings bag as JSON", () => {
-    renderHook(() => useSettingsPersistence({ ...base, wordCountGoal: 500 }));
+    renderHook(() =>
+      useSettingsPersistence({ ...base, wordCountGoal: 500, dailyNotesFolder: "diary" }),
+    );
     const stored = JSON.parse(localStorage.getItem("markup.settings") ?? "{}");
     expect(stored.wordCountGoal).toBe(500);
     expect(stored.fontSize).toBe(16);
     expect(stored.vaultSort).toBe("name");
+    // Regression: daily-notes settings were dropped from the persisted bag,
+    // so they reverted to defaults on relaunch.
+    expect(stored.dailyNotesFolder).toBe("diary");
   });
 
   it("re-persists when a field changes", () => {
