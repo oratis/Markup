@@ -159,7 +159,13 @@ export function findBlock(content: string, blockId: string): string | null {
   }
   const block = lines.slice(start, hit + 1).join("\n");
   // Strip the trailing `^id` marker (including the preceding space).
-  return block.replace(new RegExp(`\\s*\\^${blockId}\\s*$`), "");
+  // blockId comes straight from the wikilink target, so it can contain
+  // regex metacharacters (e.g. `[[Note^a(b]]`). Escape it — an unescaped
+  // value throws `SyntaxError: Invalid regular expression` and, from the
+  // render-time callers (hover preview, canvas file nodes), takes down
+  // the view.
+  const escaped = blockId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return block.replace(new RegExp(`\\s*\\^${escaped}\\s*$`), "");
 }
 
 /**
