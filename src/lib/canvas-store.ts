@@ -152,6 +152,16 @@ export function createCanvasStore(initialJson: string): CanvasStore {
     removeNode(id) {
       const exists = doc.nodes.some((n) => n.id === id);
       if (!exists) return;
+      // Pull the deleted id out of selection BEFORE the mutation. mutateDoc
+      // calls notify(), which a subscribed useSyncExternalStore reads
+      // synchronously — rebuilding (and caching) the snapshot. Updating
+      // selection afterwards would leave that cached snapshot pinned to a
+      // selection ring around a non-existent target until the next notify.
+      if (selection.has(id)) {
+        const next = new Set(selection);
+        next.delete(id);
+        selection = next;
+      }
       mutateDoc((d) => ({
         ...d,
         nodes: d.nodes.filter((n) => n.id !== id),
@@ -159,13 +169,6 @@ export function createCanvasStore(initialJson: string): CanvasStore {
         // refs would corrupt the file on next open.
         edges: d.edges.filter((e) => e.fromNode !== id && e.toNode !== id),
       }));
-      // Pull the deleted id out of selection so the UI doesn't keep a
-      // selection ring around a non-existent target.
-      if (selection.has(id)) {
-        const next = new Set(selection);
-        next.delete(id);
-        selection = next;
-      }
     },
 
     removeMany(ids) {
@@ -174,6 +177,11 @@ export function createCanvasStore(initialJson: string): CanvasStore {
       const matchesAny =
         doc.nodes.some((n) => idSet.has(n.id)) || doc.edges.some((e) => idSet.has(e.id));
       if (!matchesAny) return;
+      // Update selection before the mutation so the snapshot rebuilt during
+      // notify() doesn't keep deleted ids selected (see removeNode).
+      const next = new Set(selection);
+      for (const id of ids) next.delete(id);
+      selection = next;
       mutateDoc((d) => ({
         ...d,
         nodes: d.nodes.filter((n) => !idSet.has(n.id)),
@@ -181,9 +189,6 @@ export function createCanvasStore(initialJson: string): CanvasStore {
           (e) => !idSet.has(e.id) && !idSet.has(e.fromNode) && !idSet.has(e.toNode),
         ),
       }));
-      const next = new Set(selection);
-      for (const id of ids) next.delete(id);
-      selection = next;
     },
 
     updateNode(id, patch) {
@@ -222,15 +227,16 @@ export function createCanvasStore(initialJson: string): CanvasStore {
     removeEdge(id) {
       const exists = doc.edges.some((e) => e.id === id);
       if (!exists) return;
-      mutateDoc((d) => ({
-        ...d,
-        edges: d.edges.filter((e) => e.id !== id),
-      }));
+      // Update selection before the mutation (see removeNode).
       if (selection.has(id)) {
         const next = new Set(selection);
         next.delete(id);
         selection = next;
       }
+      mutateDoc((d) => ({
+        ...d,
+        edges: d.edges.filter((e) => e.id !== id),
+      }));
     },
 
     updateEdge(id, patch) {
