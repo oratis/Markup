@@ -56,6 +56,8 @@ export const zh: Strings = {
   "settings.trimOnSaveHint": "保存时",
   "settings.lineNumbers": "行号",
   "settings.lineNumbersHint": "源码模式",
+  "settings.customCss": "自定义 CSS",
+  "settings.customCssHint": "自行限定选择器范围",
   "settings.on": "开启",
   "settings.off": "关闭",
   "settings.restore": "恢复默认",

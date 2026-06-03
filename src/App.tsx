@@ -24,6 +24,7 @@ import { Toolbar } from "./components/Toolbar";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { WikilinkPicker } from "./components/WikilinkPicker";
 import { useCanvasStoreCleanup } from "./hooks/useCanvasStoreCleanup";
+import { useCustomTheme } from "./hooks/useCustomTheme";
 import { useIndexStoreSync } from "./hooks/useIndexStoreSync";
 import { useLargeFileGuard } from "./hooks/useLargeFileGuard";
 import { usePinnedTabsSync } from "./hooks/usePinnedTabsSync";
@@ -401,6 +402,7 @@ export function App() {
   const dailyNotesFolder = useAppStore((s) => s.dailyNotesFolder);
   const dailyNotesFormat = useAppStore((s) => s.dailyNotesFormat);
   const dailyNotesTemplate = useAppStore((s) => s.dailyNotesTemplate);
+  const customCss = useAppStore((s) => s.customCss);
   useSettingsPersistence({
     fontSize,
     proseMaxWidth,
@@ -423,7 +425,9 @@ export function App() {
     dailyNotesFolder,
     dailyNotesFormat,
     dailyNotesTemplate,
+    customCss,
   });
+  useCustomTheme(customCss);
 
   // Push recent file when active tab changes to a real file. Mirror to
   // the Rust-side store so other windows + next launches see it without

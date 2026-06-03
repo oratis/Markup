@@ -55,6 +55,8 @@ export const en = {
   "settings.trimOnSaveHint": "On save",
   "settings.lineNumbers": "Line numbers",
   "settings.lineNumbersHint": "Source mode",
+  "settings.customCss": "Custom CSS",
+  "settings.customCssHint": "Scope your own selectors",
   "settings.on": "On",
   "settings.off": "Off",
   "settings.restore": "Restore defaults",

@@ -25,6 +25,7 @@ export function serializeSettings(s: Settings): string {
       dailyNotesFolder: s.dailyNotesFolder,
       dailyNotesFormat: s.dailyNotesFormat,
       dailyNotesTemplate: s.dailyNotesTemplate,
+      customCss: s.customCss,
     },
     null,
     2,
@@ -76,6 +77,7 @@ export function parseSettings(input: unknown): Partial<Settings> | null {
   str("dailyNotesFolder");
   str("dailyNotesFormat");
   str("dailyNotesTemplate");
+  str("customCss");
 
   return out;
 }

@@ -21,6 +21,7 @@ export interface PersistedSettings {
   dailyNotesFolder: string;
   dailyNotesFormat: string;
   dailyNotesTemplate: string;
+  customCss: string;
 }
 
 /**
@@ -65,5 +66,6 @@ export function useSettingsPersistence(settings: PersistedSettings) {
     settings.dailyNotesFolder,
     settings.dailyNotesFormat,
     settings.dailyNotesTemplate,
+    settings.customCss,
   ]);
 }
