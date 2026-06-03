@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countMatches } from "./count-matches";
+import { countMatches, findMatchRanges } from "./count-matches";
 
 describe("countMatches — plain substring", () => {
   it("returns 0 for empty query", () => {
@@ -67,5 +67,43 @@ describe("countMatches — zero-width regex matches (regression)", () => {
     expect(countMatches("xabc", "x*", false, true)).toBe(
       "xabc".match(/x*/g)?.length ?? 0,
     );
+  });
+});
+
+describe("findMatchRanges", () => {
+  it("returns [start,end) ranges for plain, non-overlapping matches", () => {
+    expect(findMatchRanges("a.a.a", "a", true, false)).toEqual([
+      [0, 1],
+      [2, 3],
+      [4, 5],
+    ]);
+    // non-overlapping
+    expect(findMatchRanges("aaaa", "aa", true, false)).toEqual([
+      [0, 2],
+      [2, 4],
+    ]);
+  });
+
+  it("is case-insensitive by default", () => {
+    expect(findMatchRanges("Foo foo", "foo", false, false)).toEqual([
+      [0, 3],
+      [4, 7],
+    ]);
+  });
+
+  it("returns regex match spans (with variable length)", () => {
+    expect(findMatchRanges("a12b345", "\\d+", false, true)).toEqual([
+      [1, 3],
+      [4, 7],
+    ]);
+  });
+
+  it("returns [] for an invalid regex and for an empty query", () => {
+    expect(findMatchRanges("abc", "(", false, true)).toEqual([]);
+    expect(findMatchRanges("abc", "", false, false)).toEqual([]);
+  });
+
+  it("counts zero-width matches once (terminates)", () => {
+    expect(findMatchRanges("abc", "^", false, true)).toEqual([[0, 0]]);
   });
 });
