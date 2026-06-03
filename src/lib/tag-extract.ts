@@ -54,15 +54,27 @@ function extractFrontmatterTags(content: string): {
   if (!content.startsWith("---\n") && !content.startsWith("---\r\n")) {
     return { tags: out, bodyOffset: 0 };
   }
-  const close = content.indexOf("\n---", 4);
+  // Find the closing fence: a "\n---" whose dashes end the line (next char is
+  // newline or EOF). A bare indexOf("\n---") also matches "----" / "---x",
+  // truncating the block early and dropping later `tags:` keys — diverging
+  // from parseFrontmatter's findFrontmatterEnd.
+  let close = -1;
+  for (let p = content.indexOf("\n---", 4); p >= 0; p = content.indexOf("\n---", p + 4)) {
+    const after = content[p + 4];
+    if (after === undefined || after === "\n" || after === "\r") {
+      close = p;
+      break;
+    }
+  }
   if (close < 0) return { tags: out, bodyOffset: 0 };
   const fm = content.slice(4, close);
   // Body starts after the closing "---" + newline.
   const afterClose = content.indexOf("\n", close + 1);
   const bodyOffset = afterClose >= 0 ? afterClose + 1 : content.length;
 
-  // Inline array: tags: [a, b, "c d"]
-  const inline = fm.match(/^tags:\s*\[(.*)\]\s*$/m);
+  // Inline array: tags: [a, b, "c d"]   (a trailing YAML `# comment` is fine —
+  // capture up to the first `]` rather than requiring it at end-of-line).
+  const inline = fm.match(/^tags:\s*\[([^\]]*)\]/m);
   if (inline) {
     for (const raw of inline[1].split(",")) {
       const tag = unquote(raw).replace(/^#/, ""); // YAML allows leading '#' optionally

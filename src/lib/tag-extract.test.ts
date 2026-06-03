@@ -141,3 +141,15 @@ describe("tagAncestors", () => {
     expect(tagAncestors("/foo/bar/")).toEqual(["foo", "foo/bar"]);
   });
 });
+
+describe("extractTags — frontmatter edge cases (regression)", () => {
+  it("does not truncate the block at a '----' line", () => {
+    expect(tags("---\ntitle: A\n----\ntags: [alpha, beta]\n---\nbody")).toEqual([
+      "alpha",
+      "beta",
+    ]);
+  });
+  it("parses an inline tag array with a trailing YAML comment", () => {
+    expect(tags("---\ntags: [alpha, beta] # note\n---\nbody")).toEqual(["alpha", "beta"]);
+  });
+});
