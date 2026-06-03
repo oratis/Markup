@@ -163,7 +163,23 @@ pub async fn write_image(
     }
     let safe_ext = ext.trim_start_matches('.');
     let safe_ext = if safe_ext.is_empty() { "png" } else { safe_ext };
-    let dir = root.join(dir_relative.trim_start_matches('/'));
+    // Guard against path traversal: `dir_relative` is appended to the vault
+    // root, so a value like "../../etc" must not escape it. Reject any
+    // parent-dir / absolute component before joining.
+    let rel = PathBuf::from(dir_relative.trim_start_matches('/'));
+    if rel.components().any(|c| {
+        matches!(
+            c,
+            std::path::Component::ParentDir
+                | std::path::Component::RootDir
+                | std::path::Component::Prefix(_)
+        )
+    }) {
+        return Err(AppError::Other(format!(
+            "unsafe image directory (path traversal): {dir_relative}"
+        )));
+    }
+    let dir = root.join(&rel);
     tokio::fs::create_dir_all(&dir).await?;
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -538,9 +554,14 @@ pre[data-math-style] { background: none; padding: 0; overflow: visible; }
 "#;
 
 fn html_escape(s: &str) -> String {
+    // `&` must be replaced first. Quotes are escaped too so this stays a
+    // correct escaper if it's ever reused for an attribute value (today it
+    // only wraps the <title> element text).
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }
 
 #[cfg(test)]
@@ -607,6 +628,38 @@ mod ext_tests {
         tokio::fs::write(&path, "irrelevant").await.unwrap();
         let result = read_file_inner(&path).await;
         assert!(matches!(result, Err(AppError::NotMarkdown(_))));
+    }
+
+    #[test]
+    fn html_escape_covers_quotes_and_angle_brackets() {
+        assert_eq!(
+            html_escape("<a href=\"x\" title='y'>&"),
+            "&lt;a href=&quot;x&quot; title=&#39;y&#39;&gt;&amp;"
+        );
+    }
+
+    #[tokio::test]
+    async fn write_image_rejects_path_traversal() {
+        let dir = tempfile::tempdir().unwrap();
+        let root_dir = dir.path().join("vault");
+        std::fs::create_dir(&root_dir).unwrap();
+        let root = root_dir.to_string_lossy().into_owned();
+        let res = write_image(root, "../escape".to_string(), vec![1, 2, 3], "png".to_string()).await;
+        assert!(matches!(res, Err(AppError::Other(_))), "../ must be rejected");
+        // "../escape" from root would land at dir.path()/escape — guard fires
+        // before any directory is created, so nothing escaped the vault.
+        assert!(!dir.path().join("escape").exists());
+    }
+
+    #[tokio::test]
+    async fn write_image_writes_into_a_vault_subdir() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().to_string_lossy().into_owned();
+        let rel = write_image(root, "assets".to_string(), vec![1, 2, 3], "png".to_string())
+            .await
+            .expect("a normal subdir write should succeed");
+        assert!(rel.starts_with("assets"), "rel path was {rel}");
+        assert!(dir.path().join(&rel).exists());
     }
 }
 
