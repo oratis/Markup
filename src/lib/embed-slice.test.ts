@@ -116,6 +116,20 @@ describe("findBlock", () => {
     const md = "before ^abc after\nnext";
     expect(findBlock(md, "abc")).toBeNull();
   });
+
+  it("does not throw on a block id with regex metacharacters", () => {
+    // blockId comes verbatim from the wikilink target (e.g. `[[Note^a(b]]`),
+    // so it can contain regex specials. An unescaped RegExp would throw
+    // SyntaxError here and crash the render-time callers.
+    const md = "some paragraph ^a(b\n";
+    expect(() => findBlock(md, "a(b")).not.toThrow();
+    expect(findBlock(md, "a(b")).toBe("some paragraph");
+  });
+
+  it("strips a marker containing a dot without over-matching", () => {
+    const md = "alpha ^v1.2\n";
+    expect(findBlock(md, "v1.2")).toBe("alpha");
+  });
 });
 
 describe("sliceEmbed", () => {
