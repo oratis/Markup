@@ -93,7 +93,15 @@ function decodeInlineArray(raw: string): FrontmatterScalar[] {
     const ch = inner[i];
     if (quote) {
       buf += ch;
-      if (ch === quote && inner[i - 1] !== "\\") quote = null;
+      // A quote terminates the string only when it isn't escaped. Count the
+      // run of backslashes immediately before it: an EVEN count means they're
+      // all escaped pairs (so `\\"` really closes), an ODD count escapes the
+      // quote. The old `inner[i-1] !== "\\"` check mis-read `\\"` as escaped.
+      if (ch === quote) {
+        let backslashes = 0;
+        for (let k = i - 1; k >= 0 && inner[k] === "\\"; k--) backslashes++;
+        if (backslashes % 2 === 0) quote = null;
+      }
       continue;
     }
     if (ch === '"' || ch === "'") {
