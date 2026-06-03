@@ -147,3 +147,15 @@ describe("serializeFrontmatter", () => {
     expect(serializeFrontmatter({}, "body")).toBe("body");
   });
 });
+
+describe("frontmatter — multi-line / escaped scalar round-trip (regression)", () => {
+  it("round-trips a value containing a newline (was truncated)", () => {
+    const out = serializeFrontmatter({ note: "line1\nline2" }, "body");
+    expect(parseFrontmatter(out).properties.note).toBe("line1\nline2");
+  });
+
+  it("round-trips tabs and embedded quotes", () => {
+    const out = serializeFrontmatter({ s: 'a\tb "c"' }, "body");
+    expect(parseFrontmatter(out).properties.s).toBe('a\tb "c"');
+  });
+});
