@@ -23,7 +23,21 @@ export function parseHeadings(md: string): Heading[] {
   let inFence = false;
   let fenceMarker = "";
 
-  for (let i = 0; i < lines.length; i++) {
+  // Skip a leading YAML frontmatter block. Its closing "---" is otherwise
+  // read as a Setext underline, emitting a phantom H2 from the last
+  // frontmatter line — which pollutes the Outline/TOC of essentially every
+  // note with multi-line frontmatter. Line indices are preserved.
+  let start = 0;
+  if (lines[0]?.trim() === "---") {
+    for (let k = 1; k < lines.length; k++) {
+      if (lines[k]?.trim() === "---") {
+        start = k + 1;
+        break;
+      }
+    }
+  }
+
+  for (let i = start; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trimStart();
 
@@ -44,16 +58,28 @@ export function parseHeadings(md: string): Heading[] {
       out.push({ level: atx[1].length, text: atx[2], line: i });
       continue;
     }
-    if (i > 0 && /^=+\s*$/.test(line.trim())) {
-      const prev = lines[i - 1].trim();
-      if (prev) out.push({ level: 1, text: prev, line: i - 1 });
+    if (i > start && /^=+\s*$/.test(line.trim()) && isSetextParagraph(lines[i - 1])) {
+      out.push({ level: 1, text: lines[i - 1].trim(), line: i - 1 });
       continue;
     }
-    if (i > 0 && /^-+\s*$/.test(line.trim()) && lines[i - 1].trim()) {
+    if (i > start && /^-+\s*$/.test(line.trim()) && isSetextParagraph(lines[i - 1])) {
       out.push({ level: 2, text: lines[i - 1].trim(), line: i - 1 });
     }
   }
   return out;
+}
+
+/** A Setext underline (=== / ---) only forms a heading when the line above is
+ *  a paragraph — not blank, not an ATX heading, and not a list item. Rejects
+ *  the false positives `# Title\n---` (thematic break after a heading) and
+ *  `- item\n---`. */
+function isSetextParagraph(prev: string | undefined): boolean {
+  const t = prev?.trim();
+  if (!t) return false;
+  if (/^#{1,6}\s/.test(t)) return false; // ATX heading
+  if (/^[-*+]\s/.test(t)) return false; // bullet list item
+  if (/^\d+[.)]\s/.test(t)) return false; // ordered list item
+  return true;
 }
 
 /** Build the chain of ancestor headings for `cursorLine`. The result

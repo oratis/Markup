@@ -117,3 +117,21 @@ describe("jumpToSourceLine", () => {
     expect(view.state.selection.main.head).toBe(11);
   });
 });
+
+describe("parseHeadings — frontmatter & Setext false positives (regression)", () => {
+  it("does not emit a phantom heading from the frontmatter close", () => {
+    const md = "---\ntitle: Hello\nauthor: me\n---\n# Real";
+    expect(parseHeadings(md).map((h) => h.text)).toEqual(["Real"]);
+  });
+  it("treats --- after an ATX heading as a break, not Setext", () => {
+    expect(parseHeadings("# Title\n---\ntext").map((h) => h.text)).toEqual(["Title"]);
+  });
+  it("treats --- after a list item as a break, not Setext", () => {
+    expect(parseHeadings("- item\n---\ntext")).toEqual([]);
+  });
+  it("still recognises a real Setext heading", () => {
+    expect(parseHeadings("My Heading\n---\ntext")).toEqual([
+      { level: 2, text: "My Heading", line: 0 },
+    ]);
+  });
+});

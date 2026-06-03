@@ -23,13 +23,35 @@ interface ReplyMsg {
   headings: Heading[];
 }
 
+// Keep in sync with src/lib/headings.ts (this worker copy stays dep-free).
+function isSetextParagraph(prev: string | undefined): boolean {
+  const t = prev?.trim();
+  if (!t) return false;
+  if (/^#{1,6}\s/.test(t)) return false; // ATX heading
+  if (/^[-*+]\s/.test(t)) return false; // bullet list item
+  if (/^\d+[.)]\s/.test(t)) return false; // ordered list item
+  return true;
+}
+
 function parseHeadings(md: string): Heading[] {
   const out: Heading[] = [];
   const lines = md.split("\n");
   let inFence = false;
   let fenceMarker = "";
 
-  for (let i = 0; i < lines.length; i++) {
+  // Skip a leading YAML frontmatter block so its closing "---" isn't read as a
+  // Setext underline (phantom heading). Mirrors src/lib/headings.ts.
+  let start = 0;
+  if (lines[0]?.trim() === "---") {
+    for (let k = 1; k < lines.length; k++) {
+      if (lines[k]?.trim() === "---") {
+        start = k + 1;
+        break;
+      }
+    }
+  }
+
+  for (let i = start; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trimStart();
 
@@ -50,12 +72,11 @@ function parseHeadings(md: string): Heading[] {
       out.push({ level: atx[1].length, text: atx[2], line: i });
       continue;
     }
-    if (i > 0 && /^=+\s*$/.test(line.trim())) {
-      const prev = lines[i - 1].trim();
-      if (prev) out.push({ level: 1, text: prev, line: i - 1 });
+    if (i > start && /^=+\s*$/.test(line.trim()) && isSetextParagraph(lines[i - 1])) {
+      out.push({ level: 1, text: lines[i - 1].trim(), line: i - 1 });
       continue;
     }
-    if (i > 0 && /^-+\s*$/.test(line.trim()) && lines[i - 1].trim()) {
+    if (i > start && /^-+\s*$/.test(line.trim()) && isSetextParagraph(lines[i - 1])) {
       out.push({ level: 2, text: lines[i - 1].trim(), line: i - 1 });
     }
   }
