@@ -65,10 +65,10 @@ struct QuickOpenView: View {
             .searchable(
                 text: $query,
                 placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Jump to file")
-            .navigationTitle("Quick Open")
+                prompt: t(.jumpToFile))
+            .navigationTitle(t(.quickOpen))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } } }
         }
     }
 }
@@ -101,18 +101,18 @@ struct SearchView: View {
             }
             .overlay {
                 if hits.isEmpty {
-                    Text(query.isEmpty ? "Search your vault" : "No matches")
+                    Text(query.isEmpty ? t(.searchYourVault) : t(.noMatches))
                         .foregroundStyle(.secondary)
                 }
             }
-            .searchable(text: $query, prompt: "Search vault   (try tag:project, path:journal/)")
+            .searchable(text: $query, prompt: t(.searchVaultPrompt))
             .onChange(of: query) { _, q in
                 let trimmed = q.trimmingCharacters(in: .whitespaces)
                 hits = trimmed.isEmpty ? [] : ((try? vault.index?.search(trimmed)) ?? [])
             }
-            .navigationTitle("Search")
+            .navigationTitle(t(.search))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } } }
         }
     }
 }
@@ -134,14 +134,14 @@ struct CanvasPlaceholderView: View {
                 .font(.system(size: 44))
                 .foregroundStyle(.secondary)
             Text(file.name).font(.headline)
-            Text("Canvas is a desktop feature. Open this file in Markup for Mac to view and edit it.")
+            Text("\(t(.canvasTitle)). \(t(.canvasBody))")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Text("\(c.nodes) node\(c.nodes == 1 ? "" : "s") · \(c.edges) edge\(c.edges == 1 ? "" : "s")")
+            Text(String(format: t(.nodesEdgesFmt), c.nodes, c.edges))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
-            Link("Get Markup for Mac",
+            Link(t(.getMac),
                  destination: URL(string: "https://github.com/oratis/Markup")!)
                 .font(.callout)
                 .padding(.top, 4)
@@ -193,10 +193,10 @@ struct TagsView: View {
                     }
                 }
             }
-            .overlay { if tags.isEmpty { Text("No tags").foregroundStyle(.secondary) } }
-            .navigationTitle("Tags")
+            .overlay { if tags.isEmpty { Text(t(.noTags)).foregroundStyle(.secondary) } }
+            .navigationTitle(t(.tags))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } } }
             .task { tags = (try? vault.index?.allTags()) ?? [] }
         }
     }
@@ -241,10 +241,10 @@ struct OutlineView: View {
                         .foregroundStyle(heading.level == 1 ? .primary : .secondary)
                 }
             }
-            .overlay { if headings.isEmpty { Text("No headings").foregroundStyle(.secondary) } }
-            .navigationTitle("Outline")
+            .overlay { if headings.isEmpty { Text(t(.noHeadings)).foregroundStyle(.secondary) } }
+            .navigationTitle(t(.outline))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } } }
         }
     }
 }
@@ -264,10 +264,10 @@ struct BacklinksView: View {
                     if let f = vault.file(forRelPath: path) { onOpen(f); dismiss() }
                 } label: { Text(path) }
             }
-            .overlay { if sources.isEmpty { Text("No backlinks").foregroundStyle(.secondary) } }
-            .navigationTitle("Backlinks")
+            .overlay { if sources.isEmpty { Text(t(.noBacklinks)).foregroundStyle(.secondary) } }
+            .navigationTitle(t(.backlinks))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } } }
             .task { sources = (try? vault.index?.backlinks(toName: file.name)) ?? [] }
         }
     }

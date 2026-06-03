@@ -57,9 +57,9 @@ struct RootView: View {
                 emptyState
             } else if vault.files.isEmpty {
                 ContentUnavailableView(
-                    "No Markdown files",
+                    t(.noMarkdownTitle),
                     systemImage: "doc.text",
-                    description: Text("This folder has no .md files."))
+                    description: Text(t(.noMarkdownBody)))
             } else {
                 fileList
             }
@@ -104,20 +104,20 @@ struct RootView: View {
         ToolbarItemGroup(placement: .primaryAction) {
             if vault.rootURL != nil {
                 Button { showQuickOpen = true } label: { Image(systemName: "magnifyingglass") }
-                    .accessibilityLabel("Quick Open")
+                    .accessibilityLabel(t(.quickOpen))
                     .keyboardShortcut("p", modifiers: .command)
                 Menu {
-                    Button { showSearch = true } label: { Label("Search vault", systemImage: "text.magnifyingglass") }
+                    Button { showSearch = true } label: { Label(t(.search), systemImage: "text.magnifyingglass") }
                         .keyboardShortcut("f", modifiers: [.command, .shift])
-                    Button { showTags = true } label: { Label("Tags", systemImage: "number") }
-                    Button { showSettings = true } label: { Label("Settings", systemImage: "gearshape") }
-                    Button { showPicker = true } label: { Label("Open folder", systemImage: "folder.badge.plus") }
+                    Button { showTags = true } label: { Label(t(.tags), systemImage: "number") }
+                    Button { showSettings = true } label: { Label(t(.settings), systemImage: "gearshape") }
+                    Button { showPicker = true } label: { Label(t(.openFolder), systemImage: "folder.badge.plus") }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             } else {
                 Button { showPicker = true } label: { Image(systemName: "folder.badge.plus") }
-                    .accessibilityLabel("Open folder")
+                    .accessibilityLabel(t(.openFolder))
             }
         }
     }
@@ -128,13 +128,13 @@ struct RootView: View {
             Image(systemName: "books.vertical")
                 .font(.title)
                 .foregroundStyle(.secondary)
-            Text("Open a vault")
+            Text(t(.openVault))
                 .font(.headline)
-            Text("Point Markup at a folder of Markdown files — the same one you use on your Mac, via iCloud Drive or Files.")
+            Text(t(.openVaultBody))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Open a Folder") { showPicker = true }
+            Button(t(.openAFolder)) { showPicker = true }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
                 .padding(.top, 2)
@@ -157,11 +157,11 @@ struct RootView: View {
                 .id(file.relPath)
         } else if selection != nil {
             ContentUnavailableView(
-                "Couldn't read file", systemImage: "exclamationmark.triangle")
+                t(.couldntRead), systemImage: "exclamationmark.triangle")
         } else {
             ContentUnavailableView(
-                "Select a note", systemImage: "doc.text",
-                description: Text("Pick a file to read it here."))
+                t(.selectNote), systemImage: "doc.text",
+                description: Text(t(.selectNoteBody)))
         }
     }
 }
