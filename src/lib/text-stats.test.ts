@@ -22,6 +22,17 @@ describe("countWords", () => {
   it("treats multiple whitespace types as one boundary", () => {
     expect(countWords("a\tb\nc d")).toBe(4);
   });
+
+  // Regression: kana / Hangul have no inter-word spaces, so before they were
+  // added to the CJK class a whole sentence counted as a single word.
+  it("counts Japanese kana per character", () => {
+    expect(countWords("ありがとう")).toBe(5); // 5 hiragana
+    expect(countWords("カタカナ")).toBe(4); // 4 katakana
+  });
+
+  it("counts Korean Hangul syllables per character", () => {
+    expect(countWords("안녕하세요")).toBe(5);
+  });
 });
 
 describe("byteSize", () => {
