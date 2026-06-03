@@ -150,7 +150,10 @@ impl MarkupIndex {
             vec![self.schema.title, self.schema.body],
         );
         let q = parser.parse_query(query)?;
-        let top = searcher.search(&q, &TopDocs::with_limit(limit))?;
+        // tantivy 0.26: TopDocs no longer implements Collector directly — pick
+        // the ordering explicitly. order_by_score() yields Vec<(Score, DocAddress)>,
+        // same shape the old direct-Collector usage produced.
+        let top = searcher.search(&q, &TopDocs::with_limit(limit).order_by_score())?;
 
         let mut out = Vec::with_capacity(top.len());
         for (score, addr) in top {

@@ -27,9 +27,9 @@ tokio = { version = "1", features = ["fs", "rt-multi-thread", "macros", "sync", 
 
 # Spike 0.3: vault management
 walkdir = "2"
-notify = "7"
-notify-debouncer-full = "0.4"
-tantivy = "0.24"
+notify = "8"
+notify-debouncer-full = "0.7"
+tantivy = "0.26"
 parking_lot = "0.12"
 
 # Logging
@@ -37,7 +37,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Markdown parser (Rust-side, for indexing snippets and exports)
-comrak = { version = "0.40", default-features = false, features = ["syntect"] }
+comrak = { version = "0.52", default-features = false, features = ["syntect"] }
 
 # HTML sanitiser for the export/preview pipeline. comrak runs with unsafe_
 # (raw HTML passthrough), so the rendered body is cleaned of <script>, event

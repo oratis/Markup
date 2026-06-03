@@ -207,14 +207,14 @@ struct MarkupHighlighter {
 impl comrak::adapters::SyntaxHighlighterAdapter for MarkupHighlighter {
     fn write_highlighted(
         &self,
-        output: &mut dyn Write,
+        output: &mut dyn std::fmt::Write,
         lang: Option<&str>,
         code: &str,
-    ) -> std::io::Result<()> {
+    ) -> std::fmt::Result {
         if lang == Some("mermaid") {
             // Emit the diagram source verbatim (escaped). mermaid.js reads the
             // element's textContent and swaps in the rendered SVG.
-            return output.write_all(html_escape(code).as_bytes());
+            return output.write_str(&html_escape(code));
         }
         // syntect's default syntax set has no TypeScript grammar; highlight the
         // TS family (and JSX) as JavaScript so the common case still gets
@@ -228,23 +228,23 @@ impl comrak::adapters::SyntaxHighlighterAdapter for MarkupHighlighter {
 
     fn write_pre_tag(
         &self,
-        output: &mut dyn Write,
-        attributes: std::collections::HashMap<String, String>,
-    ) -> std::io::Result<()> {
+        output: &mut dyn std::fmt::Write,
+        attributes: std::collections::HashMap<&'static str, std::borrow::Cow<'_, str>>,
+    ) -> std::fmt::Result {
         // With `github_pre_lang` the fence language arrives as the `lang`
         // attribute on the <pre> — the only place we can see it before the
         // <code>/highlight calls.
-        if attributes.get("lang").map(String::as_str) == Some("mermaid") {
-            return output.write_all(b"<pre class=\"mermaid\">");
+        if attributes.get("lang").map(|v| v.as_ref()) == Some("mermaid") {
+            return output.write_str("<pre class=\"mermaid\">");
         }
         self.inner.write_pre_tag(output, attributes)
     }
 
     fn write_code_tag(
         &self,
-        output: &mut dyn Write,
-        attributes: std::collections::HashMap<String, String>,
-    ) -> std::io::Result<()> {
+        output: &mut dyn std::fmt::Write,
+        attributes: std::collections::HashMap<&'static str, std::borrow::Cow<'_, str>>,
+    ) -> std::fmt::Result {
         // Under `github_pre_lang` the language lives on the <pre>, so the
         // <code> attributes are empty for every fence — delegating yields a
         // clean `<code>` for both mermaid and highlighted blocks.
@@ -352,18 +352,18 @@ pub(crate) fn render_markdown_document(
     // can style checkboxes without relying on the newer `:has()` selector.
     opts.render.tasklist_classes = true;
     // Stable heading ids so exports support in-page anchors / TOCs.
-    opts.extension.header_ids = Some(String::new());
+    opts.extension.header_id_prefix = Some(String::new());
     // Parse `$inline$` / `$$display$$` math at the AST level — the same rule
     // the editor uses — so prose like "$5 and $10" is never mistaken for math.
     opts.extension.math_dollars = true;
-    opts.render.unsafe_ = true; // allow inline HTML
+    opts.render.r#unsafe = true; // allow inline HTML (comrak renamed the field)
     // Put the fence language on the <pre> so MarkupHighlighter can see it.
     opts.render.github_pre_lang = true;
 
     let highlighter = MarkupHighlighter {
         inner: comrak::plugins::syntect::SyntectAdapter::new(Some(SYNTECT_THEME)),
     };
-    let mut plugins = comrak::Plugins::default();
+    let mut plugins = comrak::options::Plugins::default();
     plugins.render.codefence_syntax_highlighter = Some(&highlighter);
 
     let raw_body = comrak::markdown_to_html_with_plugins(content, &opts, &plugins);
