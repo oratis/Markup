@@ -15,4 +15,12 @@ final class EditorController {
     /// Set by the editor coordinator: insert the chosen note name into the
     /// active `[[…]]` at the caret.
     var insertWikilink: ((String) -> Void)?
+
+    /// Set true by the accessory "image" button; ReaderView presents a photo
+    /// picker, writes the image into the vault, then calls `insertText`.
+    var imagePickerRequested = false
+
+    /// Set by the editor coordinator: insert raw text at the caret (e.g. an
+    /// image reference).
+    var insertText: ((String) -> Void)?
 }
