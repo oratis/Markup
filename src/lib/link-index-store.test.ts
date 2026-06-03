@@ -130,3 +130,16 @@ describe("link-index-store subscribe + persistence", () => {
     expect(getBacklinksFor("/v1/B.md")).toHaveLength(0);
   });
 });
+
+describe("setVaultPaths — prunes refs from removed source files (regression)", () => {
+  it("drops backlinks whose source file was deleted", () => {
+    rebuildFromFiles([
+      { path: "/v/A.md", content: "[[B]]" },
+      { path: "/v/B.md", content: "" },
+    ]);
+    expect(getBacklinksFor("/v/B.md").map((r) => r.sourcePath)).toEqual(["/v/A.md"]);
+    // A.md deleted — deletes flow through setVaultPaths, not onFileRemoved.
+    setVaultPaths(["/v/B.md"]);
+    expect(getBacklinksFor("/v/B.md")).toEqual([]);
+  });
+});
