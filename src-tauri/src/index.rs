@@ -120,6 +120,16 @@ impl MarkupIndex {
         Ok(())
     }
 
+    /// Remove every document. Caller must [`commit`](Self::commit) before
+    /// adding fresh docs so the clear is fully applied first. Used on vault
+    /// (re)open to drop entries for files deleted while the app was closed
+    /// (the watcher never observed those removals).
+    pub async fn clear(&self) -> AppResult<()> {
+        let writer = self.writer.lock().await;
+        writer.delete_all_documents()?;
+        Ok(())
+    }
+
     /// Commit pending changes so they become searchable.
     pub async fn commit(&self) -> AppResult<()> {
         let mut writer = self.writer.lock().await;
@@ -261,6 +271,37 @@ mod tests {
         let hits = idx.search("docs", 10).unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].title, "Docs Home");
+    }
+
+    #[tokio::test]
+    async fn clear_then_reindex_drops_stale_docs() {
+        // Simulates a vault reopen: an index persisted with two docs, one of
+        // whose files was deleted while the app was closed. clear() + commit
+        // then re-adding only the surviving file must leave no trace of the
+        // deleted one.
+        let tmp = tempdir().unwrap();
+        let idx = MarkupIndex::open_or_create(tmp.path()).unwrap();
+        idx.upsert_file(Path::new("/keep.md"), "alpha keep", 1)
+            .await
+            .unwrap();
+        idx.upsert_file(Path::new("/gone.md"), "beta gone", 2)
+            .await
+            .unwrap();
+        idx.commit().await.unwrap();
+
+        idx.clear().await.unwrap();
+        idx.commit().await.unwrap();
+        // Re-add only the surviving file, as open()'s bulk loop would.
+        idx.upsert_file(Path::new("/keep.md"), "alpha keep", 1)
+            .await
+            .unwrap();
+        idx.commit().await.unwrap();
+
+        assert!(
+            idx.search("gone", 10).unwrap().is_empty(),
+            "deleted file must not survive a clear + reindex"
+        );
+        assert_eq!(idx.search("keep", 10).unwrap().len(), 1);
     }
 
     #[tokio::test]

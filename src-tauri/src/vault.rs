@@ -71,7 +71,26 @@ impl VaultState {
             )));
         }
 
+        // Drop any currently-open vault FIRST so its Tantivy index writer
+        // releases the `.tantivy-writer.lock` (a non-blocking *exclusive*
+        // lock) and its watcher stops, before we open the new index. Without
+        // this, re-opening the *same* vault — the user re-picks the open
+        // folder — fails with a writer LockBusy error, because the old writer
+        // is still alive until the state swap below. Trade-off: if the open
+        // below fails (rare; the path is already validated as a dir), we're
+        // left with no open vault rather than the previous one.
+        *self.inner.write() = None;
+
         let index = Arc::new(MarkupIndex::open_or_create(&index_dir)?);
+
+        // The persisted index can still hold docs for files deleted while the
+        // app was closed (the watcher never saw those removals) — they'd
+        // otherwise surface as dead search hits forever. open() reindexes
+        // every current file below anyway, so clear the index first (a
+        // separate commit, so the wipe is fully applied before the re-adds).
+        index.clear().await?;
+        index.commit().await?;
+
         let files = scanner::scan_indexable_files(&root)?;
 
         // Bulk index. Keep memory bounded by reading files one at a time.
