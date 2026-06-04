@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import MarkupKit
 
@@ -38,6 +39,29 @@ struct GitHubLinkTests {
     @Test func rejectsNonGitHub() {
         #expect(GitHubLinkParser.parse("https://example.com/o/r") == nil)
         #expect(GitHubLinkParser.parse("not a url at all !!") == nil)
+    }
+
+    @Test func parsesBareOwnerRepo() {
+        #expect(GitHubLinkParser.parse("oratis/Markup")
+            == GitHubLink(owner: "oratis", repo: "Markup", isDirectory: true))
+        // Not a bare repo (3 segments) → still parses via URL rules / nil.
+        #expect(GitHubLinkParser.parse("a/b/c") == nil)
+    }
+
+    @Test func parsesDirectoryListing() {
+        let json = Data("""
+        [{"name":"README.md","path":"README.md","type":"file"},
+         {"name":"docs","path":"docs","type":"dir"},
+         {"name":"app.swift","path":"src/app.swift","type":"file"}]
+        """.utf8)
+        let entries = GitHubContents.parse(json)
+        // Folders first, then files alphabetical.
+        #expect(entries.map(\.name) == ["docs", "app.swift", "README.md"])
+        #expect(entries.first?.isDir == true)
+    }
+
+    @Test func badListingIsEmpty() {
+        #expect(GitHubContents.parse(Data("not json".utf8)).isEmpty)
     }
 
     @Test func buildsRawURL() {

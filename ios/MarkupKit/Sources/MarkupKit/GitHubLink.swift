@@ -1,7 +1,7 @@
 import Foundation
 
 /// A parsed reference to a file or folder on GitHub.
-public struct GitHubLink: Equatable, Sendable {
+public struct GitHubLink: Equatable, Hashable, Sendable {
     public var owner: String
     public var repo: String
     /// Branch / tag / commit SHA, or `nil` for the repo's default branch.
@@ -26,6 +26,36 @@ public struct GitHubLink: Equatable, Sendable {
     }
 }
 
+/// One entry in a GitHub directory listing (REST contents API).
+public struct GitHubEntry: Codable, Equatable, Sendable, Identifiable {
+    public var name: String
+    public var path: String
+    public var type: String // "file" | "dir"
+    public var isDir: Bool { type == "dir" }
+    public var id: String { path }
+
+    public init(name: String, path: String, type: String) {
+        self.name = name
+        self.path = path
+        self.type = type
+    }
+
+    private enum CodingKeys: String, CodingKey { case name, path, type }
+}
+
+public enum GitHubContents {
+    /// Decode a contents-API directory listing; folders first, then files,
+    /// each alphabetical. Returns `[]` for non-array (e.g. a file) or bad JSON.
+    public static func parse(_ data: Data) -> [GitHubEntry] {
+        let entries = (try? JSONDecoder().decode([GitHubEntry].self, from: data)) ?? []
+        return entries.sorted {
+            $0.isDir != $1.isDir
+                ? $0.isDir && !$1.isDir
+                : $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+}
+
 /// Parse GitHub web / raw URLs into a `GitHubLink`. Handles:
 /// - `github.com/owner/repo` (repo root)
 /// - `github.com/owner/repo/blob/<ref>/<path>` (file)
@@ -34,6 +64,12 @@ public struct GitHubLink: Equatable, Sendable {
 public enum GitHubLinkParser {
     public static func parse(_ urlString: String) -> GitHubLink? {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Bare "owner/repo" (no scheme/host) → repo root.
+        if !trimmed.contains("://"),
+           Rx.matches("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", trimmed) {
+            let parts = trimmed.split(separator: "/").map(String.init)
+            return GitHubLink(owner: parts[0], repo: stripGit(parts[1]), isDirectory: true)
+        }
         guard let comps = URLComponents(string: trimmed.contains("://") ? trimmed : "https://\(trimmed)"),
               let host = comps.host?.lowercased() else { return nil }
 
