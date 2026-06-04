@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  childLink,
   contentsApiUrl,
   fileName,
   type GitHubLink,
+  parseContents,
   parseGitHubLink,
   rawUrl,
 } from "./github-link";
@@ -43,6 +45,17 @@ describe("parseGitHubLink", () => {
     });
   });
 
+  it("parses a bare owner/repo", () => {
+    expect(parseGitHubLink("oratis/Markup")).toEqual({
+      owner: "oratis",
+      repo: "Markup",
+      ref: null,
+      path: "",
+      isDirectory: true,
+    });
+    expect(parseGitHubLink("a/b/c")).toBeNull();
+  });
+
   it("strips .git, decodes the path, and rejects non-GitHub", () => {
     const l = parseGitHubLink("https://github.com/o/r.git/blob/main/a%20b.md");
     expect(l?.repo).toBe("r");
@@ -70,5 +83,35 @@ describe("url builders", () => {
     expect(
       rawUrl({ owner: "o", repo: "r", ref: null, path: "", isDirectory: true }),
     ).toBeNull();
+  });
+});
+
+describe("parseContents + childLink", () => {
+  it("sorts folders first then files alphabetically", () => {
+    const entries = parseContents([
+      { name: "README.md", path: "README.md", type: "file" },
+      { name: "docs", path: "docs", type: "dir" },
+      { name: "app.ts", path: "src/app.ts", type: "file" },
+    ]);
+    expect(entries.map((e) => e.name)).toEqual(["docs", "app.ts", "README.md"]);
+    expect(entries[0].isDir).toBe(true);
+    expect(parseContents("not an array")).toEqual([]);
+  });
+
+  it("builds a child link for navigation", () => {
+    const parent: GitHubLink = {
+      owner: "o",
+      repo: "r",
+      ref: "main",
+      path: "docs",
+      isDirectory: true,
+    };
+    expect(childLink(parent, { name: "a.md", path: "docs/a.md", isDir: false })).toEqual({
+      owner: "o",
+      repo: "r",
+      ref: "main",
+      path: "docs/a.md",
+      isDirectory: false,
+    });
   });
 });
