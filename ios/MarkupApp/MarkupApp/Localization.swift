@@ -62,6 +62,7 @@ enum L {
     case recents, favorites, noRecentsTitle, noRecentsBody, remove, newNote, delete
     case rename, cancel, switchVault
     case openFromGitHub, githubUrlPrompt, githubInvalid, open
+    case githubSignIn, githubSignOut, githubSignedIn, githubEnterCode, githubWaiting, copyCode
 
     var en: String {
         switch self {
@@ -157,6 +158,12 @@ enum L {
         case .githubUrlPrompt: return "Paste a GitHub file link"
         case .githubInvalid: return "Not a valid GitHub link"
         case .open: return "Open"
+        case .githubSignIn: return "Sign in to GitHub"
+        case .githubSignOut: return "Sign out"
+        case .githubSignedIn: return "Signed in to GitHub"
+        case .githubEnterCode: return "Enter this code at GitHub:"
+        case .githubWaiting: return "Waiting for authorization…"
+        case .copyCode: return "Copy code"
         }
     }
 
@@ -250,6 +257,12 @@ enum L {
         case .githubUrlPrompt: return "粘贴 GitHub 文件链接"
         case .githubInvalid: return "不是有效的 GitHub 链接"
         case .open: return "打开"
+        case .githubSignIn: return "登录 GitHub"
+        case .githubSignOut: return "退出登录"
+        case .githubSignedIn: return "已登录 GitHub"
+        case .githubEnterCode: return "在 GitHub 输入此代码："
+        case .githubWaiting: return "等待授权…"
+        case .copyCode: return "复制代码"
         }
     }
 }

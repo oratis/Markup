@@ -79,11 +79,3 @@ final class GitHubService {
     }
 }
 
-/// Holds the GitHub OAuth token (Keychain-backed). Phase 1 stub: always nil.
-/// The OAuth device-flow phase fills `token` and persists it.
-@MainActor
-final class GitHubAuth {
-    static let shared = GitHubAuth()
-    var token: String?
-    var isSignedIn: Bool { token != nil }
-}

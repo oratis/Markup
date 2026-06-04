@@ -11,10 +11,29 @@ struct GitHubOpenView: View {
     @State private var loading = false
     @State private var error: String?
     @State private var path = NavigationPath()
+    @State private var showSignIn = false
+    private let auth = GitHubAuth.shared
 
     var body: some View {
         NavigationStack(path: $path) {
             Form {
+                if auth.isSignedIn {
+                    Section {
+                        HStack {
+                            Label(t(.githubSignedIn), systemImage: "checkmark.seal.fill")
+                                .foregroundStyle(.green)
+                            Spacer()
+                            Button(t(.githubSignOut), role: .destructive) { auth.signOut() }
+                        }
+                    }
+                } else if auth.isConfigured {
+                    Section {
+                        Button { showSignIn = true } label: {
+                            Label(t(.githubSignIn), systemImage: "person.crop.circle.badge.plus")
+                        }
+                    }
+                }
+
                 Section {
                     TextField(t(.githubUrlPrompt), text: $urlText, axis: .vertical)
                         .textInputAutocapitalization(.never)
@@ -46,6 +65,7 @@ struct GitHubOpenView: View {
             .navigationDestination(for: GitHubLink.self) { link in
                 GitHubBrowseView(link: link, onOpenFile: { url in onOpen(url); dismiss() })
             }
+            .sheet(isPresented: $showSignIn) { GitHubSignInView() }
         }
     }
 
