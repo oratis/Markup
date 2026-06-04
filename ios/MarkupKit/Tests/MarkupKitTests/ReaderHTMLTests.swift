@@ -35,6 +35,14 @@ struct ReaderHTMLDocumentTests {
         #expect(doc.contains("\"hello world\""))
     }
 
+    @Test func appliesCustomLineHeight() {
+        let doc = ReaderHTML.document(markdown: "hi", title: "T", lineHeight: 2.0)
+        #expect(doc.contains("line-height: 2.00"))
+        // Clamped to a sane range.
+        let clamped = ReaderHTML.document(markdown: "hi", title: "T", lineHeight: 9.0)
+        #expect(clamped.contains("line-height: 2.40"))
+    }
+
     @Test func loadsKaTeXOnlyWhenMathPresent() {
         let withMath = ReaderHTML.document(markdown: "$a+b$", title: "T", theme: .light)
         let without = ReaderHTML.document(markdown: "plain text", title: "T", theme: .light)

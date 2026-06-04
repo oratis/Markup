@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage("reader.theme") private var themeRaw = ReaderTheme.light.rawValue
     @AppStorage("reader.fontScale") private var fontScale = 1.0
     @AppStorage("reader.maxWidth") private var maxWidth = 720
+    @AppStorage("reader.lineHeight") private var lineHeight = 1.65
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -36,6 +37,10 @@ struct SettingsView: View {
                                 get: { Double(maxWidth) },
                                 set: { maxWidth = Int($0) }),
                             in: 480...1000, step: 20)
+                    }
+                    VStack(alignment: .leading) {
+                        Text("\(t(.lineSpacing))  \(String(format: "%.2f", lineHeight))")
+                        Slider(value: $lineHeight, in: 1.2...2.4, step: 0.05)
                     }
                 }
 

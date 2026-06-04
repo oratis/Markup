@@ -33,7 +33,10 @@ struct ReaderView: View {
     @AppStorage("reader.theme") private var themeRaw = ReaderTheme.light.rawValue
     @AppStorage("reader.fontScale") private var fontScale = 1.0
     @AppStorage("reader.maxWidth") private var maxWidth = 720
+    @AppStorage("reader.lineHeight") private var lineHeight = 1.65
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Render a raw `.html` doc in desktop layout (per-doc).
+    @State private var htmlDesktopMode = false
 
     /// The user's manual reader scale folded with the system Dynamic Type
     /// size, so the rendered page respects accessibility text settings (§15).
@@ -77,7 +80,7 @@ struct ReaderView: View {
     private var html: String {
         ReaderHTML.document(
             markdown: content, title: file.name, theme: theme,
-            fontScale: effectiveFontScale, maxWidth: maxWidth,
+            fontScale: effectiveFontScale, maxWidth: maxWidth, lineHeight: lineHeight,
             restoreFraction: positions.position(for: file.relPath),
             assetBase: readerAssetBase)
     }
@@ -102,6 +105,7 @@ struct ReaderView: View {
                     readAccessURL: vault.rootURL,
                     loadToken: htmlReloadToken,
                     javaScriptEnabled: htmlJSEnabled,
+                    preferDesktop: htmlDesktopMode,
                     proxy: proxy,
                     onScroll: { positions.save($0, for: file.relPath) })
             } else {
@@ -153,6 +157,13 @@ struct ReaderView: View {
         }
         if !isEditing && isHTML {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    htmlDesktopMode.toggle()
+                    htmlReloadToken += 1
+                } label: {
+                    Image(systemName: htmlDesktopMode ? "desktopcomputer" : "iphone")
+                }
+                .accessibilityLabel(htmlDesktopMode ? t(.mobileMode) : t(.desktopMode))
                 Button {
                     htmlJSEnabled.toggle()
                     htmlReloadToken += 1
