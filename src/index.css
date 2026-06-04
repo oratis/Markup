@@ -1,14 +1,31 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+/* Tailwind v4 entry. The framework is now a single `@import`; the legacy
+   `@tailwind base/components/utilities` directives are gone. The existing
+   v3-style JS config (content globs, darkMode:"class", custom colors/fonts)
+   is loaded via `@config` for backwards-compat — no CSS-first `@theme`
+   rewrite needed, so utility classes like `font-mono`/`text-ink-light`
+   keep resolving exactly as before. */
+@import "tailwindcss";
+/* Milkdown's editor theme. v4 requires every `@import` to precede other
+   rules, so this moves up here (it previously sat after the `@tailwind`
+   directives, which Vite treated as a spec violation).
+   NOTE: KaTeX's stylesheet is imported from src/main.tsx, NOT here. */
 @import "@milkdown/theme-nord/style.css";
-/* NOTE: KaTeX's stylesheet is imported from src/main.tsx, NOT here. A CSS
-   `@import` after the `@tailwind` directives is a spec violation that Vite
-   silently drops from production builds (while the dev server keeps it),
-   which broke in-app KaTeX math styling in release builds. The theme-nord
-   import above has the same caveat but uses `@layer base`, which a JS
-   import processes in isolation and errors on — so it stays here for now. */
+@config "../tailwind.config.js";
+
+/* v3→v4 visual-compat shim. Tailwind v4 changed the default border color
+   from gray-200 to `currentColor` (and the default ring to 1px). Without
+   this, every bare `border`/`border-b` in the app would suddenly inherit
+   the text colour and look wrong. Restoring gray-200 keeps this upgrade a
+   tooling change, not a restyle. (Mirrors what `@tailwindcss/upgrade` emits.) */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
 
 /* ============================================================
    Design tokens — see docs/design/04-obsidian-redesign-plan.md
@@ -129,7 +146,10 @@ body {
 
 .milkdown .editor pre,
 .milkdown .editor code {
-  font-family: theme("fontFamily.mono");
+  /* v4: the legacy `theme("fontFamily.mono")` dotted lookup is deprecated;
+     inline the same stack from tailwind.config.js to avoid relying on it. */
+  font-family:
+    ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
 }
 
 /* Drag region for the macOS frameless title bar */
