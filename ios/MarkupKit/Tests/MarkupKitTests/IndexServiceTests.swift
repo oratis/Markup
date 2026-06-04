@@ -74,6 +74,15 @@ struct IndexServiceTests {
         #expect(hits.map(\.path) == ["journal/2026.md"])
     }
 
+    @Test func backlinkHitsCarryLineContext() throws {
+        let idx = try seeded()
+        let hits = try idx.backlinkHits(toName: "Roadmap.md")
+        // Markup.md links to Roadmap on the line "See [[Roadmap]] and …".
+        #expect(hits.contains { $0.source == "Projects/Markup.md" })
+        let ctx = hits.first { $0.source == "Projects/Markup.md" }?.context ?? ""
+        #expect(ctx.contains("[[Roadmap]]"))
+    }
+
     @Test func backlinksResolveByName() throws {
         let idx = try seeded()
         #expect(try idx.backlinks(toName: "Markup") == ["Roadmap.md"])

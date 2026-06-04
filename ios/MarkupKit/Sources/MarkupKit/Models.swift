@@ -39,6 +39,18 @@ public struct LoadedFile: Equatable, Sendable {
 }
 
 /// A full-text search result row.
+/// A note that links to the current one, with the line of context the link
+/// appears on.
+public struct BacklinkHit: Equatable, Sendable, Identifiable {
+    public var source: String
+    public var context: String
+    public var id: String { source + "\u{1}" + context }
+    public init(source: String, context: String) {
+        self.source = source
+        self.context = context
+    }
+}
+
 public struct SearchHit: Equatable, Sendable, Identifiable {
     public var path: String
     public var title: String

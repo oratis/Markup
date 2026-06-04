@@ -255,20 +255,31 @@ struct BacklinksView: View {
     let file: VaultFile
     var onOpen: (VaultFile) -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var sources: [String] = []
+    @State private var hits: [BacklinkHit] = []
 
     var body: some View {
         NavigationStack {
-            List(sources, id: \.self) { path in
+            List(hits) { hit in
                 Button {
-                    if let f = vault.file(forRelPath: path) { onOpen(f); dismiss() }
-                } label: { Text(path) }
+                    if let f = vault.file(forRelPath: hit.source) { onOpen(f); dismiss() }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text((hit.source as NSString).lastPathComponent)
+                        if !hit.context.isEmpty {
+                            Text(hit.context)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        Text(hit.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                    }
+                }
             }
-            .overlay { if sources.isEmpty { Text(t(.noBacklinks)).foregroundStyle(.secondary) } }
+            .overlay { if hits.isEmpty { Text(t(.noBacklinks)).foregroundStyle(.secondary) } }
             .navigationTitle(t(.backlinks))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } } }
-            .task { sources = (try? vault.index?.backlinks(toName: file.name)) ?? [] }
+            .task { hits = (try? vault.index?.backlinkHits(toName: file.name)) ?? [] }
         }
     }
 }
