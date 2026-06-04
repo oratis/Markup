@@ -60,7 +60,7 @@ enum L {
     case onboardTitle3, onboardBody3, onboardNext, onboardStart
     case enableScripts, disableScripts, desktopMode, mobileMode, lineSpacing
     case recents, favorites, noRecentsTitle, noRecentsBody, remove, newNote, delete
-    case rename, cancel
+    case rename, cancel, switchVault
 
     var en: String {
         switch self {
@@ -151,6 +151,7 @@ enum L {
         case .delete: return "Delete"
         case .rename: return "Rename"
         case .cancel: return "Cancel"
+        case .switchVault: return "Switch vault"
         }
     }
 
@@ -239,6 +240,7 @@ enum L {
         case .delete: return "删除"
         case .rename: return "重命名"
         case .cancel: return "取消"
+        case .switchVault: return "切换仓库"
         }
     }
 }
