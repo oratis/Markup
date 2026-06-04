@@ -58,6 +58,7 @@ enum L {
     case canvasTitle, canvasBody, nodesEdgesFmt
     case onboardTitle1, onboardBody1, onboardTitle2, onboardBody2
     case onboardTitle3, onboardBody3, onboardNext, onboardStart
+    case enableScripts, disableScripts
 
     var en: String {
         switch self {
@@ -134,6 +135,8 @@ enum L {
         case .onboardBody3: return "No account, no telemetry. Your notes stay on your device and your iCloud."
         case .onboardNext: return "Next"
         case .onboardStart: return "Open a Folder"
+        case .enableScripts: return "Enable scripts"
+        case .disableScripts: return "Disable scripts"
         }
     }
 
@@ -208,6 +211,8 @@ enum L {
         case .onboardBody3: return "无账户、无遥测。你的笔记只留在本机和你的 iCloud。"
         case .onboardNext: return "下一步"
         case .onboardStart: return "打开文件夹"
+        case .enableScripts: return "启用脚本"
+        case .disableScripts: return "停用脚本"
         }
     }
 }

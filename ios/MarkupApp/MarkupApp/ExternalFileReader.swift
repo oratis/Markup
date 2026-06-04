@@ -10,6 +10,9 @@ struct ExternalFileReader: View {
     @Environment(\.dismiss) private var dismiss
     @State private var content: String?
     @State private var failed = false
+    /// Scripts in a shared `.html` file are off until the user opts in.
+    @State private var htmlJSEnabled = false
+    @State private var htmlReloadToken = 0
     @AppStorage("reader.theme") private var themeRaw = ReaderTheme.light.rawValue
 
     private var theme: ReaderTheme { ReaderTheme(rawValue: themeRaw) ?? .light }
@@ -29,7 +32,10 @@ struct ExternalFileReader: View {
         NavigationStack {
             Group {
                 if content != nil {
-                    ReaderWebView(html: docHTML, baseURL: url.deletingLastPathComponent())
+                    ReaderWebView(
+                        html: docHTML, baseURL: url.deletingLastPathComponent(),
+                        loadToken: htmlReloadToken,
+                        javaScriptEnabled: isHTML ? htmlJSEnabled : true)
                 } else if failed {
                     ContentUnavailableView(
                         "Couldn't open file", systemImage: "exclamationmark.triangle",
@@ -41,7 +47,20 @@ struct ExternalFileReader: View {
             .ignoresSafeArea(edges: .bottom)
             .navigationTitle(url.lastPathComponent)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } }
+                if isHTML && content != nil {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            htmlJSEnabled.toggle()
+                            htmlReloadToken += 1
+                        } label: {
+                            Image(systemName: htmlJSEnabled ? "bolt.fill" : "bolt.slash")
+                        }
+                        .accessibilityLabel(htmlJSEnabled ? t(.disableScripts) : t(.enableScripts))
+                    }
+                }
+            }
             .task { await load() }
         }
     }
