@@ -99,6 +99,7 @@ struct ExternalFileReader: View {
                     if let bundle = extractBundle(data) {
                         bundleRoot = bundle.root
                         bundleEntry = bundle.entry
+                        RecentsService.shared.ingest(url)
                     } else {
                         failed = true
                     }
@@ -106,6 +107,7 @@ struct ExternalFileReader: View {
                 }
             } else if let text = try? String(contentsOf: url, encoding: .utf8) {
                 content = text
+                RecentsService.shared.ingest(url)
                 return
             }
             try? await Task.sleep(nanoseconds: 300_000_000)
