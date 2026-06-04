@@ -206,4 +206,34 @@ final class VaultStore {
             return nil
         }
     }
+
+    /// Create a new empty Markdown note at the vault root (collision-safe name),
+    /// rescan, and return it. Returns nil if no vault is open or the write fails.
+    func createNote() -> VaultFile? {
+        guard let root = rootURL else { return nil }
+        let name = VaultNaming.uniqueName(
+            base: "Untitled", ext: "md", existing: Set(files.map(\.name)))
+        let dest = root.appendingPathComponent(name)
+        do {
+            try "".write(to: dest, atomically: true, encoding: .utf8)
+        } catch {
+            errorMessage = "Couldn't create note."
+            return nil
+        }
+        scan()
+        return files.first { $0.relPath == name } ?? files.first { $0.name == name }
+    }
+
+    /// Delete a vault file from disk and rescan. Returns whether it succeeded.
+    @discardableResult
+    func delete(_ file: VaultFile) -> Bool {
+        do {
+            try FileManager.default.removeItem(atPath: file.path)
+            scan()
+            return true
+        } catch {
+            errorMessage = "Couldn't delete \(file.name)."
+            return false
+        }
+    }
 }

@@ -59,7 +59,7 @@ enum L {
     case onboardTitle1, onboardBody1, onboardTitle2, onboardBody2
     case onboardTitle3, onboardBody3, onboardNext, onboardStart
     case enableScripts, disableScripts, desktopMode, mobileMode, lineSpacing
-    case recents, favorites, noRecentsTitle, noRecentsBody, remove
+    case recents, favorites, noRecentsTitle, noRecentsBody, remove, newNote, delete
 
     var en: String {
         switch self {
@@ -146,6 +146,8 @@ enum L {
         case .noRecentsTitle: return "No recent files"
         case .noRecentsBody: return "Files you open from other apps (Share → Markup) show up here."
         case .remove: return "Remove"
+        case .newNote: return "New note"
+        case .delete: return "Delete"
         }
     }
 
@@ -230,6 +232,8 @@ enum L {
         case .noRecentsTitle: return "没有最近文件"
         case .noRecentsBody: return "从其他 App 打开的文件（分享 → Markup）会出现在这里。"
         case .remove: return "移除"
+        case .newNote: return "新建笔记"
+        case .delete: return "删除"
         }
     }
 }
