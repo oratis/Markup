@@ -224,6 +224,28 @@ final class VaultStore {
         return files.first { $0.relPath == name } ?? files.first { $0.name == name }
     }
 
+    /// Rename a vault file (within its folder), keeping its extension unless the
+    /// user typed one. Collision-safe. Returns the renamed file, or nil.
+    @discardableResult
+    func rename(_ file: VaultFile, toBase base: String) -> VaultFile? {
+        let newName = VaultNaming.renamed(file.name, toBase: base)
+        guard newName != file.name else { return file }
+        let others = Set(files.map(\.name).filter { $0 != file.name })
+        let stem = (newName as NSString).deletingPathExtension
+        let ext = (newName as NSString).pathExtension
+        let unique = VaultNaming.uniqueName(base: stem, ext: ext, existing: others)
+        let src = URL(fileURLWithPath: file.path)
+        let dest = src.deletingLastPathComponent().appendingPathComponent(unique)
+        do {
+            try FileManager.default.moveItem(at: src, to: dest)
+        } catch {
+            errorMessage = "Couldn't rename \(file.name)."
+            return nil
+        }
+        scan()
+        return files.first { $0.path == dest.path } ?? files.first { $0.name == unique }
+    }
+
     /// Delete a vault file from disk and rescan. Returns whether it succeeded.
     @discardableResult
     func delete(_ file: VaultFile) -> Bool {

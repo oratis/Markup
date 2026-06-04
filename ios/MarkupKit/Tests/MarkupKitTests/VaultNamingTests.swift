@@ -17,4 +17,16 @@ struct VaultNamingTests {
         #expect(VaultNaming.uniqueName(base: "Note", ext: "md", existing: ["note.md"])
             == "Note 2.md")
     }
+
+    @Test func renameKeepsOriginalExtension() {
+        #expect(VaultNaming.renamed("Old.md", toBase: "New Title") == "New Title.md")
+    }
+
+    @Test func renameRespectsTypedExtension() {
+        #expect(VaultNaming.renamed("page.html", toBase: "index.htm") == "index.htm")
+    }
+
+    @Test func renameEmptyKeepsOldName() {
+        #expect(VaultNaming.renamed("Old.md", toBase: "  ") == "Old.md")
+    }
 }
