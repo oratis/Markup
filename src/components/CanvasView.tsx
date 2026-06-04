@@ -56,13 +56,7 @@ export function CanvasView() {
   return <CanvasViewInner tabId={tab.id} initialJson={tab.content} />;
 }
 
-function CanvasViewInner({
-  tabId,
-  initialJson,
-}: {
-  tabId: string;
-  initialJson: string;
-}) {
+function CanvasViewInner({ tabId, initialJson }: { tabId: string; initialJson: string }) {
   const store = useMemo(
     () => getOrCreateCanvasStore(tabId, initialJson),
     [tabId, initialJson],

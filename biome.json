@@ -1,14 +1,15 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "ignore": [
-      "dist",
-      "node_modules",
-      "src-tauri/target",
-      "src-tauri/gen",
-      "test-fixtures",
-      "pnpm-lock.yaml"
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/src-tauri/target",
+      "!**/src-tauri/gen",
+      "!**/test-fixtures",
+      "!**/pnpm-lock.yaml"
     ]
   },
   "formatter": {
@@ -32,11 +33,14 @@
       "style": {
         "noUnusedTemplateLiteral": "off",
         "useImportType": "warn",
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "noDescendingSpecificity": "off"
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noAssignInExpressions": "off"
+        "noAssignInExpressions": "off",
+        "noArrayIndexKey": "off",
+        "noUnknownAtRules": "off"
       },
       "correctness": {
         "useExhaustiveDependencies": "off",
@@ -49,16 +53,28 @@
         "useGenericFontNames": "off",
         "noSvgWithoutTitle": "off",
         "useFocusableInteractive": "off",
-        "useSemanticElements": "off"
+        "useSemanticElements": "off",
+        "noStaticElementInteractions": "off",
+        "useAriaPropsForRole": "off",
+        "useAriaPropsSupportedByRole": "off"
       },
       "complexity": {
-        "noForEach": "off"
+        "noForEach": "off",
+        "useOptionalChain": "off",
+        "noImportantStyles": "off"
+      }
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "off"
       }
     }
   },
   "overrides": [
     {
-      "include": ["src/test/setup.ts"],
+      "includes": ["**/src/test/setup.ts"],
       "linter": {
         "rules": {
           "suspicious": { "noAssignInExpressions": "off" }

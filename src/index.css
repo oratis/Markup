@@ -149,7 +149,9 @@ body {
 
 /* Toast animation phases */
 .toast-item {
-  transition: opacity 200ms ease, transform 160ms ease;
+  transition:
+    opacity 200ms ease,
+    transform 160ms ease;
 }
 .toast-item[data-phase="in"] {
   opacity: 0;
@@ -273,7 +275,9 @@ html.theme-sepia .markup-hover-preview {
    by lib/focus-typewriter.ts on selectionchange. */
 .focus-mode .milkdown .editor > *,
 .focus-mode .cm-content > * {
-  transition: opacity 200ms ease-out, filter 200ms ease-out;
+  transition:
+    opacity 200ms ease-out,
+    filter 200ms ease-out;
 }
 .focus-mode .milkdown .editor > *:not([data-active]),
 .focus-mode .cm-content > *:not([data-active]) {
@@ -411,7 +415,9 @@ main > aside.shrink-0 {
 
 /* --- Tab bar — match sidebar bg, refine hover --- */
 .titlebar-no-drag.relative.flex.items-center.gap-2 {
-  transition: background 80ms, color 80ms;
+  transition:
+    background 80ms,
+    color 80ms;
 }
 div.flex.items-stretch.border-b.overflow-x-auto {
   background: var(--mk-bg-sidebar) !important;
@@ -628,7 +634,9 @@ body,
   justify-content: center;
   border-radius: 4px;
   color: var(--mk-fg-muted);
-  transition: background 80ms, color 80ms;
+  transition:
+    background 80ms,
+    color 80ms;
 }
 .mk-icon-btn:hover {
   background: var(--mk-bg-hover);
@@ -693,7 +701,9 @@ body,
 
 .mk-format-btn {
   color: var(--mk-fg-muted);
-  transition: background 80ms, color 80ms;
+  transition:
+    background 80ms,
+    color 80ms;
 }
 .mk-format-btn:hover {
   background: var(--mk-bg-hover);
@@ -890,7 +900,9 @@ body,
   color: var(--mk-fg-muted);
   position: relative;
   cursor: pointer;
-  transition: background 80ms, color 80ms;
+  transition:
+    background 80ms,
+    color 80ms;
 }
 .mk-ribbon-btn:hover {
   background: var(--mk-bg-hover);
@@ -935,7 +947,9 @@ body,
   border: 0;
   border-radius: 4px;
   cursor: pointer;
-  transition: background 80ms, color 80ms;
+  transition:
+    background 80ms,
+    color 80ms;
 }
 .mk-rail-tab:hover {
   background: var(--mk-bg-hover);
@@ -958,7 +972,9 @@ body,
    (the accent comes from .mk-tab-indicator above) */
 div.flex.items-stretch.border-b > .titlebar-no-drag.relative {
   position: relative;
-  transition: background 80ms, color 80ms;
+  transition:
+    background 80ms,
+    color 80ms;
 }
 div.flex.items-stretch.border-b > .titlebar-no-drag.relative:hover {
   background: var(--mk-bg-hover);
