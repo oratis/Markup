@@ -44,8 +44,9 @@ enum Keychain {
 final class GitHubAuth {
     static let shared = GitHubAuth()
 
-    /// TODO: paste the OAuth App Client ID here to enable private-repo sign-in.
-    static let clientID = ""
+    /// Markup's GitHub OAuth App Client ID (public — Device Flow uses no
+    /// secret). The OAuth App must have "Enable Device Flow" checked.
+    static let clientID = "Ov23lio36dKpIFz413gz"
 
     private let account = "token"
     var token: String?
