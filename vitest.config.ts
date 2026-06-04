@@ -9,6 +9,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // Restore vi.spyOn/vi.fn spies to their originals before each test. vitest
+    // 4 no longer resets a re-spied method's call history on its own, so without
+    // this a spy set up in one test leaks its calls into the next.
+    restoreMocks: true,
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",

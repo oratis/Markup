@@ -9,3 +9,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Side-effect CSS imports (index.css, katex.min.css, milkdown theme). TypeScript
+// 6 requires a declaration for these or it errors on the bare import.
+declare module "*.css";
