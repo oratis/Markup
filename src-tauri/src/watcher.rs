@@ -100,7 +100,8 @@ mod tests {
 
         let got = collected.lock().unwrap().clone();
         assert!(
-            got.iter().any(|c| matches!(c, VaultChange::Upserted(p) if p.ends_with("hello.md"))),
+            got.iter()
+                .any(|c| matches!(c, VaultChange::Upserted(p) if p.ends_with("hello.md"))),
             "expected upsert for hello.md, got {:?}",
             got
         );

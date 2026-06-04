@@ -70,7 +70,9 @@ pub async fn open_file(app: tauri::AppHandle) -> AppResult<Option<LoadedFile>> {
         });
 
     let picked = rx.await.map_err(|e| AppError::Other(e.to_string()))?;
-    let Some(file_path) = picked else { return Ok(None) };
+    let Some(file_path) = picked else {
+        return Ok(None);
+    };
 
     let path_buf: PathBuf = file_path
         .into_path()
@@ -104,9 +106,7 @@ pub async fn rename_file(from: String, to: String) -> AppResult<()> {
     let from_path = PathBuf::from(&from);
     let to_path = PathBuf::from(&to);
     if to_path.exists() {
-        return Err(AppError::Other(format!(
-            "destination already exists: {to}"
-        )));
+        return Err(AppError::Other(format!("destination already exists: {to}")));
     }
     if let Some(parent) = to_path.parent() {
         if !parent.exists() {
@@ -149,7 +149,9 @@ pub async fn write_image(
 ) -> AppResult<String> {
     let root = PathBuf::from(&vault_root);
     if !root.is_dir() {
-        return Err(AppError::Other(format!("vault root not a dir: {vault_root}")));
+        return Err(AppError::Other(format!(
+            "vault root not a dir: {vault_root}"
+        )));
     }
     let safe_ext = ext.trim_start_matches('.');
     let safe_ext = if safe_ext.is_empty() { "png" } else { safe_ext };
@@ -357,7 +359,7 @@ pub(crate) fn render_markdown_document(
     // the editor uses — so prose like "$5 and $10" is never mistaken for math.
     opts.extension.math_dollars = true;
     opts.render.r#unsafe = true; // allow inline HTML (comrak renamed the field)
-    // Put the fence language on the <pre> so MarkupHighlighter can see it.
+                                 // Put the fence language on the <pre> so MarkupHighlighter can see it.
     opts.render.github_pre_lang = true;
 
     let highlighter = MarkupHighlighter {
@@ -429,7 +431,13 @@ pub async fn write_preview_html(html: String, base_name: String) -> AppResult<St
         .unwrap_or(&base_name);
     let mut safe: String = stem
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect();
     safe.truncate(80);
     if safe.is_empty() {
@@ -620,10 +628,7 @@ mod ext_tests {
     fn unrelated_extensions_are_rejected() {
         for path in ["foo.txt", "foo.pdf", "foo.docx", "foo", "canvas", ".canvas"] {
             let p = PathBuf::from(path);
-            assert!(
-                !looks_like_editable(&p),
-                "{path} should not look editable"
-            );
+            assert!(!looks_like_editable(&p), "{path} should not look editable");
         }
     }
 
@@ -662,8 +667,17 @@ mod ext_tests {
         let root_dir = dir.path().join("vault");
         std::fs::create_dir(&root_dir).unwrap();
         let root = root_dir.to_string_lossy().into_owned();
-        let res = write_image(root, "../escape".to_string(), vec![1, 2, 3], "png".to_string()).await;
-        assert!(matches!(res, Err(AppError::Other(_))), "../ must be rejected");
+        let res = write_image(
+            root,
+            "../escape".to_string(),
+            vec![1, 2, 3],
+            "png".to_string(),
+        )
+        .await;
+        assert!(
+            matches!(res, Err(AppError::Other(_))),
+            "../ must be rejected"
+        );
         // "../escape" from root would land at dir.path()/escape — guard fires
         // before any directory is created, so nothing escaped the vault.
         assert!(!dir.path().join("escape").exists());
@@ -796,7 +810,10 @@ mod render_tests {
     #[test]
     fn render_handles_display_math_blocks() {
         let html = run_render("$$\n\\int_0^1 x\\,dx\n$$", None, None);
-        assert!(html.contains(r#"data-math-style="display""#), "html: {html}");
+        assert!(
+            html.contains(r#"data-math-style="display""#),
+            "html: {html}"
+        );
     }
 
     #[test]
@@ -822,7 +839,10 @@ mod render_tests {
         // A *loose* task list (blank lines between items) used to strand the
         // checkbox above its text; the classes let CSS keep them inline.
         let html = run_render("- [x] done\n\n- [ ] todo", None, None);
-        assert!(html.contains(r#"class="contains-task-list""#), "html: {html}");
+        assert!(
+            html.contains(r#"class="contains-task-list""#),
+            "html: {html}"
+        );
         assert!(html.contains(r#"class="task-list-item""#), "html: {html}");
         assert!(html.contains(r#"type="checkbox""#));
     }
@@ -840,7 +860,10 @@ mod render_tests {
     #[test]
     fn render_strips_user_script_tags() {
         let html = run_render("before\n\n<script>alert(1)</script>\n\nafter", None, None);
-        assert!(!html.contains("alert(1)"), "script payload survived: {html}");
+        assert!(
+            !html.contains("alert(1)"),
+            "script payload survived: {html}"
+        );
         assert!(html.contains("before") && html.contains("after"));
     }
 
@@ -866,22 +889,37 @@ mod render_tests {
             None,
         );
         assert!(html.contains("<strong>bold</strong>"), "html: {html}");
-        assert!(html.contains(r#"href="https://example.com""#), "html: {html}");
-        assert!(html.contains("<kbd>Esc</kbd>"), "benign raw HTML dropped: {html}");
+        assert!(
+            html.contains(r#"href="https://example.com""#),
+            "html: {html}"
+        );
+        assert!(
+            html.contains("<kbd>Esc</kbd>"),
+            "benign raw HTML dropped: {html}"
+        );
     }
 
     #[test]
     fn render_preserves_rich_markup_through_the_sanitiser() {
         // syntect inline styles
         let code = run_render("```rust\nfn main() {}\n```", None, None);
-        assert!(code.contains("style=\"color:"), "syntect styles dropped: {code}");
+        assert!(
+            code.contains("style=\"color:"),
+            "syntect styles dropped: {code}"
+        );
         // math node + its CDN assets still inject (detection runs post-sanitise)
         let math = run_render("Inline $a^2$ here", None, None);
-        assert!(math.contains(r#"data-math-style="inline""#), "math node: {math}");
+        assert!(
+            math.contains(r#"data-math-style="inline""#),
+            "math node: {math}"
+        );
         assert!(math.contains("katex.render"), "katex assets: {math}");
         // mermaid block + assets
         let dia = run_render("```mermaid\ngraph LR\nA-->B\n```", None, None);
-        assert!(dia.contains(r#"<pre class="mermaid">"#), "mermaid block: {dia}");
+        assert!(
+            dia.contains(r#"<pre class="mermaid">"#),
+            "mermaid block: {dia}"
+        );
         assert!(dia.contains("mermaid.esm.min.mjs"), "mermaid assets: {dia}");
         // task-list input + heading anchor id
         let task = run_render("# Hi There\n\n- [x] done", None, None);
@@ -917,12 +955,7 @@ pub async fn log_perf(app: tauri::AppHandle, label: String, ms: f64) -> AppResul
         .join("Library/Logs/markup");
     let _ = tokio::fs::create_dir_all(&log_dir).await;
     let log_path = log_dir.join("perf.log");
-    let line = format!(
-        "{}\t{}\t{:.2}\n",
-        chrono_now_iso(),
-        label,
-        ms
-    );
+    let line = format!("{}\t{}\t{:.2}\n", chrono_now_iso(), label, ms);
     let line_bytes = line.into_bytes();
     let _ = tokio::task::spawn_blocking(move || {
         std::fs::OpenOptions::new()

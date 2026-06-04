@@ -13,7 +13,7 @@
 
 #[cfg(target_os = "macos")]
 pub fn create(path: &str) -> Option<Vec<u8>> {
-    use objc2_foundation::{NSString, NSURL, NSURLBookmarkCreationOptions};
+    use objc2_foundation::{NSString, NSURLBookmarkCreationOptions, NSURL};
     let ns_path = NSString::from_str(path);
     let url = NSURL::fileURLWithPath(&ns_path);
     let data = url
@@ -32,7 +32,7 @@ pub fn create(path: &str) -> Option<Vec<u8>> {
 /// open for the session, so there's nothing to balance a `stop` against.
 #[cfg(target_os = "macos")]
 pub fn resolve_and_start(bytes: &[u8]) -> Option<String> {
-    use objc2_foundation::{NSData, NSURL, NSURLBookmarkResolutionOptions};
+    use objc2_foundation::{NSData, NSURLBookmarkResolutionOptions, NSURL};
     let data = NSData::with_bytes(bytes);
     let url = unsafe {
         NSURL::URLByResolvingBookmarkData_options_relativeToURL_bookmarkDataIsStale_error(

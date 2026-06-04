@@ -87,7 +87,9 @@ async fn index_remove_drops_doc_from_results() {
     idx.commit().await.unwrap();
     assert_eq!(idx.search("uniqueterm-zhgrf", 5).unwrap().len(), 1);
 
-    idx.remove_file(std::path::Path::new("/a.md")).await.unwrap();
+    idx.remove_file(std::path::Path::new("/a.md"))
+        .await
+        .unwrap();
     idx.commit().await.unwrap();
     assert_eq!(idx.search("uniqueterm-zhgrf", 5).unwrap().len(), 0);
 }
@@ -127,13 +129,9 @@ fn search_returns_results_in_score_order() {
         let tmp = tempdir().unwrap();
         let idx = MarkupIndex::open_or_create(tmp.path()).unwrap();
         // Two docs, one mentions the term once, the other repeatedly.
-        idx.upsert_file(
-            std::path::Path::new("/a.md"),
-            "tantivy",
-            1,
-        )
-        .await
-        .unwrap();
+        idx.upsert_file(std::path::Path::new("/a.md"), "tantivy", 1)
+            .await
+            .unwrap();
         idx.upsert_file(
             std::path::Path::new("/b.md"),
             "tantivy tantivy tantivy and more tantivy",

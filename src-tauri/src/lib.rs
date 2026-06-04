@@ -3,6 +3,7 @@ mod commands;
 mod commands_locale;
 mod commands_vault;
 mod commands_window;
+mod github;
 mod menu;
 mod recent;
 
@@ -14,15 +15,15 @@ pub mod vault;
 pub mod watcher;
 
 use commands::{
-    log_perf, open_file, read_file, rename_file, render_html, trash_file, write_file,
-    write_image, write_preview_html,
+    log_perf, open_file, read_file, rename_file, render_html, trash_file, write_file, write_image,
+    write_preview_html,
 };
 use commands_locale::set_locale;
-use commands_window::new_window;
 use commands_vault::{
     close_vault, current_vault, list_vault_files, open_vault, pick_vault, restore_vault,
     search_vault,
 };
+use commands_window::new_window;
 use recent::{clear_recent_files, list_recent_files, push_recent_file};
 use std::sync::Mutex;
 use tauri::{Emitter, Manager, RunEvent, State};
@@ -61,8 +62,9 @@ fn open_urls_to_paths(urls: &[tauri::Url]) -> Vec<String> {
 pub fn run() {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,tantivy=warn,markup=debug")),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                tracing_subscriber::EnvFilter::new("info,tantivy=warn,markup=debug")
+            }),
         )
         .try_init();
 
@@ -113,6 +115,8 @@ pub fn run() {
             search_vault,
             restore_vault,
             take_pending_files,
+            github::github_device_start,
+            github::github_device_poll,
         ])
         .build(tauri::generate_context!())
         .expect("error while building markup")
