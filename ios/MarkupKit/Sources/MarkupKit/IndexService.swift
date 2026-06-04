@@ -28,7 +28,7 @@ public final class IndexService {
         CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(
           rel_path UNINDEXED, title, body, tokenize='unicode61');
         CREATE TABLE IF NOT EXISTS links(
-          src TEXT, target TEXT, target_lc TEXT, heading TEXT, is_embed INTEGER);
+          src TEXT, target TEXT, target_lc TEXT, heading TEXT, is_embed INTEGER, context TEXT);
         CREATE TABLE IF NOT EXISTS tags(rel_path TEXT, tag TEXT);
         CREATE TABLE IF NOT EXISTS headings(rel_path TEXT, level INTEGER, text TEXT, line INTEGER);
         CREATE INDEX IF NOT EXISTS idx_links_target ON links(target_lc);
@@ -55,11 +55,19 @@ public final class IndexService {
             "INSERT INTO fts(rel_path,title,body) VALUES(?,?,?)",
             [.text(relPath), .text(title), .text(content)])
 
-        for link in parseWikilinks(content) {
-            try db.run(
-                "INSERT INTO links(src,target,target_lc,heading,is_embed) VALUES(?,?,?,?,?)",
-                [.text(relPath), .text(link.target), .text(link.target.lowercased()),
-                 .text(link.heading ?? ""), .int(link.isEmbed ? 1 : 0)])
+        // Parse links per line so each carries the surrounding line as context
+        // (shown under backlinks). Wikilinks never span lines.
+        for line in content.split(separator: "\n", omittingEmptySubsequences: false) {
+            let lineStr = String(line)
+            let links = parseWikilinks(lineStr)
+            guard !links.isEmpty else { continue }
+            let ctx = lineStr.trimmingCharacters(in: .whitespacesAndNewlines)
+            for link in links {
+                try db.run(
+                    "INSERT INTO links(src,target,target_lc,heading,is_embed,context) VALUES(?,?,?,?,?,?)",
+                    [.text(relPath), .text(link.target), .text(link.target.lowercased()),
+                     .text(link.heading ?? ""), .int(link.isEmbed ? 1 : 0), .text(ctx)])
+            }
         }
         for tag in extractTags(content) {
             try db.run("INSERT INTO tags(rel_path,tag) VALUES(?,?)", [.text(relPath), .text(tag)])
@@ -140,6 +148,22 @@ public final class IndexService {
         s.bindAll([.text(base), .text(base + ".md")])
         var out: [String] = []
         while s.step() { out.append(s.text(0)) }
+        return out
+    }
+
+    /// Backlinks with the line of context each link appears on, newest-source
+    /// first then by context. One hit per (source, context) pair.
+    public func backlinkHits(toName name: String) throws -> [BacklinkHit] {
+        let base = stripMarkdownExtension(name).lowercased()
+        let s = try db.prepare("""
+        SELECT DISTINCT src, context FROM links
+        WHERE target_lc = ? OR target_lc = ? ORDER BY src, context
+        """)
+        s.bindAll([.text(base), .text(base + ".md")])
+        var out: [BacklinkHit] = []
+        while s.step() {
+            out.append(BacklinkHit(source: s.text(0), context: s.text(1)))
+        }
         return out
     }
 
