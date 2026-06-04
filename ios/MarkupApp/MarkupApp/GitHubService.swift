@@ -72,6 +72,27 @@ final class GitHubService {
         }
     }
 
+    /// List the signed-in user's repositories (most-recently-updated first from
+    /// the API, then private-first / alphabetical via `GitHubRepos.parse`).
+    func listRepos() async throws -> [GitHubRepo] {
+        guard let url = URL(string:
+            "https://api.github.com/user/repos?per_page=100&sort=updated") else {
+            throw GitHubError.badURL
+        }
+        var req = URLRequest(url: url)
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        switch code {
+        case 200: return GitHubRepos.parse(data)
+        case 401, 403: throw GitHubError.rateLimited
+        default: throw GitHubError.http(code)
+        }
+    }
+
     /// A directory link for navigating into `entry` from a parent `link`.
     func childLink(_ parent: GitHubLink, _ entry: GitHubEntry) -> GitHubLink {
         GitHubLink(owner: parent.owner, repo: parent.repo, ref: parent.ref,

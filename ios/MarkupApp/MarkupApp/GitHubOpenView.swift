@@ -12,6 +12,10 @@ struct GitHubOpenView: View {
     @State private var error: String?
     @State private var path = NavigationPath()
     @State private var showSignIn = false
+    @State private var confirmSignOut = false
+    @State private var repos: [GitHubRepo] = []
+    @State private var reposLoading = false
+    @State private var reposError: String?
     private let auth = GitHubAuth.shared
 
     var body: some View {
@@ -23,7 +27,7 @@ struct GitHubOpenView: View {
                             Label(t(.githubSignedIn), systemImage: "checkmark.seal.fill")
                                 .foregroundStyle(.green)
                             Spacer()
-                            Button(t(.githubSignOut), role: .destructive) { auth.signOut() }
+                            Button(t(.githubSignOut), role: .destructive) { confirmSignOut = true }
                         }
                     }
                 } else if auth.isConfigured {
@@ -58,6 +62,25 @@ struct GitHubOpenView: View {
                     }
                     .disabled(urlText.trimmingCharacters(in: .whitespaces).isEmpty || loading)
                 }
+
+                if auth.isSignedIn {
+                    Section(t(.githubYourRepos)) {
+                        if reposLoading {
+                            HStack { ProgressView().controlSize(.small); Text("…") }
+                        } else if let reposError {
+                            Text(reposError).foregroundStyle(.red).font(.caption)
+                        }
+                        ForEach(repos) { repo in
+                            NavigationLink(value: repo.link) {
+                                Label {
+                                    Text(repo.fullName).font(.callout)
+                                } icon: {
+                                    Image(systemName: repo.isPrivate ? "lock.fill" : "book")
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .navigationTitle(t(.openFromGitHub))
             .navigationBarTitleDisplayMode(.inline)
@@ -65,8 +88,27 @@ struct GitHubOpenView: View {
             .navigationDestination(for: GitHubLink.self) { link in
                 GitHubBrowseView(link: link, onOpenFile: { url in onOpen(url); dismiss() })
             }
-            .sheet(isPresented: $showSignIn) { GitHubSignInView() }
+            .sheet(isPresented: $showSignIn, onDismiss: { Task { await loadRepos() } }) {
+                GitHubSignInView()
+            }
+            .alert(t(.githubSignOutConfirm), isPresented: $confirmSignOut) {
+                Button(t(.githubSignOut), role: .destructive) {
+                    auth.signOut()
+                    repos = []
+                }
+                Button(t(.cancel), role: .cancel) {}
+            }
+            .task { await loadRepos() }
         }
+    }
+
+    private func loadRepos() async {
+        guard auth.isSignedIn else { return }
+        reposLoading = true
+        reposError = nil
+        defer { reposLoading = false }
+        do { repos = try await GitHubService.shared.listRepos() }
+        catch { reposError = error.localizedDescription }
     }
 
     private func open() async {
