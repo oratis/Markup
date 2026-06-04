@@ -10,9 +10,10 @@ struct GitHubOpenView: View {
     @State private var urlText = ""
     @State private var loading = false
     @State private var error: String?
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Form {
                 Section {
                     TextField(t(.githubUrlPrompt), text: $urlText, axis: .vertical)
@@ -42,6 +43,9 @@ struct GitHubOpenView: View {
             .navigationTitle(t(.openFromGitHub))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.cancel)) { dismiss() } } }
+            .navigationDestination(for: GitHubLink.self) { link in
+                GitHubBrowseView(link: link, onOpenFile: { url in onOpen(url); dismiss() })
+            }
         }
     }
 
@@ -49,6 +53,11 @@ struct GitHubOpenView: View {
         error = nil
         guard let link = GitHubLinkParser.parse(urlText) else {
             error = t(.githubInvalid)
+            return
+        }
+        // A repo / folder link → browse it; a file link → open it.
+        if link.isDirectory {
+            path.append(link)
             return
         }
         loading = true
