@@ -19,6 +19,15 @@ struct RootView: View {
     @State private var showSettings = false
     @State private var showRecents = false
     @State private var openedFile: OpenedURL?
+    /// relPath of a just-created note that should open straight into edit mode.
+    @State private var pendingEditFileId: String?
+
+    /// Create a blank note and open it straight into edit mode.
+    private func newNote() {
+        guard let f = vault.createNote() else { return }
+        pendingEditFileId = f.relPath
+        selection = f
+    }
 
     private func open(_ file: VaultFile) {
         selection = file
@@ -80,6 +89,12 @@ struct RootView: View {
                     NavigationLink(value: file) {
                         FileRow(file: file, showIcon: true)
                     }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            if selection == file { selection = nil }
+                            vault.delete(file)
+                        } label: { Label(t(.delete), systemImage: "trash") }
+                    }
                 }
             } header: {
                 VStack(alignment: .leading, spacing: 4) {
@@ -107,6 +122,9 @@ struct RootView: View {
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
             if vault.rootURL != nil {
+                Button { newNote() } label: { Image(systemName: "square.and.pencil") }
+                    .accessibilityLabel(t(.newNote))
+                    .keyboardShortcut("n", modifiers: .command)
                 Button { showQuickOpen = true } label: { Image(systemName: "magnifyingglass") }
                     .accessibilityLabel(t(.quickOpen))
                     .keyboardShortcut("p", modifiers: .command)
@@ -137,8 +155,11 @@ struct RootView: View {
             CanvasPlaceholderView(file: file)
                 .id(file.relPath)
         } else if let file = selection, let content = vault.content(of: file) {
-            ReaderView(file: file, content: content, vault: vault, onOpen: open)
+            ReaderView(
+                file: file, content: content, vault: vault,
+                startEditing: pendingEditFileId == file.relPath, onOpen: open)
                 .id(file.relPath)
+                .onAppear { pendingEditFileId = nil }
         } else if selection != nil {
             ContentUnavailableView(
                 t(.couldntRead), systemImage: "exclamationmark.triangle")

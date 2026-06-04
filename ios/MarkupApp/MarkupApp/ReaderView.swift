@@ -66,12 +66,16 @@ struct ReaderView: View {
 
     private let positions = ReadingPositionStore.shared
 
-    init(file: VaultFile, content: String, vault: VaultStore, onOpen: @escaping (VaultFile) -> Void) {
+    init(
+        file: VaultFile, content: String, vault: VaultStore,
+        startEditing: Bool = false, onOpen: @escaping (VaultFile) -> Void
+    ) {
         self.file = file
         self.vault = vault
         self.onOpen = onOpen
         _content = State(initialValue: content)
         _loadedMtimeMs = State(initialValue: file.mtimeMs)
+        _isEditing = State(initialValue: startEditing)
     }
 
     private var theme: ReaderTheme { ReaderTheme(rawValue: themeRaw) ?? .light }
