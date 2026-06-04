@@ -1,8 +1,17 @@
 import Foundation
 import MarkupKit
 
+/// A vault the user has opened before — its display name, resolved path (for
+/// dedup/display), and security-scoped bookmark (for re-opening).
+struct StoredVault: Codable, Identifiable, Equatable {
+    var name: String
+    var path: String
+    var bookmark: Data
+    var id: String { path }
+}
+
 /// Owns the chosen vault folder (via a security-scoped bookmark) and the list of
-/// `.md` files inside it. M0 scope: open a folder, scan it, load file contents.
+/// `.md` files inside it. Supports several remembered vaults with a switcher.
 @MainActor
 @Observable
 final class VaultStore {
@@ -10,6 +19,8 @@ final class VaultStore {
     var files: [VaultFile] = []
     var errorMessage: String?
     var isScanning = false
+    /// Vaults the user has opened, for the switcher. Most-recent first.
+    var knownVaults: [StoredVault] = []
 
     /// Search/links/tags/outline index. Built off the scan; nil until ready.
     var index: IndexService?
@@ -24,7 +35,50 @@ final class VaultStore {
     }
 
     private let bookmarkKey = "vault.rootBookmark"
+    private let vaultsKey = "vault.known"
     private let listableExtensions = markupListableExtensions
+
+    init() { loadKnownVaults() }
+
+    private func loadKnownVaults() {
+        if let data = UserDefaults.standard.data(forKey: vaultsKey),
+           let decoded = try? JSONDecoder().decode([StoredVault].self, from: data) {
+            knownVaults = decoded
+        }
+    }
+
+    private func saveKnownVaults() {
+        if let data = try? JSONEncoder().encode(knownVaults) {
+            UserDefaults.standard.set(data, forKey: vaultsKey)
+        }
+    }
+
+    /// Upsert the current root into the known-vaults list (most-recent first).
+    private func rememberVault(_ url: URL, bookmark: Data) {
+        let entry = StoredVault(name: url.lastPathComponent, path: url.path, bookmark: bookmark)
+        knownVaults.removeAll { $0.path == entry.path }
+        knownVaults.insert(entry, at: 0)
+        saveKnownVaults()
+    }
+
+    /// Switch to a remembered vault. Returns whether it resolved + opened.
+    @discardableResult
+    func switchTo(_ vault: StoredVault) -> Bool {
+        var stale = false
+        guard let url = try? URL(resolvingBookmarkData: vault.bookmark, bookmarkDataIsStale: &stale)
+        else {
+            errorMessage = "Couldn't reopen \(vault.name)."
+            return false
+        }
+        adopt(url, persist: true)
+        return rootURL != nil
+    }
+
+    /// Forget a remembered vault (doesn't touch its files on disk).
+    func removeVault(_ vault: StoredVault) {
+        knownVaults.removeAll { $0.id == vault.id }
+        saveKnownVaults()
+    }
 
     var rootName: String { rootURL?.lastPathComponent ?? "No folder" }
 
@@ -71,6 +125,7 @@ final class VaultStore {
 
         if persist, let data = try? url.bookmarkData() {
             UserDefaults.standard.set(data, forKey: bookmarkKey)
+            rememberVault(url, bookmark: data)
         }
         scan()
     }

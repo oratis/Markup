@@ -18,6 +18,7 @@ struct RootView: View {
     @State private var showTags = false
     @State private var showSettings = false
     @State private var showRecents = false
+    @State private var showVaultSwitcher = false
     @State private var openedFile: OpenedURL?
     /// relPath of a just-created note that should open straight into edit mode.
     @State private var pendingEditFileId: String?
@@ -59,6 +60,9 @@ struct RootView: View {
         .sheet(isPresented: $showSettings) { SettingsView(vault: vault) }
         .sheet(isPresented: $showRecents) {
             RecentsView(onOpen: { openedFile = OpenedURL(url: $0) })
+        }
+        .sheet(isPresented: $showVaultSwitcher) {
+            VaultSwitcherView(vault: vault, onOpenAnother: { showPicker = true })
         }
         .sheet(item: $openedFile) { ExternalFileReader(url: $0.url) }
         .alert(t(.rename), isPresented: Binding(
@@ -155,7 +159,7 @@ struct RootView: View {
                     Button { showTags = true } label: { Label(t(.tags), systemImage: "number") }
                     Button { showRecents = true } label: { Label(t(.recents), systemImage: "clock") }
                     Button { showSettings = true } label: { Label(t(.settings), systemImage: "gearshape") }
-                    Button { showPicker = true } label: { Label(t(.openFolder), systemImage: "folder.badge.plus") }
+                    Button { showVaultSwitcher = true } label: { Label(t(.switchVault), systemImage: "folder.badge.plus") }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
