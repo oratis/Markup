@@ -21,6 +21,8 @@ struct RootView: View {
     @State private var openedFile: OpenedURL?
     /// relPath of a just-created note that should open straight into edit mode.
     @State private var pendingEditFileId: String?
+    @State private var renameTarget: VaultFile?
+    @State private var renameText = ""
 
     /// Create a blank note and open it straight into edit mode.
     private func newNote() {
@@ -59,6 +61,18 @@ struct RootView: View {
             RecentsView(onOpen: { openedFile = OpenedURL(url: $0) })
         }
         .sheet(item: $openedFile) { ExternalFileReader(url: $0.url) }
+        .alert(t(.rename), isPresented: Binding(
+            get: { renameTarget != nil },
+            set: { if !$0 { renameTarget = nil } })) {
+            TextField(t(.newNote), text: $renameText)
+            Button(t(.cancel), role: .cancel) { renameTarget = nil }
+            Button(t(.rename)) {
+                if let target = renameTarget, let renamed = vault.rename(target, toBase: renameText) {
+                    if selection == target { selection = renamed }
+                }
+                renameTarget = nil
+            }
+        }
     }
 
     // MARK: - Sidebar
@@ -94,6 +108,13 @@ struct RootView: View {
                             if selection == file { selection = nil }
                             vault.delete(file)
                         } label: { Label(t(.delete), systemImage: "trash") }
+                    }
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            renameText = (file.name as NSString).deletingPathExtension
+                            renameTarget = file
+                        } label: { Label(t(.rename), systemImage: "pencil") }
+                        .tint(.blue)
                     }
                 }
             } header: {
