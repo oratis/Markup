@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useAppStore } from "../store";
 
 interface RibbonProps {
@@ -13,7 +14,7 @@ interface RibbonAction {
   title: string;
   active?: boolean;
   onClick: () => void;
-  icon: JSX.Element;
+  icon: ReactNode;
 }
 
 export function Ribbon({
