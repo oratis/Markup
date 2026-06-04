@@ -89,9 +89,9 @@ jobs:
           retention-days: 7
 
   ios:
-    name: iOS (MarkupKit tests)
+    name: iOS (MarkupKit tests + app build)
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
 
@@ -108,6 +108,19 @@ jobs:
       # tests on the macOS host — no simulator needed.
       - name: Test MarkupKit
         run: swift test --package-path ios/MarkupKit
+
+      # Compile the full SwiftUI app for the simulator (no signing) so UI-layer
+      # regressions are caught in CI, not just by local xcodebuild.
+      - name: Build MarkupApp (simulator)
+        run: |
+          xcodebuild \
+            -project ios/MarkupApp/MarkupApp.xcodeproj \
+            -scheme MarkupApp \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
 
   rust:
     name: Rust (build + test)
