@@ -17,6 +17,8 @@ struct ReaderView: View {
     @State private var showConflict = false
     @State private var saveTask: Task<Void, Never>?
     @State private var htmlReloadToken = 0
+    /// Scripts in a raw `.html` file are off until the user opts in (per-doc).
+    @State private var htmlJSEnabled = false
 
     private var isHTML: Bool { FileKind.of(file.name) == .html }
 
@@ -99,6 +101,7 @@ struct ReaderView: View {
                     fileURL: URL(fileURLWithPath: file.path),
                     readAccessURL: vault.rootURL,
                     loadToken: htmlReloadToken,
+                    javaScriptEnabled: htmlJSEnabled,
                     proxy: proxy,
                     onScroll: { positions.save($0, for: file.relPath) })
             } else {
@@ -149,7 +152,14 @@ struct ReaderView: View {
             .keyboardShortcut("e", modifiers: .command)
         }
         if !isEditing && isHTML {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    htmlJSEnabled.toggle()
+                    htmlReloadToken += 1
+                } label: {
+                    Image(systemName: htmlJSEnabled ? "bolt.fill" : "bolt.slash")
+                }
+                .accessibilityLabel(htmlJSEnabled ? t(.disableScripts) : t(.enableScripts))
                 Button { shareItem = ShareItem(url: URL(fileURLWithPath: file.path)) } label: {
                     Image(systemName: "square.and.arrow.up")
                 }

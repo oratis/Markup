@@ -76,6 +76,11 @@ struct ReaderWebView: UIViewRepresentable {
     var readAccessURL: URL? = nil
     /// Bump to force a reload of the same source (e.g. after editing an HTML file).
     var loadToken: Int = 0
+    /// Whether scripts may run. The markdown-render path keeps this `true` (its
+    /// bundled renderer needs JS); for a raw `.html` document callers pass the
+    /// user's per-doc choice (off by default, so untrusted shared HTML can't
+    /// execute JS until opted in).
+    var javaScriptEnabled: Bool = true
     var proxy: WebViewProxy? = nil
     var onScroll: (Double) -> Void = { _ in }
     var onToggleTask: (Int) -> Void = { _ in }
@@ -88,6 +93,7 @@ struct ReaderWebView: UIViewRepresentable {
         config.userContentController = controller
 
         let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
         webView.isOpaque = false
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
@@ -100,6 +106,7 @@ struct ReaderWebView: UIViewRepresentable {
         proxy?.webView = webView
         context.coordinator.onScroll = onScroll
         context.coordinator.onToggleTask = onToggleTask
+        context.coordinator.allowJavaScript = javaScriptEnabled
         let key = (fileURL.map { "file:" + $0.path } ?? html) + "#\(loadToken)"
         if context.coordinator.lastHTML != key {
             context.coordinator.lastHTML = key
@@ -116,10 +123,11 @@ struct ReaderWebView: UIViewRepresentable {
         Coordinator(onScroll: onScroll, onToggleTask: onToggleTask)
     }
 
-    final class Coordinator: NSObject, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         var lastHTML: String?
         var onScroll: (Double) -> Void
         var onToggleTask: (Int) -> Void
+        var allowJavaScript = true
 
         init(onScroll: @escaping (Double) -> Void, onToggleTask: @escaping (Int) -> Void) {
             self.onScroll = onScroll
@@ -135,6 +143,17 @@ struct ReaderWebView: UIViewRepresentable {
             case "task": onToggleTask(number.intValue)
             default: break
             }
+        }
+
+        // Gate JavaScript per navigation so the HTML script toggle takes effect
+        // on reload without recreating the WebView.
+        func webView(
+            _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+            preferences: WKWebpagePreferences,
+            decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
+        ) {
+            preferences.allowsContentJavaScript = allowJavaScript
+            decisionHandler(.allow, preferences)
         }
     }
 }
