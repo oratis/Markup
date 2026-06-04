@@ -63,13 +63,7 @@ export function CanvasInteractionLayer({
   );
 }
 
-function EdgeDraftGhost({
-  doc,
-  draft,
-}: {
-  doc: CanvasDoc;
-  draft: EdgeDraft;
-}) {
+function EdgeDraftGhost({ doc, draft }: { doc: CanvasDoc; draft: EdgeDraft }) {
   const from = doc.nodes.find((n) => n.id === draft.fromNodeId);
   if (!from) return null;
   const fromAnchor = anchorAt(asBox(from), draft.fromSide);

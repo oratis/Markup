@@ -117,7 +117,7 @@ function scoreSubsequence(haystack: string, needle: string): number {
     if (h >= haystack.length) return Number.NEGATIVE_INFINITY;
     if (lastMatchH === h - 1) score += 3;
     else score += 1;
-    if (h === 0 || /[\/_\-. ]/.test(haystack[h - 1])) score += 2;
+    if (h === 0 || /[/_\-. ]/.test(haystack[h - 1])) score += 2;
     lastMatchH = h;
     h++;
   }
