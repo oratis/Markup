@@ -44,8 +44,8 @@ public enum ReaderHTML {
     ///     so the reader works fully offline.
     public static func document(
         markdown: String, title: String, theme: ReaderTheme = .light,
-        fontScale: Double = 1.0, maxWidth: Int = 720, restoreFraction: Double = 0,
-        assetBase: String? = nil
+        fontScale: Double = 1.0, maxWidth: Int = 720, lineHeight: Double = 1.65,
+        restoreFraction: Double = 0, assetBase: String? = nil
     ) -> String {
         let math = needsMath(markdown)
         let mermaid = needsMermaid(markdown)
@@ -97,7 +97,7 @@ public enum ReaderHTML {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <title>\(htmlEscape(title))</title>
-        <style>\(css(theme, fontScale: fontScale, maxWidth: maxWidth))</style>
+        <style>\(css(theme, fontScale: fontScale, maxWidth: maxWidth, lineHeight: lineHeight))</style>
         \(head)
         <script defer>
         document.addEventListener("DOMContentLoaded", function () {
@@ -205,7 +205,9 @@ public enum ReaderHTML {
 
     // MARK: - Themes (minimal app chrome; desktop doc-themes are a follow-up)
 
-    private static func css(_ theme: ReaderTheme, fontScale: Double, maxWidth: Int) -> String {
+    private static func css(
+        _ theme: ReaderTheme, fontScale: Double, maxWidth: Int, lineHeight: Double = 1.65
+    ) -> String {
         let (bg, fg, muted, codeBg, accent): (String, String, String, String, String)
         switch theme {
         case .light: (bg, fg, muted, codeBg, accent) = ("#ffffff", "#1c1c1e", "#6b6b70", "#f4f4f6", "#0a84ff")
@@ -221,7 +223,7 @@ public enum ReaderHTML {
           margin: 0 auto; padding: 24px 18px 64px; max-width: \(width)px;
           background: \(bg); color: \(fg);
           font: -apple-system-body, system-ui, -apple-system, "SF Pro Text", sans-serif;
-          line-height: 1.65; word-wrap: break-word;
+          line-height: \(String(format: "%.2f", min(2.4, max(1.2, lineHeight)))); word-wrap: break-word;
         }
         h1,h2,h3,h4,h5,h6 { line-height: 1.25; margin: 1.6em 0 0.6em; font-weight: 700; }
         h1 { font-size: 1.8em; } h2 { font-size: 1.45em; } h3 { font-size: 1.2em; }

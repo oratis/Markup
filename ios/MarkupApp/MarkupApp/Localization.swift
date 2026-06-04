@@ -58,7 +58,7 @@ enum L {
     case canvasTitle, canvasBody, nodesEdgesFmt
     case onboardTitle1, onboardBody1, onboardTitle2, onboardBody2
     case onboardTitle3, onboardBody3, onboardNext, onboardStart
-    case enableScripts, disableScripts
+    case enableScripts, disableScripts, desktopMode, mobileMode, lineSpacing
 
     var en: String {
         switch self {
@@ -137,6 +137,9 @@ enum L {
         case .onboardStart: return "Open a Folder"
         case .enableScripts: return "Enable scripts"
         case .disableScripts: return "Disable scripts"
+        case .desktopMode: return "Desktop layout"
+        case .mobileMode: return "Mobile layout"
+        case .lineSpacing: return "Line spacing"
         }
     }
 
@@ -213,6 +216,9 @@ enum L {
         case .onboardStart: return "打开文件夹"
         case .enableScripts: return "启用脚本"
         case .disableScripts: return "停用脚本"
+        case .desktopMode: return "桌面版式"
+        case .mobileMode: return "移动版式"
+        case .lineSpacing: return "行距"
         }
     }
 }

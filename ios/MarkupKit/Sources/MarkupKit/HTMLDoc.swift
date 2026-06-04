@@ -10,7 +10,9 @@ public enum FileKind: Sendable {
 
     public static func of(_ name: String) -> FileKind? {
         switch (name as NSString).pathExtension.lowercased() {
-        case "md", "markdown", "mdx", "mkd": return .markdown
+        // Plain text (`.txt`) is read through the Markdown renderer — it
+        // degrades cleanly (paragraphs/headings) and stays searchable.
+        case "md", "markdown", "mdx", "mkd", "txt": return .markdown
         case "html", "htm": return .html
         case "canvas": return .canvas
         default: return nil
@@ -19,9 +21,9 @@ public enum FileKind: Sendable {
 }
 
 /// File extensions whose *text* Markup opens and full-text-indexes
-/// (Markdown + HTML).
+/// (Markdown + plain text + HTML).
 public let markupSupportedExtensions: Set<String> = [
-    "md", "markdown", "mdx", "mkd", "html", "htm",
+    "md", "markdown", "mdx", "mkd", "txt", "html", "htm",
 ]
 
 /// File extensions the vault *lists*. Wider than the indexed set: `.canvas`

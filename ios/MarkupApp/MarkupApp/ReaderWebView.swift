@@ -81,6 +81,9 @@ struct ReaderWebView: UIViewRepresentable {
     /// user's per-doc choice (off by default, so untrusted shared HTML can't
     /// execute JS until opted in).
     var javaScriptEnabled: Bool = true
+    /// Render a raw `.html` page in desktop mode (wider viewport + desktop UA)
+    /// instead of mobile — useful for web reports/PPTs designed for a laptop.
+    var preferDesktop: Bool = false
     var proxy: WebViewProxy? = nil
     var onScroll: (Double) -> Void = { _ in }
     var onToggleTask: (Int) -> Void = { _ in }
@@ -107,6 +110,7 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onScroll = onScroll
         context.coordinator.onToggleTask = onToggleTask
         context.coordinator.allowJavaScript = javaScriptEnabled
+        context.coordinator.preferDesktop = preferDesktop
         let key = (fileURL.map { "file:" + $0.path } ?? html) + "#\(loadToken)"
         if context.coordinator.lastHTML != key {
             context.coordinator.lastHTML = key
@@ -128,6 +132,7 @@ struct ReaderWebView: UIViewRepresentable {
         var onScroll: (Double) -> Void
         var onToggleTask: (Int) -> Void
         var allowJavaScript = true
+        var preferDesktop = false
 
         init(onScroll: @escaping (Double) -> Void, onToggleTask: @escaping (Int) -> Void) {
             self.onScroll = onScroll
@@ -153,6 +158,7 @@ struct ReaderWebView: UIViewRepresentable {
             decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
         ) {
             preferences.allowsContentJavaScript = allowJavaScript
+            preferences.preferredContentMode = preferDesktop ? .desktop : .mobile
             decisionHandler(.allow, preferences)
         }
     }

@@ -8,6 +8,8 @@ struct FileKindTests {
         #expect(FileKind.of("a.markdown") == .markdown)
         #expect(FileKind.of("page.html") == .html)
         #expect(FileKind.of("page.HTM") == .html)
+        #expect(FileKind.of("readme.txt") == .markdown)
+        #expect(markupSupportedExtensions.contains("txt"))
         #expect(FileKind.of("photo.png") == nil)
     }
 

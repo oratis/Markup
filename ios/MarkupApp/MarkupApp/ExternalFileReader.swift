@@ -12,6 +12,7 @@ struct ExternalFileReader: View {
     @State private var failed = false
     /// Scripts in a shared `.html` file are off until the user opts in.
     @State private var htmlJSEnabled = false
+    @State private var htmlDesktopMode = false
     @State private var htmlReloadToken = 0
     @AppStorage("reader.theme") private var themeRaw = ReaderTheme.light.rawValue
 
@@ -35,7 +36,8 @@ struct ExternalFileReader: View {
                     ReaderWebView(
                         html: docHTML, baseURL: url.deletingLastPathComponent(),
                         loadToken: htmlReloadToken,
-                        javaScriptEnabled: isHTML ? htmlJSEnabled : true)
+                        javaScriptEnabled: isHTML ? htmlJSEnabled : true,
+                        preferDesktop: isHTML && htmlDesktopMode)
                 } else if failed {
                     ContentUnavailableView(
                         "Couldn't open file", systemImage: "exclamationmark.triangle",
@@ -50,7 +52,14 @@ struct ExternalFileReader: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } }
                 if isHTML && content != nil {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button {
+                            htmlDesktopMode.toggle()
+                            htmlReloadToken += 1
+                        } label: {
+                            Image(systemName: htmlDesktopMode ? "desktopcomputer" : "iphone")
+                        }
+                        .accessibilityLabel(htmlDesktopMode ? t(.mobileMode) : t(.desktopMode))
                         Button {
                             htmlJSEnabled.toggle()
                             htmlReloadToken += 1
