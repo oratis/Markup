@@ -17,6 +17,7 @@ struct RootView: View {
     @State private var showSearch = false
     @State private var showTags = false
     @State private var showSettings = false
+    @State private var showRecents = false
     @State private var openedFile: OpenedURL?
 
     private func open(_ file: VaultFile) {
@@ -45,6 +46,9 @@ struct RootView: View {
         .sheet(isPresented: $showSearch) { SearchView(vault: vault, onOpen: open) }
         .sheet(isPresented: $showTags) { TagsView(vault: vault, onOpen: open) }
         .sheet(isPresented: $showSettings) { SettingsView(vault: vault) }
+        .sheet(isPresented: $showRecents) {
+            RecentsView(onOpen: { openedFile = OpenedURL(url: $0) })
+        }
         .sheet(item: $openedFile) { ExternalFileReader(url: $0.url) }
     }
 
@@ -110,12 +114,15 @@ struct RootView: View {
                     Button { showSearch = true } label: { Label(t(.search), systemImage: "text.magnifyingglass") }
                         .keyboardShortcut("f", modifiers: [.command, .shift])
                     Button { showTags = true } label: { Label(t(.tags), systemImage: "number") }
+                    Button { showRecents = true } label: { Label(t(.recents), systemImage: "clock") }
                     Button { showSettings = true } label: { Label(t(.settings), systemImage: "gearshape") }
                     Button { showPicker = true } label: { Label(t(.openFolder), systemImage: "folder.badge.plus") }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             } else {
+                Button { showRecents = true } label: { Image(systemName: "clock") }
+                    .accessibilityLabel(t(.recents))
                 Button { showPicker = true } label: { Image(systemName: "folder.badge.plus") }
                     .accessibilityLabel(t(.openFolder))
             }
