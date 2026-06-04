@@ -43,6 +43,45 @@ public struct GitHubEntry: Codable, Equatable, Sendable, Identifiable {
     private enum CodingKeys: String, CodingKey { case name, path, type }
 }
 
+/// A repository from the authenticated user's repo list.
+public struct GitHubRepo: Codable, Equatable, Sendable, Identifiable {
+    public var fullName: String // "owner/name"
+    public var name: String
+    public var isPrivate: Bool
+    public var id: String { fullName }
+
+    public init(fullName: String, name: String, isPrivate: Bool) {
+        self.fullName = fullName
+        self.name = name
+        self.isPrivate = isPrivate
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case fullName = "full_name"
+        case name
+        case isPrivate = "private"
+    }
+
+    /// A directory link to this repo's root for browsing.
+    public var link: GitHubLink {
+        let owner = fullName.split(separator: "/").first.map(String.init) ?? ""
+        return GitHubLink(owner: owner, repo: name, isDirectory: true)
+    }
+}
+
+public enum GitHubRepos {
+    /// Decode the `/user/repos` listing (private first, then by name). Returns
+    /// `[]` for bad JSON.
+    public static func parse(_ data: Data) -> [GitHubRepo] {
+        let repos = (try? JSONDecoder().decode([GitHubRepo].self, from: data)) ?? []
+        return repos.sorted {
+            $0.isPrivate != $1.isPrivate
+                ? $0.isPrivate && !$1.isPrivate
+                : $0.fullName.localizedCaseInsensitiveCompare($1.fullName) == .orderedAscending
+        }
+    }
+}
+
 public enum GitHubContents {
     /// Decode a contents-API directory listing; folders first, then files,
     /// each alphabetical. Returns `[]` for non-array (e.g. a file) or bad JSON.

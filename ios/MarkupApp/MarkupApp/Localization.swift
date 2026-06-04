@@ -63,6 +63,7 @@ enum L {
     case rename, cancel, switchVault
     case openFromGitHub, githubUrlPrompt, githubInvalid, open
     case githubSignIn, githubSignOut, githubSignedIn, githubEnterCode, githubWaiting, copyCode
+    case githubSignOutConfirm, githubYourRepos
 
     var en: String {
         switch self {
@@ -164,6 +165,8 @@ enum L {
         case .githubEnterCode: return "Enter this code at GitHub:"
         case .githubWaiting: return "Waiting for authorization…"
         case .copyCode: return "Copy code"
+        case .githubSignOutConfirm: return "Sign out of GitHub?"
+        case .githubYourRepos: return "Your repositories"
         }
     }
 
@@ -263,6 +266,8 @@ enum L {
         case .githubEnterCode: return "在 GitHub 输入此代码："
         case .githubWaiting: return "等待授权…"
         case .copyCode: return "复制代码"
+        case .githubSignOutConfirm: return "退出 GitHub 登录？"
+        case .githubYourRepos: return "你的仓库"
         }
     }
 }

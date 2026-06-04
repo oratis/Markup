@@ -64,6 +64,20 @@ struct GitHubLinkTests {
         #expect(GitHubContents.parse(Data("not json".utf8)).isEmpty)
     }
 
+    @Test func parsesRepoList() {
+        let json = Data("""
+        [{"full_name":"o/public-z","name":"public-z","private":false},
+         {"full_name":"o/secret","name":"secret","private":true}]
+        """.utf8)
+        let repos = GitHubRepos.parse(json)
+        // Private first, then by full name.
+        #expect(repos.map(\.fullName) == ["o/secret", "o/public-z"])
+        #expect(repos.first?.isPrivate == true)
+        // The browse link splits owner/name.
+        #expect(repos.first?.link == GitHubLink(owner: "o", repo: "secret", isDirectory: true))
+        #expect(GitHubRepos.parse(Data("nope".utf8)).isEmpty)
+    }
+
     @Test func buildsRawURL() {
         let l = GitHubLink(owner: "o", repo: "r", ref: "main", path: "a b/c.md")
         #expect(GitHubLinkParser.rawURL(l)
