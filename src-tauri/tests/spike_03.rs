@@ -60,7 +60,11 @@ async fn bench_10k_files() {
     let index_elapsed = now.elapsed();
     eprintln!("indexed {} files in {:?}", files.len(), index_elapsed);
 
-    let budget_ms = if count == 10_000 { 5000 } else { (count as u128) / 2 + 1000 };
+    let budget_ms = if count == 10_000 {
+        5000
+    } else {
+        (count as u128) / 2 + 1000
+    };
     assert!(
         index_elapsed.as_millis() < budget_ms,
         "indexing {} files took {:?}, target < {}ms",

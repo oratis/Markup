@@ -6,7 +6,9 @@ import {
   type GitHubLink,
   parseContents,
   parseGitHubLink,
+  parseRepos,
   rawUrl,
+  repoLink,
 } from "./github-link";
 
 describe("parseGitHubLink", () => {
@@ -112,6 +114,45 @@ describe("parseContents + childLink", () => {
       ref: "main",
       path: "docs/a.md",
       isDirectory: false,
+    });
+  });
+});
+
+describe("parseRepos", () => {
+  it("parses repos, private first then alphabetical", () => {
+    const repos = parseRepos([
+      { full_name: "octocat/zed", name: "zed", private: false },
+      { full_name: "octocat/secret", name: "secret", private: true },
+      { full_name: "octocat/apple", name: "apple", private: false },
+      { full_name: "octocat/aaa-priv", name: "aaa-priv", private: true },
+    ]);
+    expect(repos.map((r) => r.fullName)).toEqual([
+      "octocat/aaa-priv",
+      "octocat/secret",
+      "octocat/apple",
+      "octocat/zed",
+    ]);
+    expect(repos[0].isPrivate).toBe(true);
+  });
+
+  it("returns [] for non-array or bad input", () => {
+    expect(parseRepos("nope")).toEqual([]);
+    expect(parseRepos([{ name: "x" }, null, 3])).toEqual([]);
+  });
+
+  it("builds a repo-root link, splitting owner/name from full_name", () => {
+    expect(
+      repoLink({
+        fullName: "octocat/Hello-World",
+        name: "Hello-World",
+        isPrivate: false,
+      }),
+    ).toEqual({
+      owner: "octocat",
+      repo: "Hello-World",
+      ref: null,
+      path: "",
+      isDirectory: true,
     });
   });
 });

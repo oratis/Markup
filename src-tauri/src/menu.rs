@@ -13,7 +13,11 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
 
 pub fn build_with_locale(app: &AppHandle, loc: Locale) -> tauri::Result<Menu<Wry>> {
     let app_submenu = SubmenuBuilder::new(app, "Markup")
-        .item(&PredefinedMenuItem::about(app, Some(i18n::t(loc, "menu.about")), None)?)
+        .item(&PredefinedMenuItem::about(
+            app,
+            Some(i18n::t(loc, "menu.about")),
+            None,
+        )?)
         .separator()
         .item(
             &MenuItemBuilder::with_id("settings", i18n::t(loc, "menu.settings"))
@@ -46,19 +50,13 @@ pub fn build_with_locale(app: &AppHandle, loc: Locale) -> tauri::Result<Menu<Wry
                 .accelerator("CmdOrCtrl+O")
                 .build(app)?,
         )
-        .item(
-            &MenuItemBuilder::with_id("open_recent", i18n::t(loc, "menu.openRecent"))
-                .build(app)?,
-        )
+        .item(&MenuItemBuilder::with_id("open_recent", i18n::t(loc, "menu.openRecent")).build(app)?)
         .item(
             &MenuItemBuilder::with_id("open_vault", i18n::t(loc, "menu.openVault"))
                 .accelerator("CmdOrCtrl+Shift+O")
                 .build(app)?,
         )
-        .item(
-            &MenuItemBuilder::with_id("close_vault", i18n::t(loc, "menu.closeVault"))
-                .build(app)?,
-        )
+        .item(&MenuItemBuilder::with_id("close_vault", i18n::t(loc, "menu.closeVault")).build(app)?)
         .separator()
         .item(
             &MenuItemBuilder::with_id("save", i18n::t(loc, "menu.save"))
@@ -71,14 +69,8 @@ pub fn build_with_locale(app: &AppHandle, loc: Locale) -> tauri::Result<Menu<Wry
                 .build(app)?,
         )
         .separator()
-        .item(
-            &MenuItemBuilder::with_id("export_html", i18n::t(loc, "menu.exportHtml"))
-                .build(app)?,
-        )
-        .item(
-            &MenuItemBuilder::with_id("export_pdf", i18n::t(loc, "menu.exportPdf"))
-                .build(app)?,
-        )
+        .item(&MenuItemBuilder::with_id("export_html", i18n::t(loc, "menu.exportHtml")).build(app)?)
+        .item(&MenuItemBuilder::with_id("export_pdf", i18n::t(loc, "menu.exportPdf")).build(app)?)
         .separator()
         .item(
             &MenuItemBuilder::with_id("close_tab", i18n::t(loc, "menu.closeTab"))
@@ -120,12 +112,9 @@ pub fn build_with_locale(app: &AppHandle, loc: Locale) -> tauri::Result<Menu<Wry
 
     let view_submenu = SubmenuBuilder::new(app, i18n::t(loc, "menu.view"))
         .item(
-            &MenuItemBuilder::with_id(
-                "toggle_source_mode",
-                i18n::t(loc, "menu.toggleSourceMode"),
-            )
-            .accelerator("CmdOrCtrl+/")
-            .build(app)?,
+            &MenuItemBuilder::with_id("toggle_source_mode", i18n::t(loc, "menu.toggleSourceMode"))
+                .accelerator("CmdOrCtrl+/")
+                .build(app)?,
         )
         .item(
             &MenuItemBuilder::with_id("toggle_sidebar", i18n::t(loc, "menu.toggleSidebar"))
@@ -137,27 +126,15 @@ pub fn build_with_locale(app: &AppHandle, loc: Locale) -> tauri::Result<Menu<Wry
                 .build(app)?,
         )
         .separator()
-        .item(
-            &MenuItemBuilder::with_id("toggle_focus", i18n::t(loc, "menu.focusMode"))
-                .build(app)?,
-        )
+        .item(&MenuItemBuilder::with_id("toggle_focus", i18n::t(loc, "menu.focusMode")).build(app)?)
         .item(
             &MenuItemBuilder::with_id("toggle_typewriter", i18n::t(loc, "menu.typewriterMode"))
                 .build(app)?,
         )
         .separator()
-        .item(
-            &MenuItemBuilder::with_id("theme_light", i18n::t(loc, "menu.themeLight"))
-                .build(app)?,
-        )
-        .item(
-            &MenuItemBuilder::with_id("theme_dark", i18n::t(loc, "menu.themeDark"))
-                .build(app)?,
-        )
-        .item(
-            &MenuItemBuilder::with_id("theme_sepia", i18n::t(loc, "menu.themeSepia"))
-                .build(app)?,
-        )
+        .item(&MenuItemBuilder::with_id("theme_light", i18n::t(loc, "menu.themeLight")).build(app)?)
+        .item(&MenuItemBuilder::with_id("theme_dark", i18n::t(loc, "menu.themeDark")).build(app)?)
+        .item(&MenuItemBuilder::with_id("theme_sepia", i18n::t(loc, "menu.themeSepia")).build(app)?)
         .build()?;
 
     let window_submenu = SubmenuBuilder::new(app, i18n::t(loc, "menu.window"))

@@ -54,6 +54,40 @@ export function parseContents(json: unknown): GitHubEntry[] {
   );
 }
 
+/** One repository from the authenticated user's repo list (`/user/repos`). */
+export interface GitHubRepo {
+  fullName: string;
+  name: string;
+  isPrivate: boolean;
+}
+
+/** A repo-root link for browsing a `GitHubRepo`. */
+export function repoLink(repo: GitHubRepo): GitHubLink {
+  const slash = repo.fullName.indexOf("/");
+  const owner = slash > 0 ? repo.fullName.slice(0, slash) : repo.fullName;
+  const name = slash > 0 ? repo.fullName.slice(slash + 1) : repo.name;
+  return { owner, repo: name, ref: null, path: "", isDirectory: true };
+}
+
+/** Parse a `/user/repos` response. Private repos first, then alphabetical by
+ *  full name. Returns [] for a non-array or bad input. */
+export function parseRepos(json: unknown): GitHubRepo[] {
+  if (!Array.isArray(json)) return [];
+  const repos: GitHubRepo[] = json
+    .filter(
+      (r): r is { full_name: string; name: string; private?: boolean } =>
+        !!r && typeof r.full_name === "string" && typeof r.name === "string",
+    )
+    .map((r) => ({ fullName: r.full_name, name: r.name, isPrivate: r.private === true }));
+  return repos.sort((a, b) =>
+    a.isPrivate !== b.isPrivate
+      ? a.isPrivate
+        ? -1
+        : 1
+      : a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" }),
+  );
+}
+
 /** A child directory/file link for navigating into `entry` from `parent`. */
 export function childLink(parent: GitHubLink, entry: GitHubEntry): GitHubLink {
   return {

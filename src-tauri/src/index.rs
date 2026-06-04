@@ -76,14 +76,8 @@ impl MarkupIndex {
     }
 
     /// Index or update a single file. Removes any prior doc with the same path.
-    pub async fn upsert_file(
-        &self,
-        path: &Path,
-        content: &str,
-        mtime_ms: i64,
-    ) -> AppResult<()> {
-        self.upsert_file_titled(path, content, mtime_ms, None)
-            .await
+    pub async fn upsert_file(&self, path: &Path, content: &str, mtime_ms: i64) -> AppResult<()> {
+        self.upsert_file_titled(path, content, mtime_ms, None).await
     }
 
     /// Like [`upsert_file`], but with an explicit title override (e.g. an HTML
@@ -145,10 +139,7 @@ impl MarkupIndex {
             .reload_policy(ReloadPolicy::OnCommitWithDelay)
             .try_into()?;
         let searcher = reader.searcher();
-        let parser = QueryParser::for_index(
-            &self.index,
-            vec![self.schema.title, self.schema.body],
-        );
+        let parser = QueryParser::for_index(&self.index, vec![self.schema.title, self.schema.body]);
         let q = parser.parse_query(query)?;
         // tantivy 0.26: TopDocs no longer implements Collector directly — pick
         // the ordering explicitly. order_by_score() yields Vec<(Score, DocAddress)>,
@@ -208,11 +199,11 @@ fn derive_title(path: &Path, content: &str) -> String {
 /// stable across Rust versions, so a toolchain bump would silently orphan the
 /// existing index dir and rebuild a fresh one.
 pub fn index_dir_for_vault(app_data_dir: &Path, vault_root: &Path) -> PathBuf {
-    let canonical =
-        std::fs::canonicalize(vault_root).unwrap_or_else(|_| vault_root.to_path_buf());
-    app_data_dir
-        .join("index")
-        .join(format!("{:x}", fnv1a(canonical.to_string_lossy().as_bytes())))
+    let canonical = std::fs::canonicalize(vault_root).unwrap_or_else(|_| vault_root.to_path_buf());
+    app_data_dir.join("index").join(format!(
+        "{:x}",
+        fnv1a(canonical.to_string_lossy().as_bytes())
+    ))
 }
 
 /// FNV-1a 64-bit — small, dependency-free, and stable across toolchains.
@@ -261,7 +252,9 @@ mod tests {
     async fn upsert_replaces_existing() {
         let tmp = tempdir().unwrap();
         let idx = MarkupIndex::open_or_create(tmp.path()).unwrap();
-        idx.upsert_file(Path::new("/a.md"), "first", 1).await.unwrap();
+        idx.upsert_file(Path::new("/a.md"), "first", 1)
+            .await
+            .unwrap();
         idx.upsert_file(Path::new("/a.md"), "second different content", 2)
             .await
             .unwrap();
@@ -327,9 +320,14 @@ mod tests {
     async fn empty_title_override_falls_back_to_filename() {
         let tmp = tempdir().unwrap();
         let idx = MarkupIndex::open_or_create(tmp.path()).unwrap();
-        idx.upsert_file_titled(Path::new("/notes/page.html"), "body words here", 1, Some("  "))
-            .await
-            .unwrap();
+        idx.upsert_file_titled(
+            Path::new("/notes/page.html"),
+            "body words here",
+            1,
+            Some("  "),
+        )
+        .await
+        .unwrap();
         idx.commit().await.unwrap();
         let hits = idx.search("words", 10).unwrap();
         assert_eq!(hits.len(), 1);

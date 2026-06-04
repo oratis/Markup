@@ -176,11 +176,7 @@ fn scan_filtered(root: &Path, accept: fn(&Path) -> bool) -> AppResult<Vec<PathBu
         .follow_links(false)
         .into_iter()
         .filter_entry(|e| {
-            !e.file_type().is_dir()
-                || e.file_name()
-                    .to_str()
-                    .map(|n| !skip_dir(n))
-                    .unwrap_or(true)
+            !e.file_type().is_dir() || e.file_name().to_str().map(|n| !skip_dir(n)).unwrap_or(true)
         })
     {
         let entry = match entry {
@@ -315,13 +311,22 @@ mod tests {
     #[test]
     fn is_within_skipped_dir_matches_runtime_paths() {
         let root = Path::new("/v");
-        assert!(is_within_skipped_dir(root, Path::new("/v/node_modules/a.md")));
-        assert!(is_within_skipped_dir(root, Path::new("/v/sub/.obsidian/b.md")));
+        assert!(is_within_skipped_dir(
+            root,
+            Path::new("/v/node_modules/a.md")
+        ));
+        assert!(is_within_skipped_dir(
+            root,
+            Path::new("/v/sub/.obsidian/b.md")
+        ));
         assert!(!is_within_skipped_dir(root, Path::new("/v/notes/c.md")));
         assert!(!is_within_skipped_dir(root, Path::new("/v/a.md")));
         // Only the portion BELOW root is checked — a vault whose own path
         // contains a skipped name is fine.
         let nested = Path::new("/home/target/vault");
-        assert!(!is_within_skipped_dir(nested, Path::new("/home/target/vault/d.md")));
+        assert!(!is_within_skipped_dir(
+            nested,
+            Path::new("/home/target/vault/d.md")
+        ));
     }
 }
