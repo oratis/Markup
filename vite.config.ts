@@ -29,37 +29,17 @@ export default defineConfig({
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split heavy editor stacks into their own chunks so the React
-          // shell can paint while these stream in parallel.
-          milkdown: [
-            "@milkdown/core",
-            "@milkdown/ctx",
-            "@milkdown/kit",
-            "@milkdown/preset-commonmark",
-            "@milkdown/preset-gfm",
-            "@milkdown/prose",
-            "@milkdown/react",
-            "@milkdown/theme-nord",
-            "@milkdown/transformer",
-            "@milkdown/utils",
-            "@milkdown/plugin-clipboard",
-            "@milkdown/plugin-cursor",
-            "@milkdown/plugin-history",
-            "@milkdown/plugin-indent",
-            "@milkdown/plugin-listener",
-          ],
-          codemirror: [
-            "@codemirror/commands",
-            "@codemirror/lang-markdown",
-            "@codemirror/language",
-            "@codemirror/search",
-            "@codemirror/state",
-            "@codemirror/theme-one-dark",
-            "@codemirror/view",
-          ],
-          katex: ["katex"],
-          mermaid: ["mermaid"],
+        // Split heavy editor stacks into their own chunks so the React shell
+        // can paint while these stream in parallel. Function form (vite 8 /
+        // rollup typed `manualChunks` as a function); groups each stack with
+        // its transitive deps (prosemirror under milkdown, lezer under cm).
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@milkdown") || id.includes("prosemirror")) return "milkdown";
+          if (id.includes("@codemirror") || id.includes("@lezer")) return "codemirror";
+          if (id.includes("katex")) return "katex";
+          if (id.includes("mermaid")) return "mermaid";
+          return undefined;
         },
       },
     },
