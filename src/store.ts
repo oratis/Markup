@@ -107,6 +107,8 @@ interface AppState {
   // tab ops
   openLoadedFile: (loaded: LoadedFile) => void;
   newScratchTab: () => void;
+  /** Open fetched text (e.g. a GitHub file) as a new unsaved buffer. */
+  openScratchWithContent: (name: string, content: string) => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   reorderTab: (fromId: string, toId: string) => void;
@@ -356,6 +358,22 @@ export const useAppStore = create<AppState>((set) => ({
         path: null,
         name: "Untitled",
         content: "",
+        mtimeMs: null,
+        status: "saved",
+        errorMessage: null,
+      };
+      return { tabs: [...state.tabs, tab], activeTabId: id };
+    }),
+
+  openScratchWithContent: (name, content) =>
+    set((state) => {
+      scratchCounter += 1;
+      const id = `${SCRATCH_PREFIX}gh-${scratchCounter}`;
+      const tab: Tab = {
+        id,
+        path: null,
+        name,
+        content,
         mtimeMs: null,
         status: "saved",
         errorMessage: null,
