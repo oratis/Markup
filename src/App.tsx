@@ -16,6 +16,7 @@ import { Ribbon } from "./components/Ribbon";
 import { RightRail } from "./components/RightRail";
 import { SearchPanel } from "./components/SearchPanel";
 import { SettingsDialog } from "./components/SettingsDialog";
+import { GitHubOpenDialog } from "./components/GitHubOpenDialog";
 import { ShortcutsCheatsheet } from "./components/ShortcutsCheatsheet";
 import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
@@ -196,6 +197,8 @@ export function App() {
   const [showGraph, setShowGraph] = useState(false);
   const [showCheatsheet, setShowCheatsheet] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGitHub, setShowGitHub] = useState(false);
+  const openScratchWithContent = useAppStore((s) => s.openScratchWithContent);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWikilinkPicker, setShowWikilinkPicker] = useState(false);
   const [wikilinkPickerMode, setWikilinkPickerMode] = useState<"full" | "completion">(
@@ -2881,6 +2884,7 @@ export function App() {
         run: () => setShowQuickOpen(true),
       },
       { id: "about", label: "About Markup", run: () => setShowAbout(true) },
+      { id: "open_github", label: "Open from GitHub…", run: () => setShowGitHub(true) },
       {
         id: "open_graph_view",
         label: "Open Vault Graph",
@@ -3163,6 +3167,12 @@ export function App() {
       {showGraph && <GraphView onClose={() => setShowGraph(false)} />}
       {showCheatsheet && <ShortcutsCheatsheet onClose={() => setShowCheatsheet(false)} />}
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
+      {showGitHub && (
+        <GitHubOpenDialog
+          onClose={() => setShowGitHub(false)}
+          onOpen={openScratchWithContent}
+        />
+      )}
       {showOnboarding && (
         <Onboarding
           onSkip={dismissOnboarding}

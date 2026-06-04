@@ -19,6 +19,7 @@ struct RootView: View {
     @State private var showSettings = false
     @State private var showRecents = false
     @State private var showVaultSwitcher = false
+    @State private var showGitHub = false
     @State private var openedFile: OpenedURL?
     /// relPath of a just-created note that should open straight into edit mode.
     @State private var pendingEditFileId: String?
@@ -63,6 +64,9 @@ struct RootView: View {
         }
         .sheet(isPresented: $showVaultSwitcher) {
             VaultSwitcherView(vault: vault, onOpenAnother: { showPicker = true })
+        }
+        .sheet(isPresented: $showGitHub) {
+            GitHubOpenView(onOpen: { openedFile = OpenedURL(url: $0) })
         }
         .sheet(item: $openedFile) { ExternalFileReader(url: $0.url) }
         .alert(t(.rename), isPresented: Binding(
@@ -158,12 +162,17 @@ struct RootView: View {
                         .keyboardShortcut("f", modifiers: [.command, .shift])
                     Button { showTags = true } label: { Label(t(.tags), systemImage: "number") }
                     Button { showRecents = true } label: { Label(t(.recents), systemImage: "clock") }
+                    Button { showGitHub = true } label: { Label(t(.openFromGitHub), systemImage: "chevron.left.forwardslash.chevron.right") }
                     Button { showSettings = true } label: { Label(t(.settings), systemImage: "gearshape") }
                     Button { showVaultSwitcher = true } label: { Label(t(.switchVault), systemImage: "folder.badge.plus") }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             } else {
+                Button { showGitHub = true } label: {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                }
+                .accessibilityLabel(t(.openFromGitHub))
                 Button { showRecents = true } label: { Image(systemName: "clock") }
                     .accessibilityLabel(t(.recents))
                 Button { showPicker = true } label: { Image(systemName: "folder.badge.plus") }

@@ -61,6 +61,7 @@ enum L {
     case enableScripts, disableScripts, desktopMode, mobileMode, lineSpacing
     case recents, favorites, noRecentsTitle, noRecentsBody, remove, newNote, delete
     case rename, cancel, switchVault
+    case openFromGitHub, githubUrlPrompt, githubInvalid, open
 
     var en: String {
         switch self {
@@ -152,6 +153,10 @@ enum L {
         case .rename: return "Rename"
         case .cancel: return "Cancel"
         case .switchVault: return "Switch vault"
+        case .openFromGitHub: return "Open from GitHub"
+        case .githubUrlPrompt: return "Paste a GitHub file link"
+        case .githubInvalid: return "Not a valid GitHub link"
+        case .open: return "Open"
         }
     }
 
@@ -241,6 +246,10 @@ enum L {
         case .rename: return "重命名"
         case .cancel: return "取消"
         case .switchVault: return "切换仓库"
+        case .openFromGitHub: return "从 GitHub 打开"
+        case .githubUrlPrompt: return "粘贴 GitHub 文件链接"
+        case .githubInvalid: return "不是有效的 GitHub 链接"
+        case .open: return "打开"
         }
     }
 }
