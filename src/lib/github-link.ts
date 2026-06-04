@@ -28,9 +28,51 @@ const decode = (s: string) => {
   }
 };
 
+/** One entry in a GitHub directory listing (REST contents API). */
+export interface GitHubEntry {
+  name: string;
+  path: string;
+  isDir: boolean;
+}
+
+/** Parse a contents-API directory listing; folders first, then files,
+ *  each alphabetical. Returns [] for a non-array (e.g. a file) or bad input. */
+export function parseContents(json: unknown): GitHubEntry[] {
+  if (!Array.isArray(json)) return [];
+  const entries: GitHubEntry[] = json
+    .filter(
+      (e): e is { name: string; path: string; type: string } =>
+        !!e && typeof e.name === "string" && typeof e.path === "string",
+    )
+    .map((e) => ({ name: e.name, path: e.path, isDir: e.type === "dir" }));
+  return entries.sort((a, b) =>
+    a.isDir !== b.isDir
+      ? a.isDir
+        ? -1
+        : 1
+      : a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+  );
+}
+
+/** A child directory/file link for navigating into `entry` from `parent`. */
+export function childLink(parent: GitHubLink, entry: GitHubEntry): GitHubLink {
+  return {
+    owner: parent.owner,
+    repo: parent.repo,
+    ref: parent.ref,
+    path: entry.path,
+    isDirectory: entry.isDir,
+  };
+}
+
 export function parseGitHubLink(input: string): GitHubLink | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
+  // Bare "owner/repo" (no scheme/host) → repo root.
+  if (!trimmed.includes("://") && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(trimmed)) {
+    const [owner, repo] = trimmed.split("/");
+    return { owner, repo: stripGit(repo), ref: null, path: "", isDirectory: true };
+  }
   let url: URL;
   try {
     url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
