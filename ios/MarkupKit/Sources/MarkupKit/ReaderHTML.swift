@@ -106,6 +106,36 @@ public enum ReaderHTML {
           try { if (window.marked) content.innerHTML = window.marked.parse(md); }
           catch (e) { content.textContent = md; }
 
+          // GitHub-style alerts: promote `> [!NOTE]`-style blockquotes into
+          // styled callout blocks, matching the desktop export's comrak markup
+          // (.markdown-alert-*). marked has no native support, so transform the
+          // rendered DOM. CALLOUTS maps recognised types → default titles.
+          var CALLOUTS = \(calloutTitleMapJS());
+          content.querySelectorAll("blockquote").forEach(function (bq) {
+            var w = document.createTreeWalker(bq, NodeFilter.SHOW_TEXT, null);
+            var tn = w.nextNode();
+            if (!tn) return;
+            var m = /^\\s*\\[!(\\w+)\\]([^\\n]*)/.exec(tn.nodeValue);
+            if (!m) return;
+            var type = m[1].toLowerCase();
+            if (!Object.prototype.hasOwnProperty.call(CALLOUTS, type)) return;
+            var title = (m[2] || "").trim();
+            // Drop the whole marker line from the first text node.
+            var rest = tn.nodeValue.slice(m[0].length);
+            if (rest.charAt(0) === "\\n") rest = rest.slice(1);
+            tn.nodeValue = rest;
+            var div = document.createElement("div");
+            div.className = "markdown-alert markdown-alert-" + type;
+            var h = document.createElement("p");
+            h.className = "markdown-alert-title";
+            h.textContent = title || CALLOUTS[type];
+            div.appendChild(h);
+            while (bq.firstChild) div.appendChild(bq.firstChild);
+            var fp = h.nextElementSibling;
+            if (fp && fp.tagName === "P" && fp.textContent.trim() === "") fp.remove();
+            bq.replaceWith(div);
+          });
+
           // Stable ids on headings so the native outline can scroll to them.
           content.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach(function (el, i) {
             el.id = "mk-h" + i;
@@ -192,6 +222,14 @@ public enum ReaderHTML {
 
     static func clampFraction(_ v: Double) -> Double { min(1, max(0, v)) }
 
+    /// A JS object literal (`{note:"Note",…}`) of recognised callout types and
+    /// their default titles, built from `Callout` so the reader transform and
+    /// the desktop export stay in sync on the supported set.
+    static func calloutTitleMapJS() -> String {
+        let pairs = Callout.titles.map { "\($0.type):\(jsString($0.title))" }
+        return "{" + pairs.joined(separator: ",") + "}"
+    }
+
     /// Encode a Swift string as a safe JavaScript string literal (JSON-quoted),
     /// neutralising `</script>` so embedded markdown can't break out of the tag.
     static func jsString(_ s: String) -> String {
@@ -245,6 +283,28 @@ public enum ReaderHTML {
         .mermaid { margin: 0 0 1em; text-align: center; }
         hr { border: none; border-top: 1px solid \(muted); margin: 2em 0; }
         blockquote { margin: 0 0 1em; padding-left: 1em; border-left: 3px solid \(muted); color: \(muted); }
+        .markdown-alert {
+          border-left: 4px solid var(--alert, \(muted));
+          background: var(--alert-bg, rgba(127,127,127,0.08));
+          padding: 0.5em 1em; margin: 0 0 1em; border-radius: 0 6px 6px 0;
+        }
+        .markdown-alert > :first-child { margin-top: 0; }
+        .markdown-alert > :last-child { margin-bottom: 0; }
+        .markdown-alert-title {
+          display: flex; align-items: center; gap: 0.4em;
+          font-weight: 600; color: var(--alert, \(muted)); margin: 0 0 0.4em;
+          text-transform: capitalize;
+        }
+        .markdown-alert-note { --alert: #0a84ff; --alert-bg: rgba(10,132,255,0.10); }
+        .markdown-alert-tip { --alert: #30a14e; --alert-bg: rgba(48,161,78,0.10); }
+        .markdown-alert-important { --alert: #8250df; --alert-bg: rgba(130,80,223,0.10); }
+        .markdown-alert-warning { --alert: #bf8700; --alert-bg: rgba(191,135,0,0.12); }
+        .markdown-alert-caution { --alert: #ff453a; --alert-bg: rgba(255,69,58,0.10); }
+        .markdown-alert-note .markdown-alert-title::before { content: "ⓘ"; }
+        .markdown-alert-tip .markdown-alert-title::before { content: "💡"; }
+        .markdown-alert-important .markdown-alert-title::before { content: "❗"; }
+        .markdown-alert-warning .markdown-alert-title::before { content: "⚠️"; }
+        .markdown-alert-caution .markdown-alert-title::before { content: "🛑"; }
         table { border-collapse: collapse; margin: 0 0 1em; display: block; overflow-x: auto; }
         th, td { border: 1px solid \(muted); padding: 6px 10px; }
         tr:nth-child(even) { background: \(codeBg); }
