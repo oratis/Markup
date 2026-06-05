@@ -12,6 +12,7 @@ private struct OpenedURL: Identifiable {
 struct RootView: View {
     @State private var vault = VaultStore()
     @State private var selection: VaultFile?
+    @State private var tabs = OpenTabsStore()
     @State private var showPicker = false
     @State private var showQuickOpen = false
     @State private var showSearch = false
@@ -40,6 +41,12 @@ struct RootView: View {
         showTags = false
     }
 
+    /// Close `file`'s tab; if it was the active one, activate its neighbour.
+    private func closeTab(_ file: VaultFile) {
+        let next = tabs.close(file)
+        if selection == file { selection = next }
+    }
+
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -47,6 +54,15 @@ struct RootView: View {
             detail
         }
         .task { if vault.rootURL == nil { vault.restore() } }
+        // Any selection (sidebar tap, quick-open, search, new note) opens a tab.
+        .onChange(of: selection) { _, new in
+            if let f = new { tabs.open(f) }
+        }
+        // Switching vaults clears the open tabs of the previous one.
+        .onChange(of: vault.rootURL) { _, _ in
+            tabs.closeAll()
+            selection = nil
+        }
         .onOpenURL { url in openedFile = OpenedURL(url: url) }
         .sheet(isPresented: $showPicker) {
             FolderPicker { url in
@@ -76,6 +92,7 @@ struct RootView: View {
             Button(t(.cancel), role: .cancel) { renameTarget = nil }
             Button(t(.rename)) {
                 if let target = renameTarget, let renamed = vault.rename(target, toBase: renameText) {
+                    tabs.replace(target, with: renamed)
                     if selection == target { selection = renamed }
                 }
                 renameTarget = nil
@@ -113,7 +130,7 @@ struct RootView: View {
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            if selection == file { selection = nil }
+                            closeTab(file)
                             vault.delete(file)
                         } label: { Label(t(.delete), systemImage: "trash") }
                     }
@@ -185,6 +202,23 @@ struct RootView: View {
 
     @ViewBuilder
     private var detail: some View {
+        VStack(spacing: 0) {
+            if tabs.count > 1 {
+                TabStripView(tabs: tabs, selection: $selection, onClose: closeTab)
+                Divider()
+            }
+            detailContent
+        }
+        .background(
+            // Hidden ⌘W to close the active document's tab (iPad keyboard).
+            Button("") { if let f = selection { closeTab(f) } }
+                .keyboardShortcut("w", modifiers: .command)
+                .hidden()
+        )
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
         if let file = selection, FileKind.of(file.name) == .canvas {
             CanvasPlaceholderView(file: file)
                 .id(file.relPath)
