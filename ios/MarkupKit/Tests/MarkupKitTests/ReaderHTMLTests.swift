@@ -87,6 +87,22 @@ struct ReaderHTMLDocumentTests {
         #expect(doc.contains("jsdelivr"))
     }
 
+    @Test func exposesLivePreviewRenderHook() {
+        let doc = ReaderHTML.document(markdown: "# Hi", title: "T", theme: .light)
+        // The render pipeline is callable for incremental live-preview updates.
+        #expect(doc.contains("window.__markupSetMarkdown"))
+        #expect(doc.contains("function mkRender("))
+        // Still parses on initial load + keeps the task-list bridge.
+        #expect(doc.contains("mkRender("))
+        #expect(doc.contains("messageHandlers.task"))
+    }
+
+    @Test func javaScriptStringLiteralEscapesScriptBreakout() {
+        let lit = ReaderHTML.javaScriptStringLiteral("</script><b>")
+        #expect(lit.contains("<\\/script>"))
+        #expect(lit.hasPrefix("\""))
+    }
+
     @Test func embedsCalloutTransformAndStyles() {
         let doc = ReaderHTML.document(markdown: "> [!NOTE]\n> Hi", title: "T", theme: .light)
         // The DOM transform + the injected title map for every known type.

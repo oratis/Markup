@@ -100,17 +100,22 @@ public enum ReaderHTML {
         <style>\(css(theme, fontScale: fontScale, maxWidth: maxWidth, lineHeight: lineHeight))</style>
         \(head)
         <script defer>
-        document.addEventListener("DOMContentLoaded", function () {
-          var md = \(jsString(markdown));
+        // CALLOUTS maps recognised alert types → default titles.
+        var CALLOUTS = \(calloutTitleMapJS());
+
+        // Render markdown into #content and run the decorations/renderers. Both
+        // the initial load and the live-preview's incremental updates
+        // (window.__markupSetMarkdown) go through this, so a side-by-side
+        // preview re-renders without a full page reload (no flicker/scroll jump).
+        function mkRender(md) {
           var content = document.getElementById("content");
+          if (!content) return;
           try { if (window.marked) content.innerHTML = window.marked.parse(md); }
           catch (e) { content.textContent = md; }
 
           // GitHub-style alerts: promote `> [!NOTE]`-style blockquotes into
           // styled callout blocks, matching the desktop export's comrak markup
-          // (.markdown-alert-*). marked has no native support, so transform the
-          // rendered DOM. CALLOUTS maps recognised types → default titles.
-          var CALLOUTS = \(calloutTitleMapJS());
+          // (.markdown-alert-*). marked has no native support, so transform the DOM.
           content.querySelectorAll("blockquote").forEach(function (bq) {
             var w = document.createTreeWalker(bq, NodeFilter.SHOW_TEXT, null);
             var tn = w.nextNode();
@@ -175,6 +180,14 @@ public enum ReaderHTML {
               window.mermaid.run();
             } catch (e) {}
           }
+        }
+
+        // Exposed so the native live-preview can push edited markdown in place.
+        window.__markupSetMarkdown = function (md) { mkRender(md); };
+
+        document.addEventListener("DOMContentLoaded", function () {
+          var content = document.getElementById("content");
+          mkRender(\(jsString(markdown)));
 
           // Task-list checkboxes → notify native (which rewrites the file).
           var boxes = content.querySelectorAll(".task-list-item input[type=checkbox], li input[type=checkbox]");
@@ -229,6 +242,10 @@ public enum ReaderHTML {
         let pairs = Callout.titles.map { "\($0.type):\(jsString($0.title))" }
         return "{" + pairs.joined(separator: ",") + "}"
     }
+
+    /// Public wrapper around `jsString` so the app can build a safe argument
+    /// for `window.__markupSetMarkdown(...)` when pushing live-preview updates.
+    public static func javaScriptStringLiteral(_ s: String) -> String { jsString(s) }
 
     /// Encode a Swift string as a safe JavaScript string literal (JSON-quoted),
     /// neutralising `</script>` so embedded markdown can't break out of the tag.

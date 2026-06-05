@@ -2,7 +2,7 @@
 
 > Living status of the native iOS/iPadOS app against the design
 > ([`00-ios-app-design.md`](./00-ios-app-design.md)). Current TestFlight build:
-> **0.2.5**. Architecture: SwiftUI app + `MarkupKit` (pure,
+> **0.2.6**. Architecture: SwiftUI app + `MarkupKit` (pure,
 > unit-tested logic) + `MarkupApp` (UI). CI runs `swift test` **and** a
 > simulator app build on every PR.
 
@@ -62,6 +62,14 @@
   titles), matching the desktop export's comrak markup — handy for GitHub
   READMEs opened via the GitHub viewer.
 
+### iPad
+- **Multi-document tabs**: open several docs, switch via a tab strip, ✕ / ⌘W to
+  close (closing the active tab activates its neighbour).
+- **Split-view live preview**: edit source with a rendered preview beside it
+  (regular width; ⌘\ toggles). Edits stream into the preview in place
+  (`window.__markupSetMarkdown`) — no reload flicker — and callouts/math/mermaid
+  re-render live.
+
 ### Infrastructure
 - EAS custom build → TestFlight (`scripts/derive-build-number.sh`, lockfile in
   `ios/`). CI builds the full app on the simulator (UI-regression gate).
@@ -70,7 +78,6 @@
 
 | Area | Item | Why deferred |
 |---|---|---|
-| iPad | Multiple open-doc **tabs**; **split-view** live preview | Large, behaviour needs on-device verification |
 | Sync | iCloud "downloading" banner; **conflict two-pane** diff | Needs async read-path + device testing |
 | Files | Drag-and-drop; new **folder** + templated frontmatter | — |
 | Editor | Accessory-bar customization; focus/typewriter mode | — |
