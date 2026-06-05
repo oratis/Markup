@@ -20,6 +20,7 @@ import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
 import { getMarkdown } from "@milkdown/utils";
 import { useEffect, useRef } from "react";
+import { calloutDecorate } from "../lib/milkdown/callout-deco";
 import { compositionTracker, isComposing } from "../lib/milkdown/composition";
 import { embedDecorate } from "../lib/milkdown/embed-deco";
 import { imageView } from "../lib/milkdown/image-view";
@@ -105,6 +106,7 @@ function WysiwygEditor({
       .use(wikilinkDecorate)
       .use(tagDecorate)
       .use(embedDecorate)
+      .use(calloutDecorate)
       .use(imageView),
   );
 
