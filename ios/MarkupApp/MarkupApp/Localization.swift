@@ -64,6 +64,7 @@ enum L {
     case openFromGitHub, githubUrlPrompt, githubInvalid, open
     case githubSignIn, githubSignOut, githubSignedIn, githubEnterCode, githubWaiting, copyCode
     case githubSignOutConfirm, githubYourRepos
+    case closeTab, livePreview
 
     var en: String {
         switch self {
@@ -167,6 +168,8 @@ enum L {
         case .copyCode: return "Copy code"
         case .githubSignOutConfirm: return "Sign out of GitHub?"
         case .githubYourRepos: return "Your repositories"
+        case .closeTab: return "Close tab"
+        case .livePreview: return "Live preview"
         }
     }
 
@@ -268,6 +271,8 @@ enum L {
         case .copyCode: return "复制代码"
         case .githubSignOutConfirm: return "退出 GitHub 登录？"
         case .githubYourRepos: return "你的仓库"
+        case .closeTab: return "关闭标签"
+        case .livePreview: return "实时预览"
         }
     }
 }
