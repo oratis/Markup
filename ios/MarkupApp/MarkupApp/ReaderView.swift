@@ -34,9 +34,22 @@ struct ReaderView: View {
     @AppStorage("reader.fontScale") private var fontScale = 1.0
     @AppStorage("reader.maxWidth") private var maxWidth = 720
     @AppStorage("reader.lineHeight") private var lineHeight = 1.65
+    /// Show a live rendered preview beside the source while editing (iPad,
+    /// regular width). Persisted so it stays on across edits/sessions.
+    @AppStorage("reader.splitPreview") private var splitPreview = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var hSizeClass
+    /// The preview pane's stable shell HTML (rebuilt on theme/size change, not
+    /// on each keystroke — edits stream in via `liveMarkdown`).
+    @State private var previewShell = ""
+    @StateObject private var previewProxy = WebViewProxy()
     /// Render a raw `.html` doc in desktop layout (per-doc).
     @State private var htmlDesktopMode = false
+
+    /// True when the side-by-side editor+preview should be shown.
+    private var showSplit: Bool {
+        isEditing && !isHTML && hSizeClass == .regular && splitPreview
+    }
 
     /// The user's manual reader scale folded with the system Dynamic Type
     /// size, so the rendered page respects accessibility text settings (§15).
@@ -89,18 +102,42 @@ struct ReaderView: View {
             assetBase: readerAssetBase)
     }
 
+    /// The native source editor with its keyboard accessory + image picker.
+    private var editorPane: some View {
+        SourceEditorView(text: $content, controller: editor)
+            .onChange(of: content) { _, _ in scheduleSave() }
+            .safeAreaInset(edge: .bottom, spacing: 0) { editorSuggestions }
+            .photosPicker(
+                isPresented: Binding(
+                    get: { editor.imagePickerRequested },
+                    set: { editor.imagePickerRequested = $0 }),
+                selection: $pickedImage, matching: .images)
+            .onChange(of: pickedImage) { _, item in insertPickedImage(item) }
+    }
+
+    /// The live preview pane: a stable shell with edits streamed in via JS.
+    private var previewPane: some View {
+        ReaderWebView(
+            html: previewShell, baseURL: baseURL,
+            liveMarkdown: content, proxy: previewProxy)
+            .onAppear { previewShell = html }
+            // Rebuild the shell (full reload) only when render inputs change.
+            .onChange(of: themeRaw) { _, _ in previewShell = html }
+            .onChange(of: fontScale) { _, _ in previewShell = html }
+            .onChange(of: maxWidth) { _, _ in previewShell = html }
+            .onChange(of: lineHeight) { _, _ in previewShell = html }
+    }
+
     var body: some View {
         Group {
-            if isEditing {
-                SourceEditorView(text: $content, controller: editor)
-                    .onChange(of: content) { _, _ in scheduleSave() }
-                    .safeAreaInset(edge: .bottom, spacing: 0) { editorSuggestions }
-                    .photosPicker(
-                        isPresented: Binding(
-                            get: { editor.imagePickerRequested },
-                            set: { editor.imagePickerRequested = $0 }),
-                        selection: $pickedImage, matching: .images)
-                    .onChange(of: pickedImage) { _, item in insertPickedImage(item) }
+            if showSplit {
+                HStack(spacing: 0) {
+                    editorPane.frame(maxWidth: .infinity)
+                    Divider()
+                    previewPane.frame(maxWidth: .infinity)
+                }
+            } else if isEditing {
+                editorPane
             } else if isHTML {
                 // Render the HTML file faithfully, with read access to the vault
                 // so relative CSS/images/links resolve.
@@ -158,6 +195,17 @@ struct ReaderView: View {
             }
             .accessibilityLabel(isEditing ? t(.read) : t(.edit))
             .keyboardShortcut("e", modifiers: .command)
+        }
+        if isEditing && !isHTML && hSizeClass == .regular {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { splitPreview.toggle() } label: {
+                    Image(systemName: splitPreview
+                        ? "rectangle.righthalf.inset.filled"
+                        : "rectangle.split.2x1")
+                }
+                .accessibilityLabel(t(.livePreview))
+                .keyboardShortcut("\\", modifiers: .command)
+            }
         }
         if !isEditing && isHTML {
             ToolbarItemGroup(placement: .topBarTrailing) {

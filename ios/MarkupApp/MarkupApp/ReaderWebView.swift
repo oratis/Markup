@@ -1,3 +1,4 @@
+import MarkupKit
 import SwiftUI
 import WebKit
 
@@ -84,6 +85,11 @@ struct ReaderWebView: UIViewRepresentable {
     /// Render a raw `.html` page in desktop mode (wider viewport + desktop UA)
     /// instead of mobile — useful for web reports/PPTs designed for a laptop.
     var preferDesktop: Bool = false
+    /// When set (live-preview pane), edited markdown is pushed into the already
+    /// loaded document via `window.__markupSetMarkdown(...)` — an in-place
+    /// re-render, so the preview updates without a full reload (no flicker or
+    /// scroll jump). The `html` shell stays stable across keystrokes.
+    var liveMarkdown: String? = nil
     var proxy: WebViewProxy? = nil
     var onScroll: (Double) -> Void = { _ in }
     var onToggleTask: (Int) -> Void = { _ in }
@@ -114,12 +120,19 @@ struct ReaderWebView: UIViewRepresentable {
         let key = (fileURL.map { "file:" + $0.path } ?? html) + "#\(loadToken)"
         if context.coordinator.lastHTML != key {
             context.coordinator.lastHTML = key
+            context.coordinator.loaded = false
             if let fileURL {
                 webView.loadFileURL(
                     fileURL, allowingReadAccessTo: readAccessURL ?? fileURL.deletingLastPathComponent())
             } else {
                 webView.loadHTMLString(html, baseURL: baseURL)
             }
+        }
+
+        // Live-preview: push edited markdown into the loaded document in place.
+        if let live = liveMarkdown, context.coordinator.lastLive != live {
+            context.coordinator.lastLive = live
+            if context.coordinator.loaded { context.coordinator.pushMarkdown(into: webView, live) }
         }
     }
 
@@ -133,10 +146,26 @@ struct ReaderWebView: UIViewRepresentable {
         var onToggleTask: (Int) -> Void
         var allowJavaScript = true
         var preferDesktop = false
+        /// Live-preview bookkeeping: the last markdown pushed, and whether the
+        /// document has finished loading (so a push has somewhere to land).
+        var lastLive: String?
+        var loaded = false
 
         init(onScroll: @escaping (Double) -> Void, onToggleTask: @escaping (Int) -> Void) {
             self.onScroll = onScroll
             self.onToggleTask = onToggleTask
+        }
+
+        func pushMarkdown(into webView: WKWebView, _ md: String) {
+            let arg = ReaderHTML.javaScriptStringLiteral(md)
+            webView.evaluateJavaScript("window.__markupSetMarkdown(\(arg));", completionHandler: nil)
+        }
+
+        // Once loaded, flush the latest live markdown (covers the initial load
+        // and any shell reload, e.g. a theme change).
+        func webView(_ webView: WKWebView, didFinish _: WKNavigation!) {
+            loaded = true
+            if let md = lastLive { pushMarkdown(into: webView, md) }
         }
 
         func userContentController(
