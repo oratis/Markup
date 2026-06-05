@@ -264,6 +264,53 @@ html.theme-sepia .milkdown .embed {
   border-color: rgba(139, 90, 43, 0.45);
 }
 
+/* GitHub-style callouts/alerts in the WYSIWYG editor (callout-deco.ts adds the
+   classes to the blockquote + the [!TYPE] marker). Decorative only — the doc
+   keeps a plain blockquote, matching the export/reader `.markdown-alert` look. */
+.milkdown blockquote.markdown-alert {
+  border-left: 4px solid var(--alert, #888);
+  background: color-mix(in srgb, var(--alert, #888) 8%, transparent);
+  padding: 0.3em 1em;
+  border-radius: 0 6px 6px 0;
+}
+.milkdown blockquote.markdown-alert .markdown-alert-title {
+  color: var(--alert, #888);
+  font-weight: 600;
+}
+.milkdown blockquote.markdown-alert .markdown-alert-title::before {
+  margin-right: 0.35em;
+}
+.milkdown blockquote.markdown-alert-note {
+  --alert: #0969da;
+}
+.milkdown blockquote.markdown-alert-tip {
+  --alert: #1a7f37;
+}
+.milkdown blockquote.markdown-alert-important {
+  --alert: #8250df;
+}
+.milkdown blockquote.markdown-alert-warning {
+  --alert: #9a6700;
+}
+.milkdown blockquote.markdown-alert-caution {
+  --alert: #cf222e;
+}
+.milkdown blockquote.markdown-alert-note .markdown-alert-title::before {
+  content: "ⓘ";
+}
+.milkdown blockquote.markdown-alert-tip .markdown-alert-title::before {
+  content: "💡";
+}
+.milkdown blockquote.markdown-alert-important .markdown-alert-title::before {
+  content: "❗";
+}
+.milkdown blockquote.markdown-alert-warning .markdown-alert-title::before {
+  content: "⚠️";
+}
+.milkdown blockquote.markdown-alert-caution .markdown-alert-title::before {
+  content: "🛑";
+}
+
 /* Hover preview tooltip — popped by lib/hover-preview.ts on dwell over
    .wikilink or .embed decorated spans in the WYSIWYG editor. */
 .markup-hover-preview {
