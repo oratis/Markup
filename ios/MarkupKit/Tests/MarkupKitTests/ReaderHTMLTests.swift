@@ -86,4 +86,16 @@ struct ReaderHTMLDocumentTests {
         let doc = ReaderHTML.document(markdown: "# Hi", title: "T", theme: .light)
         #expect(doc.contains("jsdelivr"))
     }
+
+    @Test func embedsCalloutTransformAndStyles() {
+        let doc = ReaderHTML.document(markdown: "> [!NOTE]\n> Hi", title: "T", theme: .light)
+        // The DOM transform + the injected title map for every known type.
+        #expect(doc.contains("markdown-alert markdown-alert-"))
+        #expect(doc.contains("markdown-alert-title"))
+        for (type, title) in Callout.titles {
+            #expect(doc.contains("\(type):\"\(title)\""))
+        }
+        // And the matching CSS.
+        #expect(doc.contains(".markdown-alert-warning"))
+    }
 }

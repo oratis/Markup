@@ -350,6 +350,9 @@ pub(crate) fn render_markdown_document(
     opts.extension.tasklist = true;
     opts.extension.autolink = true;
     opts.extension.footnotes = true;
+    // GitHub-style alerts (`> [!NOTE]`, `> [!WARNING]`, …) → styled callout
+    // blocks. Common in GitHub READMEs, which the GitHub viewer opens directly.
+    opts.extension.alerts = true;
     // Emit GitHub-style `contains-task-list` / `task-list-item` classes so we
     // can style checkboxes without relying on the newer `:has()` selector.
     opts.render.tasklist_classes = true;
@@ -577,6 +580,33 @@ pre[data-math-style] { background: none; padding: 0; overflow: visible; }
   margin-top: 2.5rem;
   padding-top: 0.5rem;
 }
+/* GitHub-style alerts (comrak `alerts` extension). The accent colour comes
+   from a per-type custom property so the five types share one rule. */
+.markdown-alert {
+  border-left: 4px solid var(--alert, #888);
+  padding: 0.4em 1em;
+  margin: 1em 0;
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--alert, #888) 8%, transparent);
+}
+.markdown-alert > :first-child { margin-top: 0; }
+.markdown-alert > :last-child { margin-bottom: 0; }
+.markdown-alert-title {
+  display: flex; align-items: center; gap: 0.4em;
+  font-weight: 600; color: var(--alert, #888); margin: 0 0 0.4em;
+  text-transform: capitalize;
+}
+.markdown-alert-title::before { font-weight: 400; }
+.markdown-alert-note { --alert: #0969da; }
+.markdown-alert-tip { --alert: #1a7f37; }
+.markdown-alert-important { --alert: #8250df; }
+.markdown-alert-warning { --alert: #9a6700; }
+.markdown-alert-caution { --alert: #cf222e; }
+.markdown-alert-note .markdown-alert-title::before { content: "ⓘ"; }
+.markdown-alert-tip .markdown-alert-title::before { content: "💡"; }
+.markdown-alert-important .markdown-alert-title::before { content: "❗"; }
+.markdown-alert-warning .markdown-alert-title::before { content: "⚠️"; }
+.markdown-alert-caution .markdown-alert-title::before { content: "🛑"; }
 "#;
 
 fn html_escape(s: &str) -> String {
@@ -760,6 +790,19 @@ mod render_tests {
         assert!(html.contains("type=\"checkbox\""));
         let html = run_render("https://example.com", None, None);
         assert!(html.contains("href=\"https://example.com\""));
+    }
+
+    #[test]
+    fn render_emits_github_alerts_as_callout_divs() {
+        let html = run_render("> [!WARNING]\n> Be careful here.", None, None);
+        assert!(
+            html.contains(r#"class="markdown-alert markdown-alert-warning""#),
+            "html: {html}"
+        );
+        assert!(html.contains(r#"class="markdown-alert-title""#));
+        assert!(html.contains("Be careful here."));
+        // The alert CSS ships in the common stylesheet.
+        assert!(html.contains(".markdown-alert-warning"));
     }
 
     #[test]
