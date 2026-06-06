@@ -135,18 +135,20 @@ final class GitHubService {
     /// in-repo links then all work locally + offline — the design's
     /// "zipball working-copy" target (§16). A previous copy of the same repo is
     /// replaced so re-opening refreshes it.
+    ///
+    /// Also snapshots a `RepoManifest` sidecar (`.markup/manifest.json`) so a
+    /// later `refreshVault` can diff and download only what changed instead of
+    /// re-fetching the whole zipball (design §5, §17). To keep the zipball and
+    /// the manifest consistent we first resolve `link` to an exact commit SHA and
+    /// pin both to it; if that resolution fails (e.g. rate limit) we fall back to
+    /// the bare-ref zipball with no manifest, and the next refresh re-downloads.
     func openAsVault(_ link: GitHubLink) async throws -> URL {
-        var s = "https://api.github.com/repos/\(link.owner)/\(link.repo)/zipball"
-        if let ref = link.ref, !ref.isEmpty { s += "/\(ref)" }
-        guard let url = URL(string: s) else { throw GitHubError.badURL }
-        var req = URLRequest(url: url)
-        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        req.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
-        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
-
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
-        guard code == 200 else { throw Self.httpError(resp, code) }
+        // Pin to an immutable commit when we can, so the extracted tree exactly
+        // matches the manifest we snapshot (and refreshes can diff cleanly).
+        let resolved = try? await resolveCommit(link)
+        let data = try await downloadZipball(
+            owner: link.owner, repo: link.repo,
+            ref: resolved?.sha ?? (link.ref?.isEmpty == false ? link.ref : nil))
 
         let root = Self.vaultRoot(for: link)
         // Decompress + write off the main thread (a whole repo is heavy work);
@@ -154,7 +156,89 @@ final class GitHubService {
         try await Task.detached(priority: .userInitiated) {
             try Self.extractZipball(data, to: root)
         }.value
+
+        // Snapshot the manifest (best-effort): a failure here just means the next
+        // refresh falls back to a full re-download. Store the original `link`
+        // (ref preserved, incl. nil) so a refresh resolves the same ref and the
+        // vault path stays stable.
+        if let sha = resolved?.sha,
+           let manifest = try? await fetchTree(owner: link.owner, repo: link.repo, treeish: sha) {
+            try? Self.writeMeta(GitHubVaultMeta(link: link, manifest: manifest), vaultRoot: root)
+        }
         return root
+    }
+
+    /// Outcome of a refresh, for the "↻ N updated" UI.
+    struct RefreshResult: Sendable {
+        /// Files added or changed (re)downloaded.
+        let updated: Int
+        /// Files deleted from the working copy.
+        let removed: Int
+        /// True when we couldn't diff incrementally and re-extracted the whole
+        /// zipball instead (no stored manifest, truncated tree, or an error).
+        let fullReset: Bool
+
+        /// Nothing changed since the last sync.
+        var isNoOp: Bool { !fullReset && updated == 0 && removed == 0 }
+        var changeCount: Int { updated + removed }
+    }
+
+    /// Bring a materialized GitHub vault up to date **incrementally**: fetch the
+    /// repo's current tree, diff it against the stored manifest, download only the
+    /// added/changed blobs (raw host, CDN-fast) and delete the removed ones —
+    /// instead of re-downloading the whole zipball (design §5). Falls back to a
+    /// full zipball re-extract (and returns `fullReset: true`) when there's no
+    /// stored manifest, the tree is truncated, or anything goes wrong, so refresh
+    /// always leaves a complete, consistent vault.
+    @discardableResult
+    func refreshVault(at root: URL) async throws -> RefreshResult {
+        guard let meta = Self.readMeta(vaultRoot: root) else {
+            throw GitHubError.notFound // not a GitHub vault / no manifest to diff
+        }
+        let link = meta.link
+        do {
+            let resolved = try await resolveCommit(link)
+            let new = try await fetchTree(owner: link.owner, repo: link.repo, treeish: resolved.sha)
+            // A truncated tree is incomplete — diffing it would wrongly delete the
+            // dropped files. Bail to the full-zipball fallback instead.
+            guard !new.truncated else { throw GitHubError.badArchive }
+
+            let diff = RepoManifest.diff(from: meta.manifest, to: new)
+            if !diff.isEmpty {
+                try await materialize(diff, owner: link.owner, repo: link.repo,
+                                      commit: resolved.sha, root: root)
+                for path in diff.removed { Self.deleteFile(path, under: root) }
+            }
+            // Re-point the manifest only after the working copy is updated.
+            try Self.writeMeta(GitHubVaultMeta(link: link, manifest: new), vaultRoot: root)
+            return RefreshResult(
+                updated: diff.added.count + diff.changed.count,
+                removed: diff.removed.count, fullReset: false)
+        } catch {
+            // Fallback: re-extract the whole zipball (also re-snapshots the
+            // manifest). openAsVault recomputes the same root from `link`.
+            _ = try await openAsVault(link)
+            return RefreshResult(updated: 0, removed: 0, fullReset: true)
+        }
+    }
+
+    /// Download the added/changed blobs of a diff into the working copy in
+    /// parallel, pinned to `commit` (so all bytes are from one consistent tree).
+    /// A real failure propagates so the caller can fall back rather than leave a
+    /// half-updated vault.
+    private func materialize(
+        _ diff: ManifestDiff, owner: String, repo: String, commit: String, root: URL
+    ) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for blob in diff.toFetch {
+                group.addTask {
+                    let data = try await self.rawHostData(
+                        owner: owner, repo: repo, ref: commit, path: blob.path)
+                    try self.writeFile(data, to: root.appendingPathComponent(blob.path), under: root)
+                }
+            }
+            try await group.waitForAll()
+        }
     }
 
     /// The durable, app-owned vault directory for a repo, as separate path
@@ -205,6 +289,139 @@ final class GitHubService {
         } else {
             try fm.moveItem(at: temp, to: root)
         }
+    }
+
+    // MARK: - Incremental-refresh networking
+
+    /// Download a repo's zipball bytes (optionally pinned to `ref`, which may be
+    /// a branch, tag, or commit SHA). Shared by the first-time open and the
+    /// refresh fallback.
+    private func downloadZipball(owner: String, repo: String, ref: String?) async throws -> Data {
+        var s = "https://api.github.com/repos/\(owner)/\(repo)/zipball"
+        if let ref, !ref.isEmpty { s += "/\(ref)" }
+        guard let url = URL(string: s) else { throw GitHubError.badURL }
+        var req = URLRequest(url: url)
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200 else { throw Self.httpError(resp, code) }
+        return data
+    }
+
+    /// Resolve `link`'s ref (or the repo's default branch when it has none) to
+    /// an exact commit SHA, returning both. Pinning the zipball, tree, and raw
+    /// downloads to one commit makes the working copy + manifest consistent,
+    /// handles refs containing `/` (e.g. `feature/x`), and avoids a push racing
+    /// mid-refresh. Uses the `application/vnd.github.sha` media type, which
+    /// returns the commit SHA as the plain-text body.
+    private func resolveCommit(_ link: GitHubLink) async throws -> (ref: String, sha: String) {
+        let ref = (link.ref?.isEmpty == false) ? link.ref! : try await defaultBranch(link)
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove("/")
+        let enc = ref.addingPercentEncoding(withAllowedCharacters: allowed) ?? ref
+        guard let url = URL(string:
+            "https://api.github.com/repos/\(link.owner)/\(link.repo)/commits/\(enc)") else {
+            throw GitHubError.badURL
+        }
+        var req = URLRequest(url: url)
+        req.setValue("application/vnd.github.sha", forHTTPHeaderField: "Accept")
+        req.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200,
+              let sha = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !sha.isEmpty else {
+            throw Self.httpError(resp, code)
+        }
+        return (ref, sha)
+    }
+
+    /// The repo's default branch name (used when a link pins no ref).
+    private func defaultBranch(_ link: GitHubLink) async throws -> String {
+        guard let url = URL(string:
+            "https://api.github.com/repos/\(link.owner)/\(link.repo)") else {
+            throw GitHubError.badURL
+        }
+        var req = URLRequest(url: url)
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200 else { throw Self.httpError(resp, code) }
+        let o = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        guard let branch = o?["default_branch"] as? String else { throw GitHubError.badArchive }
+        return branch
+    }
+
+    /// Fetch the recursive git-tree at `treeish` (a commit/tree SHA or ref) and
+    /// parse it into a `RepoManifest` (the pure model + parsing live in MarkupKit).
+    private func fetchTree(owner: String, repo: String, treeish: String) async throws -> RepoManifest {
+        guard let url = URL(string:
+            "https://api.github.com/repos/\(owner)/\(repo)/git/trees/\(treeish)?recursive=1") else {
+            throw GitHubError.badURL
+        }
+        var req = URLRequest(url: url)
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200 else { throw Self.httpError(resp, code) }
+        guard let manifest = RepoManifest.parseTreeAPI(data) else { throw GitHubError.badArchive }
+        return manifest
+    }
+
+    /// Fetch one file's bytes from `raw.githubusercontent.com` (CDN-fast and not
+    /// counted against the API rate limit), pinned to `ref` (a commit SHA for
+    /// refresh). A token, when present, is sent so private repos resolve too.
+    private func rawHostData(owner: String, repo: String, ref: String, path: String) async throws -> Data {
+        let link = GitHubLink(owner: owner, repo: repo, ref: ref, path: path, isDirectory: false)
+        guard let s = GitHubLinkParser.rawURL(link), let url = URL(string: s) else {
+            throw GitHubError.badURL
+        }
+        var req = URLRequest(url: url)
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200 else { throw Self.httpError(resp, code) }
+        return data
+    }
+
+    // MARK: - Manifest sidecar (persisted alongside a GitHub vault)
+
+    /// The manifest sidecar path for a vault: `.markup/manifest.json` under the
+    /// vault root. The `.markup` dir is hidden, so `VaultStore.scan()` (which
+    /// skips hidden files) never lists or indexes it.
+    nonisolated static func metaURL(forVaultRoot root: URL) -> URL {
+        root.appendingPathComponent(".markup", isDirectory: true)
+            .appendingPathComponent("manifest.json")
+    }
+
+    /// Read a vault's GitHub metadata sidecar, or `nil` if it isn't a GitHub
+    /// vault (no sidecar) or the file is unreadable/corrupt.
+    nonisolated static func readMeta(vaultRoot root: URL) -> GitHubVaultMeta? {
+        guard let data = try? Data(contentsOf: metaURL(forVaultRoot: root)) else { return nil }
+        return try? JSONDecoder().decode(GitHubVaultMeta.self, from: data)
+    }
+
+    /// Write a vault's GitHub metadata sidecar atomically (creating `.markup/`).
+    nonisolated static func writeMeta(_ meta: GitHubVaultMeta, vaultRoot root: URL) throws {
+        let url = metaURL(forVaultRoot: root)
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(meta).write(to: url, options: .atomic)
+    }
+
+    /// Delete a working-copy file by its repo-relative path, guarding against a
+    /// path escaping the vault root (defense against a crafted manifest entry).
+    nonisolated static func deleteFile(_ relPath: String, under root: URL) {
+        let dest = root.appendingPathComponent(relPath).standardizedFileURL
+        guard dest.path.hasPrefix(root.standardizedFileURL.path + "/") else { return }
+        try? FileManager.default.removeItem(at: dest)
     }
 
     /// List a repo folder's entries (folders first, then files).

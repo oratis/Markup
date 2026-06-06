@@ -1,7 +1,9 @@
 import Foundation
 
-/// A parsed reference to a file or folder on GitHub.
-public struct GitHubLink: Equatable, Hashable, Sendable {
+/// A parsed reference to a file or folder on GitHub. `Codable` so it can be
+/// persisted in a vault's manifest sidecar (`GitHubVaultMeta`) and reloaded to
+/// drive an incremental refresh.
+public struct GitHubLink: Equatable, Hashable, Sendable, Codable {
     public var owner: String
     public var repo: String
     /// Branch / tag / commit SHA, or `nil` for the repo's default branch.

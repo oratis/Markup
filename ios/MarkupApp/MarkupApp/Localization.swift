@@ -66,6 +66,7 @@ enum L {
     case githubSignOutConfirm, githubYourRepos
     case closeTab, livePreview
     case openAsVault, ok
+    case refreshFromGitHub, refreshing, refreshUpToDate, refreshUpdatedSuffix, refreshedFull
 
     var en: String {
         switch self {
@@ -173,6 +174,11 @@ enum L {
         case .livePreview: return "Live preview"
         case .openAsVault: return "Open as Vault"
         case .ok: return "OK"
+        case .refreshFromGitHub: return "Refresh from GitHub"
+        case .refreshing: return "Refreshing…"
+        case .refreshUpToDate: return "Already up to date"
+        case .refreshUpdatedSuffix: return "updated"
+        case .refreshedFull: return "Re-downloaded"
         }
     }
 
@@ -278,6 +284,11 @@ enum L {
         case .livePreview: return "实时预览"
         case .openAsVault: return "作为 Vault 打开"
         case .ok: return "好"
+        case .refreshFromGitHub: return "从 GitHub 刷新"
+        case .refreshing: return "刷新中…"
+        case .refreshUpToDate: return "已是最新"
+        case .refreshUpdatedSuffix: return "项已更新"
+        case .refreshedFull: return "已重新下载"
         }
     }
 }

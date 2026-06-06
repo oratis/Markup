@@ -49,6 +49,13 @@ final class VaultStore {
     /// Vaults the user has opened, for the switcher. Most-recent first.
     var knownVaults: [StoredVault] = []
 
+    /// GitHub metadata when the active vault is a materialized repo (i.e. has a
+    /// `.markup/manifest.json` sidecar). Drives the "Refresh" affordance; `nil`
+    /// for Files/iCloud vaults, which the OS syncs and can't refresh from us.
+    var githubMeta: GitHubVaultMeta?
+    /// Whether the active vault is a GitHub-backed (refreshable) vault.
+    var isGitHubVault: Bool { githubMeta != nil }
+
     /// Search/links/tags/outline index. Built off the scan; nil until ready.
     var index: IndexService?
     var indexReady = false
@@ -165,12 +172,22 @@ final class VaultStore {
         }
         rootURL = url
         isAppOwned = appOwned
+        // GitHub vaults carry a manifest sidecar; Files/iCloud vaults don't.
+        githubMeta = GitHubService.readMeta(vaultRoot: url)
 
         if persist, let data = try? url.bookmarkData() {
             UserDefaults.standard.set(data, forKey: bookmarkKey)
             UserDefaults.standard.set(appOwned, forKey: rootAppOwnedKey)
             rememberVault(url, bookmark: data, appOwned: appOwned)
         }
+        scan()
+    }
+
+    /// After an incremental refresh updated the working copy on disk, re-read the
+    /// (re-pointed) manifest sidecar and rescan so the file list + index reflect
+    /// the added/changed/removed files.
+    func reloadAfterRefresh() {
+        if let url = rootURL { githubMeta = GitHubService.readMeta(vaultRoot: url) }
         scan()
     }
 
