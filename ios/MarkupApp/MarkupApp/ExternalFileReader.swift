@@ -7,6 +7,11 @@ import MarkupKit
 /// access and on-demand iCloud download.
 struct ExternalFileReader: View {
     let url: URL
+    /// When set, `url` is a doc inside a materialized working copy (e.g. a
+    /// downloaded GitHub repo subtree). The reader loads it from disk granting
+    /// read-access to this root, so relative images / CSS / scripts resolve like
+    /// a local file — instead of `loadHTMLString`, whose file access is sandboxed.
+    var readAccessRoot: URL? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var content: String?
@@ -14,6 +19,9 @@ struct ExternalFileReader: View {
     /// Entry point + extraction root for an opened `.zip` web bundle.
     @State private var bundleEntry: URL?
     @State private var bundleRoot: URL?
+    /// Entry HTML to load from disk for a working-copy doc (the file itself for
+    /// HTML, or a rendered-Markdown sibling for `.md`).
+    @State private var workingCopyEntry: URL?
     /// Scripts in shared HTML / bundles are off until the user opts in.
     @State private var htmlJSEnabled = false
     @State private var htmlDesktopMode = false
@@ -44,6 +52,15 @@ struct ExternalFileReader: View {
                         fileURL: bundleEntry, readAccessURL: bundleRoot,
                         loadToken: htmlReloadToken,
                         javaScriptEnabled: htmlJSEnabled, preferDesktop: htmlDesktopMode)
+                } else if let workingCopyEntry {
+                    // GitHub working copy: load from disk so relative assets
+                    // resolve. Our own Markdown render is trusted (JS on); raw
+                    // repo HTML keeps the opt-in script toggle.
+                    ReaderWebView(
+                        fileURL: workingCopyEntry, readAccessURL: readAccessRoot,
+                        loadToken: htmlReloadToken,
+                        javaScriptEnabled: isHTML ? htmlJSEnabled : true,
+                        preferDesktop: isHTML && htmlDesktopMode)
                 } else if content != nil {
                     ReaderWebView(
                         html: docHTML, baseURL: url.deletingLastPathComponent(),
@@ -108,11 +125,26 @@ struct ExternalFileReader: View {
             } else if let text = try? String(contentsOf: url, encoding: .utf8) {
                 content = text
                 RecentsService.shared.ingest(url)
+                if readAccessRoot != nil { workingCopyEntry = makeWorkingCopyEntry(text) }
                 return
             }
             try? await Task.sleep(nanoseconds: 300_000_000)
         }
         failed = true
+    }
+
+    /// Build the on-disk entry HTML for a working-copy doc. HTML loads directly;
+    /// Markdown is rendered to a sibling `.html` (same directory, so the relative
+    /// asset paths in the doc resolve against the mirrored working copy). Returns
+    /// `nil` on write failure → the caller falls back to the in-memory render.
+    private func makeWorkingCopyEntry(_ text: String) -> URL? {
+        if isHTML { return url }
+        let html = ReaderHTML.document(
+            markdown: text, title: url.lastPathComponent, theme: theme, assetBase: readerAssetBase)
+        guard let data = html.data(using: .utf8) else { return nil }
+        let entry = url.appendingPathExtension("html")
+        do { try data.write(to: entry, options: .atomic) } catch { return nil }
+        return entry
     }
 
     /// Unpack a `.zip` web bundle into a temp dir and return its entry HTML.

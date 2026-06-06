@@ -24,10 +24,53 @@ final class GitHubService {
     /// OAuth token, when signed in. Phase 1 is public-only, so this is nil.
     var token: String? { GitHubAuth.shared.token }
 
-    /// Download a file referenced by `link` and write it to a temp file,
-    /// returning that URL (so the existing reader can render + record it).
-    func openFile(_ link: GitHubLink) async throws -> URL {
+    /// A GitHub document materialized into a local working copy: the primary
+    /// doc at `fileURL` (under a repo-path-mirrored `root`, alongside its
+    /// downloaded in-repo assets). Grant the reader read-access to `root` so
+    /// relative images / stylesheets resolve like a local file.
+    struct GitHubDoc {
+        let fileURL: URL
+        let root: URL
+    }
+
+    /// Download `link` **and the in-repo assets it references** into a local
+    /// working copy mirroring the repo's path layout, so the reader renders it
+    /// with full fidelity (images, CSS, JS) instead of 404-ing every relative
+    /// URL. Asset failures are non-fatal — a missing image shouldn't block the
+    /// doc from opening.
+    func openFile(_ link: GitHubLink) async throws -> GitHubDoc {
         guard !link.isDirectory, !link.path.isEmpty else { throw GitHubError.notAFile }
+
+        let root = Self.cacheRoot
+            .appendingPathComponent(UUID().uuidString.prefix(8).description, isDirectory: true)
+        // 1. The primary document (hard-fails on error — there's nothing to show).
+        let docData = try await rawData(for: link)
+        let docFile = root.appendingPathComponent(link.path)
+        try writeFile(docData, to: docFile, under: root)
+
+        // 2. Its in-repo assets (best-effort, in parallel).
+        let text = String(data: docData, encoding: .utf8) ?? ""
+        let plan = FileKind.of(link.fileName) == .html
+            ? GitHubAssetPlan.html(text, docPath: link.path)
+            : GitHubAssetPlan.markdown(text, docPath: link.path)
+        await withTaskGroup(of: Void.self) { group in
+            for assetPath in plan.assetPaths {
+                let assetLink = GitHubLink(
+                    owner: link.owner, repo: link.repo, ref: link.ref,
+                    path: assetPath, isDirectory: false)
+                group.addTask {
+                    if let data = try? await self.rawData(for: assetLink) {
+                        try? self.writeFile(data, to: root.appendingPathComponent(assetPath), under: root)
+                    }
+                }
+            }
+        }
+        return GitHubDoc(fileURL: docFile, root: root)
+    }
+
+    /// Fetch a single file's raw bytes via the contents API (raw media type),
+    /// mapping HTTP failures to `GitHubError`.
+    private func rawData(for link: GitHubLink) async throws -> Data {
         guard let url = URL(string: GitHubLinkParser.contentsAPIURL(link)) else {
             throw GitHubError.badURL
         }
@@ -39,17 +82,23 @@ final class GitHubService {
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
         switch code {
-        case 200: break
+        case 200: return data
         case 403, 429: throw GitHubError.rateLimited
         case 404: throw GitHubError.notFound
         default: throw GitHubError.http(code)
         }
+    }
 
-        let dir = Self.cacheRoot.appendingPathComponent(UUID().uuidString.prefix(8).description)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let dest = dir.appendingPathComponent(link.fileName)
-        try data.write(to: dest, options: .atomic)
-        return dest
+    /// Write `data` to `dest`, creating parent dirs — but only if `dest` stays
+    /// within `root` (defense against a crafted path escaping the working copy).
+    nonisolated private func writeFile(_ data: Data, to dest: URL, under root: URL) throws {
+        let destStd = dest.standardizedFileURL
+        guard destStd.path.hasPrefix(root.standardizedFileURL.path) else {
+            throw GitHubError.badURL
+        }
+        try FileManager.default.createDirectory(
+            at: destStd.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: destStd, options: .atomic)
     }
 
     /// A managed, app-owned cache directory for downloaded GitHub content

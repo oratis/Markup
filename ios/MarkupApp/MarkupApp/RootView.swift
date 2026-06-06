@@ -2,8 +2,11 @@ import SwiftUI
 import MarkupKit
 
 /// Identifiable wrapper so a file URL opened from another app can drive a sheet.
+/// `readAccessRoot` (set for GitHub working copies) is the directory the reader
+/// may read relative assets from.
 private struct OpenedURL: Identifiable {
     let url: URL
+    var readAccessRoot: URL? = nil
     var id: String { url.absoluteString }
 }
 
@@ -54,8 +57,8 @@ struct RootView: View {
             githubBrowse = BrowseLink(link: link)
         } else {
             Task {
-                if let fileURL = try? await GitHubService.shared.openFile(link) {
-                    openedFile = OpenedURL(url: fileURL)
+                if let doc = try? await GitHubService.shared.openFile(link) {
+                    openedFile = OpenedURL(url: doc.fileURL, readAccessRoot: doc.root)
                 }
             }
         }
@@ -109,19 +112,21 @@ struct RootView: View {
             VaultSwitcherView(vault: vault, onOpenAnother: { showPicker = true })
         }
         .sheet(isPresented: $showGitHub) {
-            GitHubOpenView(onOpen: { openedFile = OpenedURL(url: $0) })
+            GitHubOpenView(onOpen: { openedFile = OpenedURL(url: $0.fileURL, readAccessRoot: $0.root) })
         }
-        .sheet(item: $openedFile) { ExternalFileReader(url: $0.url) }
+        .sheet(item: $openedFile) {
+            ExternalFileReader(url: $0.url, readAccessRoot: $0.readAccessRoot)
+        }
         .sheet(item: $githubBrowse) { item in
             NavigationStack {
-                GitHubBrowseView(link: item.link, onOpenFile: { url in
+                GitHubBrowseView(link: item.link, onOpenFile: { doc in
                     githubBrowse = nil
-                    openedFile = OpenedURL(url: url)
+                    openedFile = OpenedURL(url: doc.fileURL, readAccessRoot: doc.root)
                 })
                 .navigationDestination(for: GitHubLink.self) { child in
-                    GitHubBrowseView(link: child, onOpenFile: { url in
+                    GitHubBrowseView(link: child, onOpenFile: { doc in
                         githubBrowse = nil
-                        openedFile = OpenedURL(url: url)
+                        openedFile = OpenedURL(url: doc.fileURL, readAccessRoot: doc.root)
                     })
                 }
                 .toolbar {
