@@ -445,6 +445,7 @@ device-verified**. Both reading gaps named in §16 are closed.
 | **Repo → vault (zipball working copy)** | #107 | `GitHubZipball` strip + `openAsVault` → `VaultStore.openLocalVault`; full sidebar/search/index, offline |
 | Hardening (10 of 11 adversarial-review findings) | #108 | atomic extract, off-main decompress, zip64 fail-loud, `owner/ref/repo` vault path, 403-vs-rate-limit, surfaced in-repo errors |
 | **In-vault Markdown image fidelity** | #110 | `VaultStore.isAppOwned`; `ReaderView` renders to a `<doc>.html` sibling + `loadFileURL(readAccessURL:)` for app-owned vaults (user folders keep `loadHTMLString`); scan hides the siblings |
+| **Incremental refresh** (manifest diff → fetch only changes) | #111 | `RepoManifest`/`ManifestDiff` (git-trees API, pure + tested); `openAsVault` snapshots `.markup/manifest.json` pinned to a commit; `refreshVault` diffs, downloads added/changed via raw, deletes removed, full-zipball fallback; "Refresh from GitHub" toolbar action |
 
 **On-disk layout (as built):** `<App Support>/GitHubVaults/<owner>/<refSlug>/<repo>/…`
 (separate path components — unambiguous, ref-keyed, repo name as the display leaf).
@@ -453,8 +454,8 @@ Per-file working copies for single-doc opens live under `<caches>/MarkupGitHub/<
 ### Deferred follow-ups (tracked)
 - **Cross-doc `#fragment` scrolling** (review #7) — intercepted in-repo links open the
   target at the top; honoring the fragment needs a GitHub-slug → `mk-h{n}` heading map.
-- **Incremental refresh** — `RepoManifest` + `ManifestDiff` (git-trees API) to fetch
-  only changed files instead of re-downloading the whole zipball; plus a Refresh action.
+- **Incremental reindex on refresh** — refresh re-downloads only changed files (shipped,
+  #111) but still rebuilds the whole FTS5 index via `scan()`; index only the diff next.
 - **Offline reuse on re-open** + storage eviction policy for `GitHubVaults/`.
 - **Share Extension** (G2) and a unified `VaultSource`/Sources home (G0) remain as in §13.
 

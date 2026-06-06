@@ -36,6 +36,10 @@ struct RootView: View {
     /// "owner/repo" while a repo is being downloaded + opened as a vault.
     @State private var openingVault: String?
     @State private var openVaultError: String?
+    /// True while an incremental refresh of the current GitHub vault runs.
+    @State private var refreshingVault = false
+    /// Transient "↻ N updated" / "Up to date" confirmation after a refresh.
+    @State private var refreshToast: String?
     /// relPath of a just-created note that should open straight into edit mode.
     @State private var pendingEditFileId: String?
     @State private var renameTarget: VaultFile?
@@ -92,6 +96,45 @@ struct RootView: View {
         }
     }
 
+    /// Pull the latest commit into the current GitHub vault incrementally
+    /// (download only changed/added files, drop removed), then rescan so the
+    /// sidebar + index reflect it. Shows a brief result toast.
+    private func refreshGitHubVault() {
+        guard let root = vault.rootURL, vault.isGitHubVault, !refreshingVault else { return }
+        refreshingVault = true
+        Task {
+            let text: String
+            do {
+                let result = try await GitHubService.shared.refreshVault(at: root)
+                vault.reloadAfterRefresh()
+                if result.fullReset { text = t(.refreshedFull) }
+                else if result.isNoOp { text = t(.refreshUpToDate) }
+                else { text = "↻ \(result.changeCount) " + t(.refreshUpdatedSuffix) }
+            } catch {
+                refreshingVault = false
+                openVaultError = error.localizedDescription
+                return
+            }
+            // Drop the "Refreshing…" overlay before showing the result toast.
+            refreshingVault = false
+            refreshToast = text
+            try? await Task.sleep(for: .seconds(2))
+            if refreshToast == text { refreshToast = nil }
+        }
+    }
+
+    /// A centered material card with a spinner and a label — shared by the
+    /// "Downloading…" and "Refreshing…" overlays.
+    private func progressCard(_ label: Text) -> some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            label.font(.callout).foregroundStyle(.secondary)
+        }
+        .padding(28)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .shadow(radius: 20)
+    }
+
     private func open(_ file: VaultFile) {
         selection = file
         showQuickOpen = false
@@ -124,16 +167,23 @@ struct RootView: View {
         .onOpenURL { url in handleOpenURL(url) }
         .overlay {
             if let repo = openingVault {
-                VStack(spacing: 12) {
-                    ProgressView()
-                    Text("Downloading \(repo)…")
-                        .font(.callout).foregroundStyle(.secondary)
-                }
-                .padding(28)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .shadow(radius: 20)
+                progressCard(Text("Downloading \(repo)…"))
+            } else if refreshingVault {
+                progressCard(Text(t(.refreshing)))
             }
         }
+        .overlay(alignment: .bottom) {
+            if let toast = refreshToast {
+                Text(toast)
+                    .font(.callout.weight(.medium))
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .shadow(radius: 8)
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.default, value: refreshToast)
         .alert("Couldn't open repository", isPresented: Binding(
             get: { openVaultError != nil }, set: { if !$0 { openVaultError = nil } })) {
             Button(t(.ok), role: .cancel) { openVaultError = nil }
@@ -282,6 +332,13 @@ struct RootView: View {
                         .keyboardShortcut("f", modifiers: [.command, .shift])
                     Button { showTags = true } label: { Label(t(.tags), systemImage: "number") }
                     Button { showRecents = true } label: { Label(t(.recents), systemImage: "clock") }
+                    // Only GitHub-backed vaults can be refreshed (Files/iCloud sync via the OS).
+                    if vault.isGitHubVault {
+                        Button { refreshGitHubVault() } label: {
+                            Label(t(.refreshFromGitHub), systemImage: "arrow.clockwise")
+                        }
+                        .disabled(refreshingVault)
+                    }
                     Button { showGitHub = true } label: { Label(t(.openFromGitHub), systemImage: "chevron.left.forwardslash.chevron.right") }
                     Button { showSettings = true } label: { Label(t(.settings), systemImage: "gearshape") }
                     Button { showVaultSwitcher = true } label: { Label(t(.switchVault), systemImage: "folder.badge.plus") }
