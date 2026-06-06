@@ -31,6 +31,9 @@ final class GitHubService {
     struct GitHubDoc {
         let fileURL: URL
         let root: URL
+        /// The repo link this doc came from (owner/repo/ref/path) — lets the
+        /// reader re-materialize in-repo links tapped inside it.
+        let link: GitHubLink
     }
 
     /// Download `link` **and the in-repo assets it references** into a local
@@ -65,7 +68,7 @@ final class GitHubService {
                 }
             }
         }
-        return GitHubDoc(fileURL: docFile, root: root)
+        return GitHubDoc(fileURL: docFile, root: root, link: link)
     }
 
     /// Fetch a single file's raw bytes via the contents API (raw media type),
