@@ -103,6 +103,26 @@ public enum ReaderHTML {
         // CALLOUTS maps recognised alert types → default titles.
         var CALLOUTS = \(calloutTitleMapJS());
 
+        // MK_SLUGS maps each heading's GitHub-style slug → the id the renderer
+        // assigns it (mk-h{index}), so a `#fragment` link (e.g. `doc.md#post-users`)
+        // resolves to the right heading. Headings are keyed by index, not slug,
+        // so the native handler / in-page TOC clicks below look them up here.
+        var MK_SLUGS = \(slugMapJS(markdown));
+
+        // Resolve a GitHub-style `#fragment` to its heading and scroll to it.
+        // Returns whether a target was found. Called from native after a tapped
+        // in-repo `doc.md#frag` link finishes loading, and from in-page TOC clicks.
+        window.__markupScrollToSlug = function (slug) {
+          if (slug == null) return false;
+          var key = String(slug).replace(/^#/, "");
+          var id = MK_SLUGS[key];
+          if (!id) { try { id = MK_SLUGS[decodeURIComponent(key)]; } catch (e) {} }
+          var el = id ? document.getElementById(id) : document.getElementById(key);
+          if (!el) return false;
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          return true;
+        };
+
         // Render markdown into #content and run the decorations/renderers. Both
         // the initial load and the live-preview's incremental updates
         // (window.__markupSetMarkdown) go through this, so a side-by-side
@@ -198,6 +218,14 @@ public enum ReaderHTML {
             });
           });
 
+          // In-page anchor links (a doc's own table of contents) resolve a
+          // GitHub-style #slug to its heading and scroll, since heading ids are
+          // mk-h{index}. Unknown slugs fall through to default handling.
+          content.addEventListener("click", function (e) {
+            var a = e.target.closest ? e.target.closest("a[href^='#']") : null;
+            if (a && window.__markupScrollToSlug(a.getAttribute("href"))) e.preventDefault();
+          });
+
           // Restore reading position, then report scroll fraction (debounced).
           var restore = \(clampFraction(restoreFraction));
           if (restore > 0) {
@@ -246,6 +274,47 @@ public enum ReaderHTML {
     /// Public wrapper around `jsString` so the app can build a safe argument
     /// for `window.__markupSetMarkdown(...)` when pushing live-preview updates.
     public static func javaScriptStringLiteral(_ s: String) -> String { jsString(s) }
+
+    /// A GitHub-style heading anchor slug, used to resolve `#fragment` links
+    /// (e.g. `reference.md#post-users`) against the `mk-h{index}` ids the reader
+    /// assigns to headings. Lowercases, drops punctuation (keeping ASCII
+    /// letters/digits, `-` and `_`), and joins the remaining word runs with
+    /// hyphens — an approximation of GitHub's `github-slugger` that matches
+    /// plain-text headings (links/emphasis inside a heading aren't unwrapped).
+    public static func githubSlug(_ text: String) -> String {
+        var pieces: [String] = []
+        var current = ""
+        for ch in text.lowercased() {
+            if ch.isWhitespace {
+                if !current.isEmpty { pieces.append(current); current = "" }
+            } else if ch == "-" || ch == "_" || (ch.isASCII && (ch.isLetter || ch.isNumber)) {
+                current.append(ch)
+            }
+            // Other punctuation is dropped without forcing a word break, so
+            // "POST /users" → "post-users" and "C++ Guide" → "c-guide".
+        }
+        if !current.isEmpty { pieces.append(current) }
+        return pieces.joined(separator: "-")
+    }
+
+    /// A JS object literal mapping each heading's GitHub-style slug to its
+    /// `mk-h{index}` id (`{"post-users":"mk-h0",…}`), embedded so the reader can
+    /// resolve `#fragment` links. Duplicate slugs get GitHub's `-1`, `-2` …
+    /// suffixes, in document order. Heading order matches `parseHeadings` — the
+    /// same index the renderer assigns as `mk-h{index}` and the outline scrolls to.
+    static func slugMapJS(_ markdown: String) -> String {
+        var counts: [String: Int] = [:]
+        var pairs: [String] = []
+        for (i, heading) in parseHeadings(markdown).enumerated() {
+            let base = githubSlug(heading.text)
+            guard !base.isEmpty else { continue }
+            let n = counts[base, default: 0]
+            counts[base] = n + 1
+            let slug = n == 0 ? base : "\(base)-\(n)"
+            pairs.append("\(jsString(slug)):\(jsString("mk-h\(i)"))")
+        }
+        return "{" + pairs.joined(separator: ",") + "}"
+    }
 
     /// Encode a Swift string as a safe JavaScript string literal (JSON-quoted),
     /// neutralising `</script>` so embedded markdown can't break out of the tag.
