@@ -325,7 +325,109 @@ repo" and "writing in my vault."
 - iCloud/Files vaults still open and **edit** exactly as before, alongside GitHub
   sources in one home.
 
+## 15. Pro/con debate & decision log
+
+Each contested decision is steelmanned both ways, then ruled. "Ruling" is the
+recommendation we proceed on (open questions resolved per the author's call).
+
+### D1 — How to materialize a repo: per-file-on-demand vs **zipball** vs tree+blob
+- **Per-file Contents API (what shipped today).** _For:_ trivial — one file = one
+  `GET …/contents/{path}` → `/tmp`; no state machine; lazy by nature. _Against:_ a
+  doc's images/CSS/sibling links have **no on-disk neighbours** → they 404 (this is
+  literally the "GitHub worse than local" complaint); N API calls re-hit the 60/hr
+  unauthenticated limit on every open; `/tmp` files leak; **no offline**.
+- **Zipball + unzip (codeload).** _For:_ **one** request gets the *entire* repo, so
+  every relative image/CSS/link resolves with zero per-asset logic; atomic; offline
+  immediately; not API-rate-limited; a path-mirrored worktree falls out for free.
+  _Against:_ downloads the whole repo incl. binaries (wasteful for big monorepos);
+  refresh = re-download the whole zip (no incremental); unzip cost/memory.
+- **Git-tree + per-blob (the design's §4).** _For:_ download only docs (small),
+  subdir-as-root cheap, content-addressed dedup, **incremental** refresh by SHA diff.
+  _Against:_ most logic to build (manifest, blob fetch, asset scan, partial-state);
+  metadata calls hit the API limit.
+- **Ruling.** Target **zipball as the default working-copy** (best
+  reading-experience-per-effort: complete assets, offline, atomic) with a **size
+  guard** + a **subdir-as-root via the per-dir Contents API** escape hatch for huge
+  monorepos; keep **per-file-on-demand** only as the bridge that already ships. The
+  design's tree+blob+manifest is **not** the v1 path — fold it into a *later*
+  incremental-refresh optimization, not the MVP. (Updates §4: prefer zipball; §13: G3
+  = "zip the repo + resolve assets," G4 = incremental.)
+
+### D2 — GitHub **primary** vs iCloud primary
+- _For GitHub-primary:_ zero-setup "read the world" (any open-source `/docs`, your
+  repos), inherently shareable ("open this repo in Markup"), differentiates from every
+  generic iCloud reader, and is the natural top-of-funnel.
+- _For iCloud-primary:_ editing/owning notes is the deep value; GitHub repos are
+  read-mostly; most people's private notes aren't on GitHub; no Universal Links on
+  github.com hurts the "tap a repo" dream.
+- **Ruling.** **GitHub = acquisition/top-of-funnel** (shareable, instant, the hook);
+  **iCloud/Files = retention/creation** (your editable vault). Both first-class in one
+  **Sources** home. Keep GitHub primary, as asked.
+
+### D3 — GitHub vaults **read-only** (v1) vs editable
+- _For read-only:_ a temp/unzipped copy isn't a write-back target; no merge/PR/auth-
+  write complexity; refresh never clobbers a local edit; matches reader-first.
+- _For editable:_ "open as vault" implies writability; users want to fix a typo.
+- **Ruling.** **Read-only in v1** (matches shipped). Surface the state explicitly. Path
+  forward: "Edit a copy → save to my iCloud vault," then a PR flow (needs write scope).
+
+### D4 — Entry point: **paste/browse first**, Share Extension later
+- _For Share Extension first:_ closest to the literal "tap a repo in Safari → open."
+  _Against:_ extra target + App Group, clunkier, lower discoverability than in-app.
+- _For paste/browse first:_ already shipped; lowest friction; works for signed-in
+  users' own repos.
+- **Ruling.** Ship **paste + browse + your-repos** (done); land the **`markup://`
+  scheme now** (near-zero cost, unblocks QR/website/deep-links); add the **Share
+  Extension in G2**. Sequence: paste/browse → scheme → Share Extension.
+
+### D5 — Auth: **OAuth Device Flow** (shipped) vs PAT vs none
+- **Ruling.** Keep **device flow** (no client secret on device, no embedded web login);
+  **public-first** (anonymous), device-flow unlocks private + 5,000/hr. Correct as-is.
+
+### D6 — Storage: Caches (evictable) vs App Support (persistent); and `/tmp` leaks
+- **Ruling.** Working copy in **Caches** (re-downloadable), source registry + recents in
+  **App Support**; offline-pin protects from eviction. **Fix the `/tmp/gh-*` leak**:
+  write into a managed per-repo cache dir and reap on close / size cap. (The shipped
+  `/tmp` writes with no deletion are a privacy + disk leak — see §16.)
+
+### D7 — Untrusted HTML/JS from arbitrary repos
+- **Ruling.** Standing constraint: the reader WebView stays sandboxed, loads `file://`
+  scoped to the worktree root, exposes **only** the minimal scroll/task message
+  handlers, and never widens the bridge for GitHub content. External links open in
+  Safari (never navigate the reader WebView away).
+
+## 16. Reconciliation with the shipped implementation (2026-06)
+
+The iOS app **already ships** a working GitHub path that diverges from this doc's
+original §4. Correcting the record so the doc matches reality:
+
+| Aspect | This doc (original) | **Shipped today** | Action |
+|---|---|---|---|
+| Download | tree + per-blob | **per-file Contents API → `/tmp/gh-*` per open** (`GitHubService.swift:29-52`) | Move to **zipball working copy** (D1); per-file is the bridge |
+| Working copy | path-mirrored worktree + manifest | none (single temp file) | Build in G3 |
+| Auth | device flow | **device flow shipped** (`GitHubDeviceFlow.swift`, `GitHubAuth.swift`) | ✅ keep |
+| URL parsing | all github.com shapes | **shipped** (`GitHubLink.swift` / `GitHubLinkParser`) | ✅ reuse |
+| Sources model | `VaultSource` protocol + Sources home | three separate paths (VaultStore / GitHubService / Recents) | G0 unify |
+| `markup://` scheme | yes | **not registered** (`Info.plist` has no `CFBundleURLTypes`) | land now |
+| Share Extension | yes (headline UX) | **none** | G2 |
+| In-repo link nav | intercept → in-app / Safari | **none** — `ReaderWebView` `decidePolicyFor` always `.allow` (`:184-192`); links silently fail | **G3 — see below** |
+| Asset resolution | download referenced assets | **none** — images/CSS 404 | **G3 — see below** |
+
+### The two gaps that most hurt reading (and the first concrete step)
+1. **Broken images / unstyled HTML** — referenced assets have no on-disk copy.
+2. **Links silently fail** — no classification of in-repo vs external; the WebView
+   nav-policy always allows, so relative links navigate nowhere and external links
+   don't reach Safari.
+
+Both are downstream of **one pure operation**: _given a doc, find every referenced
+URL and classify it (in-repo relative path · external · anchor)._ That operation is
+the highest-ROI, zero-collision, fully testable next step — it feeds **both** the
+asset-download queue (G3) and the WebView link-interception policy, and it lands as a
+pure `MarkupKit` module with no UI changes. **First step:** `DocReferences` in
+`MarkupKit` (markdown + HTML reference scanner + relative-path resolver/classifier),
+with `swift test` coverage. (Implemented alongside this doc.)
+
 ---
 _Companion docs: [`00-ios-app-design.md`](./00-ios-app-design.md) (reader/index/editor
 architecture, reused wholesale) · [`02-html-support.md`](./02-html-support.md) (faithful
-`.html` rendering, now fed by the downloaded worktree)._
+`.html` rendering)._
