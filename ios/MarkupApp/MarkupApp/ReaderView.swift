@@ -102,6 +102,23 @@ struct ReaderView: View {
             assetBase: readerAssetBase)
     }
 
+    /// On-disk sibling (`<doc>.html`, next to the source) that the app-owned
+    /// render path writes and loads, so relative assets resolve against the
+    /// working copy. Only used when `vault.isAppOwned`.
+    private var renderedSiblingURL: URL {
+        URL(fileURLWithPath: file.path).appendingPathExtension("html")
+    }
+
+    /// Write the current rendered HTML to `renderedSiblingURL` and bump the load
+    /// token so the WebView reloads it. The write must precede the reload, so the
+    /// freshly rendered document (matching the current theme/size/content) is
+    /// what gets loaded.
+    private func renderMarkdownSibling() {
+        guard let data = html.data(using: .utf8),
+              (try? data.write(to: renderedSiblingURL, options: .atomic)) != nil else { return }
+        htmlReloadToken += 1
+    }
+
     /// The native source editor with its keyboard accessory + image picker.
     private var editorPane: some View {
         SourceEditorView(text: $content, controller: editor)
@@ -149,20 +166,28 @@ struct ReaderView: View {
                     preferDesktop: htmlDesktopMode,
                     proxy: proxy,
                     onScroll: { positions.save($0, for: file.relPath) })
+            } else if vault.isAppOwned {
+                // App-owned (GitHub) vault: render the Markdown to a sibling
+                // `<doc>.html` on disk and load it with read access to the vault
+                // root, so relative images/CSS resolve — `loadHTMLString` (the
+                // `else` branch) is sandboxed and can't reach them. The sibling
+                // is (re)written on every render-input change via `.task(id:)`.
+                // We never write into user-picked folders.
+                ReaderWebView(
+                    fileURL: renderedSiblingURL,
+                    readAccessURL: vault.rootURL,
+                    loadToken: htmlReloadToken,
+                    proxy: proxy,
+                    onScroll: { positions.save($0, for: file.relPath) },
+                    onToggleTask: { toggleTask($0) })
+                .task(id: html) { renderMarkdownSibling() }
             } else {
                 ReaderWebView(
                     html: html,
                     baseURL: baseURL,
                     proxy: proxy,
                     onScroll: { positions.save($0, for: file.relPath) },
-                    onToggleTask: { index in
-                        if let updated = MarkdownTasks.toggle(content, at: index),
-                           vault.write(updated, to: file) {
-                            content = updated
-                            loadedMtimeMs = vault.modificationDateMs(of: file) ?? loadedMtimeMs
-                        }
-                    }
-                )
+                    onToggleTask: { toggleTask($0) })
             }
         }
         .ignoresSafeArea(edges: .bottom)
@@ -360,6 +385,19 @@ struct ReaderView: View {
                 }
             }
             pickedImage = nil
+        }
+    }
+
+    // MARK: - Task list
+
+    /// Toggle the `index`-th task checkbox in the source and persist it (the
+    /// rendered view reloads from the updated `content`). Shared by both the
+    /// app-owned (file) and user-folder (in-memory) render paths.
+    private func toggleTask(_ index: Int) {
+        if let updated = MarkdownTasks.toggle(content, at: index),
+           vault.write(updated, to: file) {
+            content = updated
+            loadedMtimeMs = vault.modificationDateMs(of: file) ?? loadedMtimeMs
         }
     }
 

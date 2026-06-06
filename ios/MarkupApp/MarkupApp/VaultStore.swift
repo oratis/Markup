@@ -7,7 +7,29 @@ struct StoredVault: Codable, Identifiable, Equatable {
     var name: String
     var path: String
     var bookmark: Data
+    /// True for app-owned (downloaded GitHub) vaults, which render Markdown to
+    /// on-disk siblings so relative assets resolve. Persisted so a remembered or
+    /// restored vault keeps the behavior; absent in older data → false.
+    var isAppOwned: Bool
     var id: String { path }
+
+    init(name: String, path: String, bookmark: Data, isAppOwned: Bool) {
+        self.name = name
+        self.path = path
+        self.bookmark = bookmark
+        self.isAppOwned = isAppOwned
+    }
+
+    // Custom decode so vaults persisted before `isAppOwned` existed still load
+    // (a missing key defaults to false) instead of dropping the whole list.
+    enum CodingKeys: String, CodingKey { case name, path, bookmark, isAppOwned }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        path = try c.decode(String.self, forKey: .path)
+        bookmark = try c.decode(Data.self, forKey: .bookmark)
+        isAppOwned = try c.decodeIfPresent(Bool.self, forKey: .isAppOwned) ?? false
+    }
 }
 
 /// Owns the chosen vault folder (via a security-scoped bookmark) and the list of
@@ -19,6 +41,11 @@ final class VaultStore {
     var files: [VaultFile] = []
     var errorMessage: String?
     var isScanning = false
+    /// True when the open vault is app-owned (a downloaded GitHub repo) rather
+    /// than a user-picked folder. App-owned vaults render Markdown to on-disk
+    /// `<doc>.html` siblings so relative images/CSS resolve; user folders keep
+    /// the sandboxed in-memory render (we never write into a user's folder).
+    var isAppOwned = false
     /// Vaults the user has opened, for the switcher. Most-recent first.
     var knownVaults: [StoredVault] = []
 
@@ -35,6 +62,9 @@ final class VaultStore {
     }
 
     private let bookmarkKey = "vault.rootBookmark"
+    /// App-owned flag for the single restored-on-launch vault, stored alongside
+    /// `bookmarkKey` so `restore()` reinstates it without path-matching.
+    private let rootAppOwnedKey = "vault.rootIsAppOwned"
     private let vaultsKey = "vault.known"
     private let listableExtensions = markupListableExtensions
 
@@ -54,8 +84,9 @@ final class VaultStore {
     }
 
     /// Upsert the current root into the known-vaults list (most-recent first).
-    private func rememberVault(_ url: URL, bookmark: Data) {
-        let entry = StoredVault(name: url.lastPathComponent, path: url.path, bookmark: bookmark)
+    private func rememberVault(_ url: URL, bookmark: Data, appOwned: Bool) {
+        let entry = StoredVault(
+            name: url.lastPathComponent, path: url.path, bookmark: bookmark, isAppOwned: appOwned)
         knownVaults.removeAll { $0.path == entry.path }
         knownVaults.insert(entry, at: 0)
         saveKnownVaults()
@@ -70,7 +101,7 @@ final class VaultStore {
             errorMessage = "Couldn't reopen \(vault.name)."
             return false
         }
-        adopt(url, persist: true)
+        adopt(url, persist: true, appOwned: vault.isAppOwned)
         return rootURL != nil
     }
 
@@ -105,22 +136,23 @@ final class VaultStore {
             errorMessage = "Couldn't reopen the saved folder."
             return
         }
-        adopt(url, persist: stale) // refresh the bookmark if it went stale
+        let appOwned = UserDefaults.standard.bool(forKey: rootAppOwnedKey)
+        adopt(url, persist: stale, appOwned: appOwned) // refresh the bookmark if it went stale
     }
 
     /// Adopt a folder the user just picked.
     func openFolder(_ url: URL) {
-        adopt(url, persist: true)
+        adopt(url, persist: true, appOwned: false)
     }
 
     /// Adopt an app-owned directory (e.g. a downloaded GitHub repo vault) as the
     /// vault. Unlike a user-picked folder it needs no security scope — it lives
     /// in our own container — so it's adopted + persisted directly.
     func openLocalVault(_ url: URL) {
-        adopt(url, persist: true)
+        adopt(url, persist: true, appOwned: true)
     }
 
-    private func adopt(_ url: URL, persist: Bool) {
+    private func adopt(_ url: URL, persist: Bool, appOwned: Bool) {
         // Stop accessing any previous root.
         rootURL?.stopAccessingSecurityScopedResource()
 
@@ -132,10 +164,12 @@ final class VaultStore {
             return
         }
         rootURL = url
+        isAppOwned = appOwned
 
         if persist, let data = try? url.bookmarkData() {
             UserDefaults.standard.set(data, forKey: bookmarkKey)
-            rememberVault(url, bookmark: data)
+            UserDefaults.standard.set(appOwned, forKey: rootAppOwnedKey)
+            rememberVault(url, bookmark: data, appOwned: appOwned)
         }
         scan()
     }
@@ -158,6 +192,11 @@ final class VaultStore {
         let rootPath = root.standardizedFileURL.path
         for case let url as URL in enumerator {
             guard listableExtensions.contains(url.pathExtension.lowercased()) else { continue }
+            // Hide the `<doc>.html` render siblings the reader writes next to
+            // Markdown sources in app-owned vaults, so they don't double up the
+            // listing/index. Scoped to app-owned vaults — user folders never get
+            // these (and we never write into them).
+            if isAppOwned && markupIsGeneratedRenderSibling(url.lastPathComponent) { continue }
             let values = try? url.resourceValues(forKeys: Set(keys))
             if values?.isRegularFile == false { continue }
             let mtime = (values?.contentModificationDate?.timeIntervalSince1970 ?? 0) * 1000
