@@ -65,6 +65,7 @@ enum L {
     case githubSignIn, githubSignOut, githubSignedIn, githubEnterCode, githubWaiting, copyCode
     case githubSignOutConfirm, githubYourRepos
     case closeTab, livePreview
+    case openAsVault, ok
 
     var en: String {
         switch self {
@@ -170,6 +171,8 @@ enum L {
         case .githubYourRepos: return "Your repositories"
         case .closeTab: return "Close tab"
         case .livePreview: return "Live preview"
+        case .openAsVault: return "Open as Vault"
+        case .ok: return "OK"
         }
     }
 
@@ -273,6 +276,8 @@ enum L {
         case .githubYourRepos: return "你的仓库"
         case .closeTab: return "关闭标签"
         case .livePreview: return "实时预览"
+        case .openAsVault: return "作为 Vault 打开"
+        case .ok: return "好"
         }
     }
 }

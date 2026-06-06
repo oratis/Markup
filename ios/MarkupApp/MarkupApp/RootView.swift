@@ -33,6 +33,9 @@ struct RootView: View {
     @State private var showGitHub = false
     @State private var openedFile: OpenedURL?
     @State private var githubBrowse: BrowseLink?
+    /// "owner/repo" while a repo is being downloaded + opened as a vault.
+    @State private var openingVault: String?
+    @State private var openVaultError: String?
     /// relPath of a just-created note that should open straight into edit mode.
     @State private var pendingEditFileId: String?
     @State private var renameTarget: VaultFile?
@@ -46,8 +49,8 @@ struct RootView: View {
     }
 
     /// Route an inbound URL. `file://` (Files / share-sheet) opens in the reader;
-    /// `markup://github?repo=…` deep-links download a single file into the reader
-    /// or browse a repo folder. Anything unparseable is ignored.
+    /// `markup://github?repo=…` deep-links open a repo root as a vault, browse a
+    /// sub-folder, or download a single file into the reader. Unparseable → ignored.
     private func handleOpenURL(_ url: URL) {
         guard url.scheme?.lowercased() == "markup" else {
             openedFile = OpenedURL(url: url)
@@ -55,13 +58,36 @@ struct RootView: View {
         }
         guard let link = GitHubLinkParser.parseAppLink(url.absoluteString) else { return }
         if link.isDirectory {
-            githubBrowse = BrowseLink(link: link)
+            // Repo root → open the whole repo as a vault; a sub-folder → browse it.
+            if link.path.isEmpty {
+                openRepoAsVault(link)
+            } else {
+                githubBrowse = BrowseLink(link: link)
+            }
         } else {
             Task {
                 if let doc = try? await GitHubService.shared.openFile(link) {
                     openedFile = OpenedURL(
                         url: doc.fileURL, readAccessRoot: doc.root, sourceLink: doc.link)
                 }
+            }
+        }
+    }
+
+    /// Download a repo's zipball and open it as the active vault, with a progress
+    /// overlay. Switching `vault.rootURL` clears the previous vault's tabs.
+    private func openRepoAsVault(_ link: GitHubLink) {
+        guard openingVault == nil else { return }
+        showGitHub = false
+        githubBrowse = nil
+        openingVault = "\(link.owner)/\(link.repo)"
+        Task {
+            defer { openingVault = nil }
+            do {
+                let dir = try await GitHubService.shared.openAsVault(link)
+                vault.openLocalVault(dir)
+            } catch {
+                openVaultError = error.localizedDescription
             }
         }
     }
@@ -96,6 +122,24 @@ struct RootView: View {
             selection = nil
         }
         .onOpenURL { url in handleOpenURL(url) }
+        .overlay {
+            if let repo = openingVault {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Downloading \(repo)…")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                .padding(28)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .shadow(radius: 20)
+            }
+        }
+        .alert("Couldn't open repository", isPresented: Binding(
+            get: { openVaultError != nil }, set: { if !$0 { openVaultError = nil } })) {
+            Button(t(.ok), role: .cancel) { openVaultError = nil }
+        } message: {
+            Text(openVaultError ?? "")
+        }
         .sheet(isPresented: $showPicker) {
             FolderPicker { url in
                 vault.openFolder(url)
@@ -114,9 +158,11 @@ struct RootView: View {
             VaultSwitcherView(vault: vault, onOpenAnother: { showPicker = true })
         }
         .sheet(isPresented: $showGitHub) {
-            GitHubOpenView(onOpen: {
-                openedFile = OpenedURL(url: $0.fileURL, readAccessRoot: $0.root, sourceLink: $0.link)
-            })
+            GitHubOpenView(
+                onOpen: {
+                    openedFile = OpenedURL(url: $0.fileURL, readAccessRoot: $0.root, sourceLink: $0.link)
+                },
+                onOpenVault: { openRepoAsVault($0) })
         }
         .sheet(item: $openedFile) {
             ExternalFileReader(url: $0.url, readAccessRoot: $0.readAccessRoot, sourceLink: $0.sourceLink)
@@ -127,13 +173,13 @@ struct RootView: View {
                     githubBrowse = nil
                     openedFile = OpenedURL(
                         url: doc.fileURL, readAccessRoot: doc.root, sourceLink: doc.link)
-                })
+                }, onOpenVault: { openRepoAsVault($0) })
                 .navigationDestination(for: GitHubLink.self) { child in
                     GitHubBrowseView(link: child, onOpenFile: { doc in
                         githubBrowse = nil
                         openedFile = OpenedURL(
                             url: doc.fileURL, readAccessRoot: doc.root, sourceLink: doc.link)
-                    })
+                    }, onOpenVault: { openRepoAsVault($0) })
                 }
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {

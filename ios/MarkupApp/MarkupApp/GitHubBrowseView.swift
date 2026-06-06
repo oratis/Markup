@@ -6,6 +6,8 @@ import MarkupKit
 struct GitHubBrowseView: View {
     let link: GitHubLink
     var onOpenFile: (GitHubService.GitHubDoc) -> Void
+    /// Download the whole repo as a vault (offered at the repo root).
+    var onOpenVault: (GitHubLink) -> Void = { _ in }
 
     @State private var entries: [GitHubEntry] = []
     @State private var loading = true
@@ -48,6 +50,17 @@ struct GitHubBrowseView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // At the repo root, offer to download the whole repo as a vault
+            // (full sidebar + search + offline), not just open one file.
+            if link.path.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { onOpenVault(link) } label: {
+                        Label(t(.openAsVault), systemImage: "arrow.down.circle")
+                    }
+                }
+            }
+        }
         .task { await load() }
     }
 
