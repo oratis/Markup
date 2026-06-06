@@ -86,3 +86,34 @@ struct GitHubLinkTests {
         #expect(GitHubLinkParser.rawURL(GitHubLink(owner: "o", repo: "r", isDirectory: true)) == nil)
     }
 }
+
+@Suite("GitHubLinkParser.parseAppLink (markup://)")
+struct GitHubAppLinkTests {
+    @Test func repoRoot() {
+        #expect(GitHubLinkParser.parseAppLink("markup://github?repo=oratis/Markup")
+            == GitHubLink(owner: "oratis", repo: "Markup", isDirectory: true))
+    }
+
+    @Test func fileWithRefAndPath() {
+        #expect(GitHubLinkParser.parseAppLink(
+            "markup://github?repo=o/r&ref=main&path=docs/guide.md&type=blob")
+            == GitHubLink(owner: "o", repo: "r", ref: "main", path: "docs/guide.md", isDirectory: false))
+    }
+
+    @Test func subdirAsRoot() {
+        #expect(GitHubLinkParser.parseAppLink("markup://github?repo=o/r&path=docs&type=tree")
+            == GitHubLink(owner: "o", repo: "r", path: "docs", isDirectory: true))
+    }
+
+    @Test func stripsGitSuffixAndLeadingSlashes() {
+        #expect(GitHubLinkParser.parseAppLink("markup://github?repo=o/r.git&path=/docs/x.md&type=blob")
+            == GitHubLink(owner: "o", repo: "r", path: "docs/x.md", isDirectory: false))
+    }
+
+    @Test func rejectsMalformed() {
+        #expect(GitHubLinkParser.parseAppLink("markup://github?repo=noSlash") == nil)
+        #expect(GitHubLinkParser.parseAppLink("markup://other?repo=o/r") == nil)
+        #expect(GitHubLinkParser.parseAppLink("https://github.com/o/r") == nil)
+        #expect(GitHubLinkParser.parseAppLink("markup://github") == nil)
+    }
+}

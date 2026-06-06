@@ -45,12 +45,22 @@ final class GitHubService {
         default: throw GitHubError.http(code)
         }
 
-        let name = link.fileName
-        let dest = FileManager.default.temporaryDirectory
-            .appendingPathComponent("gh-\(UUID().uuidString.prefix(8))-\(name)")
+        let dir = Self.cacheRoot.appendingPathComponent(UUID().uuidString.prefix(8).description)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dest = dir.appendingPathComponent(link.fileName)
         try data.write(to: dest, options: .atomic)
         return dest
     }
+
+    /// A managed, app-owned cache directory for downloaded GitHub content
+    /// (`<caches>/MarkupGitHub/`). Replaces scattering temp files in the system
+    /// temp dir, and gives PR-2's working copies a stable home to mirror repo
+    /// paths under. The OS may evict it under storage pressure — fine, it's a
+    /// cache; offline persistence is a later concern.
+    static let cacheRoot: URL = {
+        let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        return base.appendingPathComponent("MarkupGitHub", isDirectory: true)
+    }()
 
     /// List a repo folder's entries (folders first, then files).
     func listDirectory(_ link: GitHubLink) async throws -> [GitHubEntry] {

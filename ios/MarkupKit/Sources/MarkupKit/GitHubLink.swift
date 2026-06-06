@@ -143,6 +143,32 @@ public enum GitHubLinkParser {
         }
     }
 
+    /// Parse a `markup://` deep link into a `GitHubLink`. Shape:
+    /// `markup://github?repo=owner/repo[&ref=branch][&path=docs/x.md][&type=blob|tree]`.
+    /// `type` defaults to `tree` (directory) when a path is absent or `type=tree`,
+    /// otherwise the path is treated as a file. Returns `nil` for anything that
+    /// isn't a well-formed `markup://github` link. Lets websites / QR codes /
+    /// other apps open a repo straight into Markup.
+    public static func parseAppLink(_ urlString: String) -> GitHubLink? {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let comps = URLComponents(string: trimmed),
+              comps.scheme?.lowercased() == "markup",
+              (comps.host?.lowercased() == "github" || comps.path == "github")
+        else { return nil }
+        var q: [String: String] = [:]
+        for item in comps.queryItems ?? [] { q[item.name.lowercased()] = item.value }
+        guard let repoFull = q["repo"], repoFull.contains("/") else { return nil }
+        let parts = repoFull.split(separator: "/", maxSplits: 1).map(String.init)
+        guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
+        let path = (q["path"]?.removingPercentEncoding ?? q["path"] ?? "")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let isDir = path.isEmpty || q["type"]?.lowercased() == "tree"
+        let ref = (q["ref"]?.isEmpty == false) ? q["ref"] : nil
+        return GitHubLink(
+            owner: parts[0], repo: stripGit(parts[1]), ref: ref,
+            path: path, isDirectory: isDir)
+    }
+
     /// The `raw.githubusercontent.com` URL for a file link (needs a ref).
     public static func rawURL(_ link: GitHubLink) -> String? {
         guard !link.isDirectory, !link.path.isEmpty, let ref = link.ref else { return nil }
