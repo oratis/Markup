@@ -17,6 +17,20 @@ struct FileKindTests {
         #expect(markupSupportedExtensions.contains("html"))
         #expect(markupSupportedExtensions.contains("md"))
     }
+
+    @Test func detectsGeneratedRenderSiblings() {
+        // `<doc>.html` next to a Markdown source → a generated sibling.
+        #expect(markupIsGeneratedRenderSibling("notes.md.html"))
+        #expect(markupIsGeneratedRenderSibling("README.MARKDOWN.HTML"))
+        #expect(markupIsGeneratedRenderSibling("a.mdx.html"))
+        #expect(markupIsGeneratedRenderSibling("b.mkd.html"))
+        #expect(markupIsGeneratedRenderSibling("changelog.txt.html"))
+        // Plain HTML docs and Markdown sources are not siblings.
+        #expect(!markupIsGeneratedRenderSibling("page.html"))
+        #expect(!markupIsGeneratedRenderSibling("index.htm"))
+        #expect(!markupIsGeneratedRenderSibling("notes.md"))
+        #expect(!markupIsGeneratedRenderSibling("photo.png"))
+    }
 }
 
 @Suite("HTMLDoc")

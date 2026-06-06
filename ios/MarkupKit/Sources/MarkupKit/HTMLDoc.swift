@@ -32,6 +32,23 @@ public let markupSupportedExtensions: Set<String> = [
 public let markupListableExtensions: Set<String> =
     markupSupportedExtensions.union(["canvas"])
 
+/// True when `name` looks like a render sibling the reader writes next to a
+/// Markdown source in an app-owned vault: an `.html` file whose stem still
+/// carries a Markdown extension (e.g. `notes.md.html`, `readme.txt.html`).
+/// These are loaded via `loadFileURL` so relative assets resolve; the vault
+/// scan hides them so they don't double up the listing/index. (A real repo
+/// file literally named `*.md.html` would also match, but that's vanishingly
+/// rare and only affects app-owned vaults.)
+public func markupIsGeneratedRenderSibling(_ name: String) -> Bool {
+    let lower = name.lowercased() as NSString
+    guard lower.pathExtension == "html" else { return false }
+    let stem = lower.deletingPathExtension as NSString
+    switch stem.pathExtension {
+    case "md", "markdown", "mdx", "mkd", "txt": return true
+    default: return false
+    }
+}
+
 /// Lightweight HTML inspection — enough to title and full-text-index an `.html`
 /// file without a full parser. Used so HTML documents are searchable and named
 /// in the vault. Rendering itself is done faithfully by the WebView.

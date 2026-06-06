@@ -444,16 +444,13 @@ device-verified**. Both reading gaps named in §16 are closed.
 | **In-repo link interception** (tap → open in-app) | #106 | closes gap #2 (in-repo half); pushes deeper docs on the nav stack |
 | **Repo → vault (zipball working copy)** | #107 | `GitHubZipball` strip + `openAsVault` → `VaultStore.openLocalVault`; full sidebar/search/index, offline |
 | Hardening (10 of 11 adversarial-review findings) | #108 | atomic extract, off-main decompress, zip64 fail-loud, `owner/ref/repo` vault path, 403-vs-rate-limit, surfaced in-repo errors |
+| **In-vault Markdown image fidelity** | #110 | `VaultStore.isAppOwned`; `ReaderView` renders to a `<doc>.html` sibling + `loadFileURL(readAccessURL:)` for app-owned vaults (user folders keep `loadHTMLString`); scan hides the siblings |
 
 **On-disk layout (as built):** `<App Support>/GitHubVaults/<owner>/<refSlug>/<repo>/…`
 (separate path components — unambiguous, ref-keyed, repo name as the display leaf).
 Per-file working copies for single-doc opens live under `<caches>/MarkupGitHub/<id>/…`.
 
 ### Deferred follow-ups (tracked)
-- **In-vault Markdown image fidelity** — `ReaderView`'s markdown read path still uses
-  `loadHTMLString` (shared with user folders); for app-owned GitHub vaults it should
-  render to a sibling `.html` + `loadFileURL` like the single-doc path. Single-doc
-  reading already renders images correctly.
 - **Cross-doc `#fragment` scrolling** (review #7) — intercepted in-repo links open the
   target at the top; honoring the fragment needs a GitHub-slug → `mk-h{n}` heading map.
 - **Incremental refresh** — `RepoManifest` + `ManifestDiff` (git-trees API) to fetch
