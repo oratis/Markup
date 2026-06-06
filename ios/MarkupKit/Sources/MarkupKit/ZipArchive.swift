@@ -50,6 +50,22 @@ public enum ZipArchive {
         return entries
     }
 
+    /// Whether `data` looks like a **zip64** archive (or otherwise exceeds the
+    /// classic-format limits this reader understands). `extract` silently drops
+    /// entries it can't parse — fine for a small web bundle, but for a whole-repo
+    /// zipball it would yield a *partial* tree with no error. Callers that need
+    /// completeness (the GitHub vault) should check this and fail loudly.
+    ///
+    /// Detected via the classic EOCD sentinels: a `0xFFFF` entry count or a
+    /// `0xFFFFFFFF` central-directory size/offset all mean "see the zip64 record".
+    public static func isLikelyZip64(_ data: Data) -> Bool {
+        let bytes = [UInt8](data)
+        guard let eocd = findEOCD(bytes) else { return false }
+        return u16(bytes, eocd + 10) == 0xFFFF      // total entry count
+            || u32(bytes, eocd + 12) == 0xFFFF_FFFF // central-directory size
+            || u32(bytes, eocd + 16) == 0xFFFF_FFFF // central-directory offset
+    }
+
     /// Pick the HTML file to open as the bundle's entry point: a top-level
     /// `index.html`/`index.htm` first, else the shallowest `.html`, else the
     /// first one. Returns `nil` when the bundle has no HTML.

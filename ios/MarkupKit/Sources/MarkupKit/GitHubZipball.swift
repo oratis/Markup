@@ -30,6 +30,21 @@ public enum GitHubZipball {
         return top
     }
 
+    /// The path components (under a `GitHubVaults/` base) that uniquely and
+    /// unambiguously locate a repo's vault directory: `[owner, refSlug, repo]`.
+    ///
+    /// Separate path components (not a hyphen-joined string) avoid aliasing —
+    /// `a/(b-c)` and `(a-b)/c` map to distinct directories — and the ref is part
+    /// of the key so different branches/tags of one repo don't clobber each
+    /// other (design §"on-disk layout"). `repo` is the leaf so the vault's
+    /// display name is the repo name. `ref` is slugified (`/`→`-`) since a branch
+    /// like `feature/x` would otherwise nest.
+    public static func vaultPathComponents(owner: String, repo: String, ref: String?) -> [String] {
+        let refSlug = (ref?.isEmpty == false ? ref! : "default")
+            .replacingOccurrences(of: "/", with: "-")
+        return [owner, refSlug, repo]
+    }
+
     /// Map one zipball entry path to its vault-root-relative path by dropping
     /// `topLevel/`. Returns `nil` for the top dir itself, anything outside it,
     /// or a pure directory entry (trailing `/`) — i.e. only real files survive.
