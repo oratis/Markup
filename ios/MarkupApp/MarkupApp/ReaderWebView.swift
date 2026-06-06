@@ -217,34 +217,42 @@ struct ReaderWebView: UIViewRepresentable {
             preferences.allowsContentJavaScript = allowJavaScript
             preferences.preferredContentMode = preferDesktop ? .desktop : .mobile
 
-            // A tapped link to another Markdown/HTML doc inside the working copy
-            // is handed back to the app to download + open, rather than letting
-            // the WebView 404 on a file we never materialized. Same-doc anchors
-            // (path == the loaded file) fall through so in-page links still work.
             if navigationAction.navigationType == .linkActivated,
-               let root = inRepoRoot,
-               let url = navigationAction.request.url, url.isFileURL,
-               let rel = Self.inRepoDocPath(url, under: root),
-               url.standardizedFileURL.path != loadedFilePath {
-                onInRepoDoc(rel)
-                decisionHandler(.cancel, preferences)
-                return
+               let url = navigationAction.request.url {
+                // In-repo file links (working copy).
+                if url.isFileURL {
+                    let p = url.standardizedFileURL.path
+                    // An anchor within the currently rendered doc → let WebKit
+                    // scroll natively (the rendered Markdown lives in a sibling
+                    // `<doc>.md.html`, so a self-link spelling the source name
+                    // resolves to `<doc>` itself — also "same doc", so don't
+                    // re-fetch it or load the raw .md; just stay put).
+                    if let loaded = loadedFilePath, p == loaded || loaded == p + ".html" {
+                        decisionHandler(p == loaded ? .allow : .cancel, preferences)
+                        return
+                    }
+                    // A link to a *different* in-repo doc → open it in-app rather
+                    // than 404 on a file we never materialized.
+                    if let root = inRepoRoot, let rel = Self.inRepoDocPath(url, under: root) {
+                        onInRepoDoc(rel)
+                        decisionHandler(.cancel, preferences)
+                        return
+                    }
+                    // Other local resources (assets etc.) → allow.
+                    decisionHandler(.allow, preferences)
+                    return
+                }
+                // A tapped link to an external destination (web / mail / phone)
+                // opens in the system handler instead of hijacking the reader.
+                if let scheme = url.scheme?.lowercased(),
+                   ["http", "https", "mailto", "tel"].contains(scheme) {
+                    UIApplication.shared.open(url)
+                    decisionHandler(.cancel, preferences)
+                    return
+                }
             }
-
-            // A tapped link to an external destination (web / mail / phone)
-            // opens in the system handler instead of hijacking the reader —
-            // fixes silently-failing taps on http(s)/mailto/tel links in
-            // GitHub-sourced docs. The initial document load and in-bundle
-            // (file://, markupasset://) navigations are `.other`, so they fall
-            // through to `.allow`.
-            if navigationAction.navigationType == .linkActivated,
-               let url = navigationAction.request.url,
-               let scheme = url.scheme?.lowercased(),
-               ["http", "https", "mailto", "tel"].contains(scheme) {
-                UIApplication.shared.open(url)
-                decisionHandler(.cancel, preferences)
-                return
-            }
+            // The initial document load and in-bundle (file://, markupasset://)
+            // navigations are `.other`, so they fall through to `.allow`.
             decisionHandler(.allow, preferences)
         }
     }

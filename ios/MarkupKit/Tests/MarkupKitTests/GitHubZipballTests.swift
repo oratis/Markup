@@ -50,4 +50,27 @@ struct GitHubZipballTests {
         let rels = entries.compactMap { GitHubZipball.vaultPath($0, topLevel: top) }
         #expect(rels == ["README.md", "doc/build.md", "assets/logo.png"])
     }
+
+    @Test func vaultPathComponentsAreOwnerRefRepo() {
+        #expect(GitHubZipball.vaultPathComponents(owner: "octo", repo: "scrcpy", ref: nil)
+            == ["octo", "default", "scrcpy"])
+        #expect(GitHubZipball.vaultPathComponents(owner: "octo", repo: "scrcpy", ref: "main")
+            == ["octo", "main", "scrcpy"])
+    }
+
+    @Test func vaultPathComponentsSlugifyRefSlashes() {
+        #expect(GitHubZipball.vaultPathComponents(owner: "o", repo: "r", ref: "feature/x")
+            == ["o", "feature-x", "r"])
+        #expect(GitHubZipball.vaultPathComponents(owner: "o", repo: "r", ref: "")
+            == ["o", "default", "r"])
+    }
+
+    @Test func vaultPathComponentsDontAliasOnHyphens() {
+        // alice/(my-repo) vs (alice-my)/repo must map to distinct directories.
+        let a = GitHubZipball.vaultPathComponents(owner: "alice", repo: "my-repo", ref: "main")
+        let b = GitHubZipball.vaultPathComponents(owner: "alice-my", repo: "repo", ref: "main")
+        #expect(a == ["alice", "main", "my-repo"])
+        #expect(b == ["alice-my", "main", "repo"])
+        #expect(a != b)
+    }
 }

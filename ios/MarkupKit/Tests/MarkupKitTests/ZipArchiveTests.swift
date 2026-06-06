@@ -57,6 +57,37 @@ struct ZipExtractTests {
     }
 }
 
+@Suite("ZipArchive.isLikelyZip64")
+struct ZipZip64Tests {
+    @Test func normalZipIsNotZip64() {
+        let zip = makeZip([(name: "a.html", data: Data("x".utf8), deflate: false)])
+        #expect(ZipArchive.isLikelyZip64(zip) == false)
+    }
+
+    @Test func sentinelEntryCountIsZip64() {
+        // A bare EOCD whose total-records field is the 0xFFFF zip64 sentinel.
+        var b = [UInt8]()
+        b += le32(0x0605_4b50)            // EOCD signature
+        b += le16(0) + le16(0)            // disk numbers
+        b += le16(0xFFFF) + le16(0xFFFF)  // records-this-disk + total (sentinel)
+        b += le32(0) + le32(0) + le16(0)  // cd size, cd offset, comment len
+        #expect(ZipArchive.isLikelyZip64(Data(b)) == true)
+    }
+
+    @Test func sentinelCdOffsetIsZip64() {
+        var b = [UInt8]()
+        b += le32(0x0605_4b50)
+        b += le16(0) + le16(0)
+        b += le16(1) + le16(1)
+        b += le32(0) + le32(0xFFFF_FFFF) + le16(0) // cd offset = sentinel
+        #expect(ZipArchive.isLikelyZip64(Data(b)) == true)
+    }
+
+    @Test func nonZipIsNotZip64() {
+        #expect(ZipArchive.isLikelyZip64(Data("nope".utf8)) == false)
+    }
+}
+
 // MARK: - In-test ZIP builder
 
 private func le16(_ v: Int) -> [UInt8] { [UInt8(v & 0xff), UInt8((v >> 8) & 0xff)] }

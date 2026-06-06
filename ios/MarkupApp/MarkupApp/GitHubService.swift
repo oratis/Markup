@@ -9,16 +9,34 @@ final class GitHubService {
     static let shared = GitHubService()
 
     enum GitHubError: LocalizedError {
-        case notAFile, rateLimited, notFound, http(Int), badURL, badArchive
+        case notAFile, rateLimited, forbidden, notFound, http(Int), badURL, badArchive
         var errorDescription: String? {
             switch self {
             case .notAFile: return "That link points to a folder, not a file."
             case .rateLimited: return "GitHub rate limit reached — sign in to raise it."
+            case .forbidden: return "Access denied. Sign in to view private repos, or check your access."
             case .notFound: return "File not found (or the repo is private)."
             case .http(let c): return "GitHub request failed (HTTP \(c))."
             case .badURL: return "Couldn't build the request URL."
             case .badArchive: return "Couldn't read the repository archive."
             }
+        }
+    }
+
+    /// Map a non-2xx GitHub response to a `GitHubError`, distinguishing a real
+    /// rate-limit (403/429 with `x-ratelimit-remaining: 0`) from an
+    /// authorization failure (403/401), which would otherwise both read as
+    /// "rate limit reached — sign in", misleading already-signed-in users.
+    private static func httpError(_ resp: URLResponse, _ code: Int) -> GitHubError {
+        switch code {
+        case 404: return .notFound
+        case 429: return .rateLimited
+        case 401: return .forbidden
+        case 403:
+            let remaining = (resp as? HTTPURLResponse)?
+                .value(forHTTPHeaderField: "x-ratelimit-remaining")
+            return remaining == "0" ? .rateLimited : .forbidden
+        default: return .http(code)
         }
     }
 
@@ -85,12 +103,8 @@ final class GitHubService {
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
-        switch code {
-        case 200: return data
-        case 403, 429: throw GitHubError.rateLimited
-        case 404: throw GitHubError.notFound
-        default: throw GitHubError.http(code)
-        }
+        guard code == 200 else { throw Self.httpError(resp, code) }
+        return data
     }
 
     /// Write `data` to `dest`, creating parent dirs — but only if `dest` stays
@@ -132,46 +146,64 @@ final class GitHubService {
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
-        switch code {
-        case 200: break
-        case 403, 429: throw GitHubError.rateLimited
-        case 404: throw GitHubError.notFound
-        default: throw GitHubError.http(code)
-        }
+        guard code == 200 else { throw Self.httpError(resp, code) }
 
         let root = Self.vaultRoot(for: link)
-        try Self.extractZipball(data, to: root)
+        // Decompress + write off the main thread (a whole repo is heavy work);
+        // extractZipball is nonisolated so this runs on a background executor.
+        try await Task.detached(priority: .userInitiated) {
+            try Self.extractZipball(data, to: root)
+        }.value
         return root
     }
 
-    /// The durable, app-owned vault directory for a repo
-    /// (`<Application Support>/GitHubVaults/<owner>-<repo>`).
+    /// The durable, app-owned vault directory for a repo, as separate path
+    /// components `GitHubVaults/<owner>/<refSlug>/<repo>` under Application
+    /// Support — unambiguous (no hyphen aliasing) and ref-keyed (branches don't
+    /// clobber each other), with the repo name as the leaf for display.
     static func vaultRoot(for link: GitHubLink) -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return base
-            .appendingPathComponent("GitHubVaults", isDirectory: true)
-            .appendingPathComponent("\(link.owner)-\(link.repo)", isDirectory: true)
+        var url = base.appendingPathComponent("GitHubVaults", isDirectory: true)
+        for c in GitHubZipball.vaultPathComponents(
+            owner: link.owner, repo: link.repo, ref: link.ref) {
+            url = url.appendingPathComponent(c, isDirectory: true)
+        }
+        return url
     }
 
     /// Extract a GitHub zipball (one `owner-repo-sha/` wrapper dir) into `root`,
-    /// stripping the wrapper so paths are repo-root-relative. Replaces any
-    /// existing `root`. Off the main actor — pure file I/O + decompression.
+    /// stripping the wrapper so paths are repo-root-relative. Builds the tree in
+    /// a sibling temp dir and **atomically** swaps it into place, so a re-open of
+    /// the active vault never exposes a half-written tree and a mid-extract crash
+    /// can't leave a truncated vault. Off the main actor — file I/O + decompression.
     nonisolated static func extractZipball(_ data: Data, to root: URL) throws {
+        // Fail loudly on zip64 rather than open a silently-incomplete vault:
+        // ZipArchive can't parse it and would drop entries with no error.
+        if ZipArchive.isLikelyZip64(data) { throw GitHubError.badArchive }
         let entries = ZipArchive.extract(data)
         guard let top = GitHubZipball.topLevelDir(entries.map(\.path)) else {
             throw GitHubError.badArchive
         }
         let fm = FileManager.default
-        try? fm.removeItem(at: root)
-        try fm.createDirectory(at: root, withIntermediateDirectories: true)
-        let rootPath = root.standardizedFileURL.path
+        let parent = root.deletingLastPathComponent()
+        try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        let temp = parent.appendingPathComponent(".tmp-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: temp, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: temp) } // no-op once moved/replaced
+        let tempPath = temp.standardizedFileURL.path
         for e in entries {
             guard let rel = GitHubZipball.vaultPath(e.path, topLevel: top) else { continue }
-            let dest = root.appendingPathComponent(rel).standardizedFileURL
-            guard dest.path.hasPrefix(rootPath + "/") else { continue } // traversal guard
+            let dest = temp.appendingPathComponent(rel).standardizedFileURL
+            guard dest.path.hasPrefix(tempPath + "/") else { continue } // traversal guard
             try? fm.createDirectory(
                 at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? e.data.write(to: dest)
+        }
+        // Atomic swap: replace an existing vault in place, else move into position.
+        if fm.fileExists(atPath: root.path) {
+            _ = try fm.replaceItemAt(root, withItemAt: temp)
+        } else {
+            try fm.moveItem(at: temp, to: root)
         }
     }
 
@@ -187,12 +219,8 @@ final class GitHubService {
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
-        switch code {
-        case 200: return GitHubContents.parse(data)
-        case 403, 429: throw GitHubError.rateLimited
-        case 404: throw GitHubError.notFound
-        default: throw GitHubError.http(code)
-        }
+        guard code == 200 else { throw Self.httpError(resp, code) }
+        return GitHubContents.parse(data)
     }
 
     /// List the signed-in user's repositories (most-recently-updated first from
@@ -209,11 +237,8 @@ final class GitHubService {
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
-        switch code {
-        case 200: return GitHubRepos.parse(data)
-        case 401, 403: throw GitHubError.rateLimited
-        default: throw GitHubError.http(code)
-        }
+        guard code == 200 else { throw Self.httpError(resp, code) }
+        return GitHubRepos.parse(data)
     }
 
     /// A directory link for navigating into `entry` from a parent `link`.

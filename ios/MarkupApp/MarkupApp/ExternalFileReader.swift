@@ -57,6 +57,8 @@ struct ReaderContent: View {
     @State private var workingCopyEntry: URL?
     /// True while downloading a tapped in-repo doc before pushing it.
     @State private var openingInRepo = false
+    /// Set when opening a tapped in-repo doc fails (offline / 404 / rate limit).
+    @State private var inRepoError: String?
     /// Scripts in shared HTML / bundles are off until the user opts in.
     @State private var htmlJSEnabled = false
     @State private var htmlDesktopMode = false
@@ -122,6 +124,12 @@ struct ReaderContent: View {
         .ignoresSafeArea(edges: .bottom)
         .navigationTitle(url.lastPathComponent)
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Couldn't open link", isPresented: Binding(
+            get: { inRepoError != nil }, set: { if !$0 { inRepoError = nil } })) {
+            Button(t(.ok), role: .cancel) { inRepoError = nil }
+        } message: {
+            Text(inRepoError ?? "")
+        }
         .toolbar {
             if isRoot {
                 ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } }
@@ -149,6 +157,8 @@ struct ReaderContent: View {
     }
 
     /// Download a tapped in-repo doc (same owner/repo/ref, new path) and push it.
+    /// Surfaces failures (offline, 404 on a broken link, rate limit) instead of
+    /// silently clearing the spinner with nothing opened.
     private func openInRepo(_ repoPath: String) {
         guard let sourceLink, !openingInRepo else { return }
         openingInRepo = true
@@ -157,8 +167,11 @@ struct ReaderContent: View {
             let link = GitHubLink(
                 owner: sourceLink.owner, repo: sourceLink.repo, ref: sourceLink.ref,
                 path: repoPath, isDirectory: false)
-            if let doc = try? await GitHubService.shared.openFile(link) {
+            do {
+                let doc = try await GitHubService.shared.openFile(link)
                 onPushDoc(InRepoTarget(fileURL: doc.fileURL, root: doc.root, link: doc.link))
+            } catch {
+                inRepoError = error.localizedDescription
             }
         }
     }
@@ -216,8 +229,9 @@ struct ReaderContent: View {
         let rootPath = root.standardizedFileURL.path
         for e in entries {
             let dest = root.appendingPathComponent(e.path).standardizedFileURL
-            // Guard against zip path traversal (../ escaping the temp root).
-            guard dest.path.hasPrefix(rootPath) else { continue }
+            // Guard against zip path traversal (../ escaping the temp root). The
+            // trailing "/" prevents a sibling dir whose name extends the root.
+            guard dest.path.hasPrefix(rootPath + "/") else { continue }
             try? FileManager.default.createDirectory(
                 at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? e.data.write(to: dest)
