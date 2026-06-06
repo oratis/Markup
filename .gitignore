@@ -59,8 +59,16 @@ __pycache__/
 *.pyc
 test-fixtures/
 
-# claude-code session state (per-machine, not for sharing)
-.claude/
+# claude-code session state (per-machine, not for sharing) — but DO share
+# project skills, which are meant to travel with the repo.
+.claude/*
+!.claude/skills/
+
+# Apple signing material — never commit (defence in depth alongside *.p8 above)
+*.cer
+*.p12
+*.mobileprovision
+**/AuthKey_*.p8
 
 # Playwright
 /test-results/
