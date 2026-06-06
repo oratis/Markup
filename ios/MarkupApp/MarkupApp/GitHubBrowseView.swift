@@ -5,7 +5,7 @@ import MarkupKit
 /// them in the reader. Pushed within the GitHub sheet's NavigationStack.
 struct GitHubBrowseView: View {
     let link: GitHubLink
-    var onOpenFile: (URL) -> Void
+    var onOpenFile: (GitHubService.GitHubDoc) -> Void
 
     @State private var entries: [GitHubEntry] = []
     @State private var loading = true
@@ -70,9 +70,9 @@ struct GitHubBrowseView: View {
         openingId = entry.id
         defer { openingId = nil }
         do {
-            let url = try await GitHubService.shared.openFile(
+            let doc = try await GitHubService.shared.openFile(
                 GitHubService.shared.childLink(link, entry))
-            onOpenFile(url)
+            onOpenFile(doc)
         } catch {
             self.error = error.localizedDescription
         }

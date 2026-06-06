@@ -5,7 +5,7 @@ import MarkupKit
 /// sign-in; the fetched file is rendered (and added to Recents) like any other
 /// shared file.
 struct GitHubOpenView: View {
-    var onOpen: (URL) -> Void
+    var onOpen: (GitHubService.GitHubDoc) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var urlText = ""
     @State private var loading = false
@@ -86,7 +86,7 @@ struct GitHubOpenView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.cancel)) { dismiss() } } }
             .navigationDestination(for: GitHubLink.self) { link in
-                GitHubBrowseView(link: link, onOpenFile: { url in onOpen(url); dismiss() })
+                GitHubBrowseView(link: link, onOpenFile: { doc in onOpen(doc); dismiss() })
             }
             .sheet(isPresented: $showSignIn, onDismiss: { Task { await loadRepos() } }) {
                 GitHubSignInView()
@@ -125,8 +125,8 @@ struct GitHubOpenView: View {
         loading = true
         defer { loading = false }
         do {
-            let fileURL = try await GitHubService.shared.openFile(link)
-            onOpen(fileURL)
+            let doc = try await GitHubService.shared.openFile(link)
+            onOpen(doc)
             dismiss()
         } catch {
             self.error = error.localizedDescription
