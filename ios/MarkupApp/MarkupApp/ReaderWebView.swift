@@ -91,6 +91,13 @@ struct ReaderWebView: UIViewRepresentable {
     /// re-render, so the preview updates without a full reload (no flicker or
     /// scroll jump). The `html` shell stays stable across keystrokes.
     var liveMarkdown: String? = nil
+    /// When set, a tapped link to a Markdown/HTML file inside this root (a
+    /// GitHub working copy) is intercepted instead of navigated: the WebView
+    /// cancels and `onInRepoDoc` is called with the repo-relative path, so the
+    /// reader can download + open that doc in-app rather than 404 on a file that
+    /// was never materialized.
+    var inRepoRoot: URL? = nil
+    var onInRepoDoc: (String) -> Void = { _ in }
     var proxy: WebViewProxy? = nil
     var onScroll: (Double) -> Void = { _ in }
     var onToggleTask: (Int) -> Void = { _ in }
@@ -118,6 +125,9 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onToggleTask = onToggleTask
         context.coordinator.allowJavaScript = javaScriptEnabled
         context.coordinator.preferDesktop = preferDesktop
+        context.coordinator.inRepoRoot = inRepoRoot
+        context.coordinator.onInRepoDoc = onInRepoDoc
+        context.coordinator.loadedFilePath = fileURL?.standardizedFileURL.path
         let key = (fileURL.map { "file:" + $0.path } ?? html) + "#\(loadToken)"
         if context.coordinator.lastHTML != key {
             context.coordinator.lastHTML = key
@@ -147,6 +157,11 @@ struct ReaderWebView: UIViewRepresentable {
         var onToggleTask: (Int) -> Void
         var allowJavaScript = true
         var preferDesktop = false
+        var inRepoRoot: URL?
+        var onInRepoDoc: (String) -> Void = { _ in }
+        /// Standardized path of the file currently loaded (so same-doc anchor
+        /// taps aren't mistaken for in-repo navigations).
+        var loadedFilePath: String?
         /// Live-preview bookkeeping: the last markdown pushed, and whether the
         /// document has finished loading (so a push has somewhere to land).
         var lastLive: String?
@@ -155,6 +170,18 @@ struct ReaderWebView: UIViewRepresentable {
         init(onScroll: @escaping (Double) -> Void, onToggleTask: @escaping (Int) -> Void) {
             self.onScroll = onScroll
             self.onToggleTask = onToggleTask
+        }
+
+        /// Repo-relative path of `url` if it is a Markdown/HTML/text document
+        /// inside `root`; otherwise `nil` (external, an asset, or escaping root).
+        static func inRepoDocPath(_ url: URL, under root: URL) -> String? {
+            let rootPath = root.standardizedFileURL.path
+            let p = url.standardizedFileURL.path
+            let prefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
+            guard p.hasPrefix(prefix) else { return nil }
+            let docExts: Set<String> = ["md", "markdown", "mdx", "mkd", "html", "htm", "txt", "text"]
+            guard docExts.contains(url.pathExtension.lowercased()) else { return nil }
+            return String(p.dropFirst(prefix.count))
         }
 
         func pushMarkdown(into webView: WKWebView, _ md: String) {
@@ -189,6 +216,20 @@ struct ReaderWebView: UIViewRepresentable {
         ) {
             preferences.allowsContentJavaScript = allowJavaScript
             preferences.preferredContentMode = preferDesktop ? .desktop : .mobile
+
+            // A tapped link to another Markdown/HTML doc inside the working copy
+            // is handed back to the app to download + open, rather than letting
+            // the WebView 404 on a file we never materialized. Same-doc anchors
+            // (path == the loaded file) fall through so in-page links still work.
+            if navigationAction.navigationType == .linkActivated,
+               let root = inRepoRoot,
+               let url = navigationAction.request.url, url.isFileURL,
+               let rel = Self.inRepoDocPath(url, under: root),
+               url.standardizedFileURL.path != loadedFilePath {
+                onInRepoDoc(rel)
+                decisionHandler(.cancel, preferences)
+                return
+            }
 
             // A tapped link to an external destination (web / mail / phone)
             // opens in the system handler instead of hijacking the reader —

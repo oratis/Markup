@@ -1,17 +1,50 @@
 import SwiftUI
 import MarkupKit
 
-/// Reads a single file opened from another app ("Open in Markup") — a `.md`
-/// rendered as a page, a `.html` shown directly, or a `.zip` web bundle
-/// (index.html + assets) unpacked and rendered. Handles security-scoped
-/// access and on-demand iCloud download.
+/// A repo doc to push when an in-repo link is tapped while reading a GitHub
+/// working copy. Hashable so it can drive a `NavigationStack` path.
+struct InRepoTarget: Hashable {
+    let fileURL: URL
+    let root: URL
+    let link: GitHubLink
+}
+
+/// Sheet host for an externally opened doc. Wraps the reader content in a
+/// navigation stack so in-repo links (inside a GitHub working copy) push deeper
+/// repo docs in place, with a normal back button.
 struct ExternalFileReader: View {
     let url: URL
-    /// When set, `url` is a doc inside a materialized working copy (e.g. a
-    /// downloaded GitHub repo subtree). The reader loads it from disk granting
-    /// read-access to this root, so relative images / CSS / scripts resolve like
-    /// a local file — instead of `loadHTMLString`, whose file access is sandboxed.
     var readAccessRoot: URL? = nil
+    /// Repo context for the root doc — present only for GitHub working copies.
+    var sourceLink: GitHubLink? = nil
+
+    @State private var path: [InRepoTarget] = []
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            ReaderContent(
+                url: url, readAccessRoot: readAccessRoot, sourceLink: sourceLink,
+                isRoot: true, onPushDoc: { path.append($0) })
+            .navigationDestination(for: InRepoTarget.self) { target in
+                ReaderContent(
+                    url: target.fileURL, readAccessRoot: target.root, sourceLink: target.link,
+                    isRoot: false, onPushDoc: { path.append($0) })
+            }
+        }
+    }
+}
+
+/// Reads a single file — a `.md` rendered as a page, a `.html` shown directly,
+/// or a `.zip` web bundle (index.html + assets) unpacked and rendered. Handles
+/// security-scoped access and on-demand iCloud download. For a GitHub working
+/// copy (`readAccessRoot` + `sourceLink` set) it loads from disk so relative
+/// assets resolve, and intercepts in-repo doc links to open them in-app.
+struct ReaderContent: View {
+    let url: URL
+    var readAccessRoot: URL? = nil
+    var sourceLink: GitHubLink? = nil
+    var isRoot: Bool = true
+    var onPushDoc: (InRepoTarget) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @State private var content: String?
@@ -22,6 +55,8 @@ struct ExternalFileReader: View {
     /// Entry HTML to load from disk for a working-copy doc (the file itself for
     /// HTML, or a rendered-Markdown sibling for `.md`).
     @State private var workingCopyEntry: URL?
+    /// True while downloading a tapped in-repo doc before pushing it.
+    @State private var openingInRepo = false
     /// Scripts in shared HTML / bundles are off until the user opts in.
     @State private var htmlJSEnabled = false
     @State private var htmlDesktopMode = false
@@ -35,6 +70,8 @@ struct ExternalFileReader: View {
     /// HTML-style controls (scripts/desktop toggles) apply to raw HTML and to
     /// rendered web bundles.
     private var showHTMLControls: Bool { bundleEntry != nil || (isHTML && content != nil) }
+    /// Intercept in-repo links only when we can re-materialize them.
+    private var inRepoRoot: URL? { sourceLink != nil ? readAccessRoot : nil }
 
     private var docHTML: String {
         guard let content else { return "" }
@@ -45,61 +82,84 @@ struct ExternalFileReader: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if let bundleEntry {
-                    ReaderWebView(
-                        fileURL: bundleEntry, readAccessURL: bundleRoot,
-                        loadToken: htmlReloadToken,
-                        javaScriptEnabled: htmlJSEnabled, preferDesktop: htmlDesktopMode)
-                } else if let workingCopyEntry {
-                    // GitHub working copy: load from disk so relative assets
-                    // resolve. Our own Markdown render is trusted (JS on); raw
-                    // repo HTML keeps the opt-in script toggle.
-                    ReaderWebView(
-                        fileURL: workingCopyEntry, readAccessURL: readAccessRoot,
-                        loadToken: htmlReloadToken,
-                        javaScriptEnabled: isHTML ? htmlJSEnabled : true,
-                        preferDesktop: isHTML && htmlDesktopMode)
-                } else if content != nil {
-                    ReaderWebView(
-                        html: docHTML, baseURL: url.deletingLastPathComponent(),
-                        loadToken: htmlReloadToken,
-                        javaScriptEnabled: isHTML ? htmlJSEnabled : true,
-                        preferDesktop: isHTML && htmlDesktopMode)
-                } else if failed {
-                    ContentUnavailableView(
-                        "Couldn't open file", systemImage: "exclamationmark.triangle",
-                        description: Text(url.lastPathComponent))
-                } else {
-                    ProgressView("Opening…")
-                }
+        Group {
+            if let bundleEntry {
+                ReaderWebView(
+                    fileURL: bundleEntry, readAccessURL: bundleRoot,
+                    loadToken: htmlReloadToken,
+                    javaScriptEnabled: htmlJSEnabled, preferDesktop: htmlDesktopMode)
+            } else if let workingCopyEntry {
+                // GitHub working copy: load from disk so relative assets
+                // resolve. Our own Markdown render is trusted (JS on); raw
+                // repo HTML keeps the opt-in script toggle.
+                ReaderWebView(
+                    fileURL: workingCopyEntry, readAccessURL: readAccessRoot,
+                    loadToken: htmlReloadToken,
+                    javaScriptEnabled: isHTML ? htmlJSEnabled : true,
+                    preferDesktop: isHTML && htmlDesktopMode,
+                    inRepoRoot: inRepoRoot, onInRepoDoc: openInRepo)
+            } else if content != nil {
+                ReaderWebView(
+                    html: docHTML, baseURL: url.deletingLastPathComponent(),
+                    loadToken: htmlReloadToken,
+                    javaScriptEnabled: isHTML ? htmlJSEnabled : true,
+                    preferDesktop: isHTML && htmlDesktopMode)
+            } else if failed {
+                ContentUnavailableView(
+                    "Couldn't open file", systemImage: "exclamationmark.triangle",
+                    description: Text(url.lastPathComponent))
+            } else {
+                ProgressView("Opening…")
             }
-            .ignoresSafeArea(edges: .bottom)
-            .navigationTitle(url.lastPathComponent)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+        }
+        .overlay {
+            if openingInRepo {
+                ProgressView().controlSize(.large)
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .ignoresSafeArea(edges: .bottom)
+        .navigationTitle(url.lastPathComponent)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isRoot {
                 ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } }
-                if showHTMLControls {
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Button {
-                            htmlDesktopMode.toggle()
-                            htmlReloadToken += 1
-                        } label: {
-                            Image(systemName: htmlDesktopMode ? "desktopcomputer" : "iphone")
-                        }
-                        .accessibilityLabel(htmlDesktopMode ? t(.mobileMode) : t(.desktopMode))
-                        Button {
-                            htmlJSEnabled.toggle()
-                            htmlReloadToken += 1
-                        } label: {
-                            Image(systemName: htmlJSEnabled ? "bolt.fill" : "bolt.slash")
-                        }
-                        .accessibilityLabel(htmlJSEnabled ? t(.disableScripts) : t(.enableScripts))
+            }
+            if showHTMLControls {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        htmlDesktopMode.toggle()
+                        htmlReloadToken += 1
+                    } label: {
+                        Image(systemName: htmlDesktopMode ? "desktopcomputer" : "iphone")
                     }
+                    .accessibilityLabel(htmlDesktopMode ? t(.mobileMode) : t(.desktopMode))
+                    Button {
+                        htmlJSEnabled.toggle()
+                        htmlReloadToken += 1
+                    } label: {
+                        Image(systemName: htmlJSEnabled ? "bolt.fill" : "bolt.slash")
+                    }
+                    .accessibilityLabel(htmlJSEnabled ? t(.disableScripts) : t(.enableScripts))
                 }
             }
-            .task { await load() }
+        }
+        .task { await load() }
+    }
+
+    /// Download a tapped in-repo doc (same owner/repo/ref, new path) and push it.
+    private func openInRepo(_ repoPath: String) {
+        guard let sourceLink, !openingInRepo else { return }
+        openingInRepo = true
+        Task {
+            defer { openingInRepo = false }
+            let link = GitHubLink(
+                owner: sourceLink.owner, repo: sourceLink.repo, ref: sourceLink.ref,
+                path: repoPath, isDirectory: false)
+            if let doc = try? await GitHubService.shared.openFile(link) {
+                onPushDoc(InRepoTarget(fileURL: doc.fileURL, root: doc.root, link: doc.link))
+            }
         }
     }
 

@@ -7,6 +7,7 @@ import MarkupKit
 private struct OpenedURL: Identifiable {
     let url: URL
     var readAccessRoot: URL? = nil
+    var sourceLink: GitHubLink? = nil
     var id: String { url.absoluteString }
 }
 
@@ -58,7 +59,8 @@ struct RootView: View {
         } else {
             Task {
                 if let doc = try? await GitHubService.shared.openFile(link) {
-                    openedFile = OpenedURL(url: doc.fileURL, readAccessRoot: doc.root)
+                    openedFile = OpenedURL(
+                        url: doc.fileURL, readAccessRoot: doc.root, sourceLink: doc.link)
                 }
             }
         }
@@ -112,21 +114,25 @@ struct RootView: View {
             VaultSwitcherView(vault: vault, onOpenAnother: { showPicker = true })
         }
         .sheet(isPresented: $showGitHub) {
-            GitHubOpenView(onOpen: { openedFile = OpenedURL(url: $0.fileURL, readAccessRoot: $0.root) })
+            GitHubOpenView(onOpen: {
+                openedFile = OpenedURL(url: $0.fileURL, readAccessRoot: $0.root, sourceLink: $0.link)
+            })
         }
         .sheet(item: $openedFile) {
-            ExternalFileReader(url: $0.url, readAccessRoot: $0.readAccessRoot)
+            ExternalFileReader(url: $0.url, readAccessRoot: $0.readAccessRoot, sourceLink: $0.sourceLink)
         }
         .sheet(item: $githubBrowse) { item in
             NavigationStack {
                 GitHubBrowseView(link: item.link, onOpenFile: { doc in
                     githubBrowse = nil
-                    openedFile = OpenedURL(url: doc.fileURL, readAccessRoot: doc.root)
+                    openedFile = OpenedURL(
+                        url: doc.fileURL, readAccessRoot: doc.root, sourceLink: doc.link)
                 })
                 .navigationDestination(for: GitHubLink.self) { child in
                     GitHubBrowseView(link: child, onOpenFile: { doc in
                         githubBrowse = nil
-                        openedFile = OpenedURL(url: doc.fileURL, readAccessRoot: doc.root)
+                        openedFile = OpenedURL(
+                            url: doc.fileURL, readAccessRoot: doc.root, sourceLink: doc.link)
                     })
                 }
                 .toolbar {
