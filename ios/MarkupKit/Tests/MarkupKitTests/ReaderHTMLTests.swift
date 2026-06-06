@@ -19,6 +19,29 @@ struct ReaderHTMLDetectionTests {
     }
 }
 
+@Suite("ReaderHTML.githubSlug")
+struct ReaderHTMLSlugTests {
+    @Test func slugsPlainHeadings() {
+        #expect(ReaderHTML.githubSlug("Getting Started") == "getting-started")
+        #expect(ReaderHTML.githubSlug("API Reference") == "api-reference")
+    }
+
+    @Test func dropsPunctuationWithoutSpuriousWordBreaks() {
+        #expect(ReaderHTML.githubSlug("POST /users") == "post-users")
+        #expect(ReaderHTML.githubSlug("Hello, World!") == "hello-world")
+        #expect(ReaderHTML.githubSlug("C++ Guide") == "c-guide")
+        #expect(ReaderHTML.githubSlug("Section: Overview") == "section-overview")
+    }
+
+    @Test func keepsHyphensAndUnderscores() {
+        #expect(ReaderHTML.githubSlug("snake_case and kebab-case") == "snake_case-and-kebab-case")
+    }
+
+    @Test func emptyForPunctuationOnlyHeading() {
+        #expect(ReaderHTML.githubSlug("!!!") == "")
+    }
+}
+
 @Suite("ReaderHTML.document")
 struct ReaderHTMLDocumentTests {
     @Test func wrapsWithTitleAndAlwaysLoadsMarked() {
@@ -101,6 +124,25 @@ struct ReaderHTMLDocumentTests {
         let lit = ReaderHTML.javaScriptStringLiteral("</script><b>")
         #expect(lit.contains("<\\/script>"))
         #expect(lit.hasPrefix("\""))
+    }
+
+    @Test func injectsSlugToHeadingIdMapAndScrollHook() {
+        let md = "# POST /users\n\nbody\n\n## Notes & Caveats\n"
+        let doc = ReaderHTML.document(markdown: md, title: "T", theme: .light)
+        // The fragment-resolution hook the native handler / TOC clicks call.
+        #expect(doc.contains("window.__markupScrollToSlug"))
+        // Headings get mk-h{index} ids keyed by their GitHub-style slug, in order.
+        #expect(doc.contains("var MK_SLUGS ="))
+        #expect(doc.contains("\"post-users\":\"mk-h0\""))
+        #expect(doc.contains("\"notes-caveats\":\"mk-h1\""))
+    }
+
+    @Test func deduplicatesRepeatedSlugsLikeGitHub() {
+        let md = "# Intro\n\n## Intro\n\n## Intro\n"
+        let doc = ReaderHTML.document(markdown: md, title: "T", theme: .light)
+        #expect(doc.contains("\"intro\":\"mk-h0\""))
+        #expect(doc.contains("\"intro-1\":\"mk-h1\""))
+        #expect(doc.contains("\"intro-2\":\"mk-h2\""))
     }
 
     @Test func embedsCalloutTransformAndStyles() {

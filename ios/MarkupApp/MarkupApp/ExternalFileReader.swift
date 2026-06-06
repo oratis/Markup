@@ -2,11 +2,14 @@ import SwiftUI
 import MarkupKit
 
 /// A repo doc to push when an in-repo link is tapped while reading a GitHub
-/// working copy. Hashable so it can drive a `NavigationStack` path.
+/// working copy. Hashable so it can drive a `NavigationStack` path. `fragment`
+/// is the tapped link's `#anchor` (e.g. `post-users`), if any, so the pushed
+/// doc scrolls to that heading once loaded.
 struct InRepoTarget: Hashable {
     let fileURL: URL
     let root: URL
     let link: GitHubLink
+    var fragment: String? = nil
 }
 
 /// Sheet host for an externally opened doc. Wraps the reader content in a
@@ -28,7 +31,7 @@ struct ExternalFileReader: View {
             .navigationDestination(for: InRepoTarget.self) { target in
                 ReaderContent(
                     url: target.fileURL, readAccessRoot: target.root, sourceLink: target.link,
-                    isRoot: false, onPushDoc: { path.append($0) })
+                    isRoot: false, fragment: target.fragment, onPushDoc: { path.append($0) })
             }
         }
     }
@@ -44,9 +47,14 @@ struct ReaderContent: View {
     var readAccessRoot: URL? = nil
     var sourceLink: GitHubLink? = nil
     var isRoot: Bool = true
+    /// A `#fragment` (e.g. `post-users`) to scroll to once this doc loads — set
+    /// when the doc was opened by tapping an in-repo `doc.md#anchor` link.
+    var fragment: String? = nil
     var onPushDoc: (InRepoTarget) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
+    /// Drives the reader's WebView so we can scroll to `fragment` after load.
+    @StateObject private var readerProxy = WebViewProxy()
     @State private var content: String?
     @State private var failed = false
     /// Entry point + extraction root for an opened `.zip` web bundle.
@@ -99,13 +107,15 @@ struct ReaderContent: View {
                     loadToken: htmlReloadToken,
                     javaScriptEnabled: isHTML ? htmlJSEnabled : true,
                     preferDesktop: isHTML && htmlDesktopMode,
-                    inRepoRoot: inRepoRoot, onInRepoDoc: openInRepo)
+                    inRepoRoot: inRepoRoot, onInRepoDoc: openInRepo,
+                    onFinishLoad: scrollToFragment, proxy: readerProxy)
             } else if content != nil {
                 ReaderWebView(
                     html: docHTML, baseURL: url.deletingLastPathComponent(),
                     loadToken: htmlReloadToken,
                     javaScriptEnabled: isHTML ? htmlJSEnabled : true,
-                    preferDesktop: isHTML && htmlDesktopMode)
+                    preferDesktop: isHTML && htmlDesktopMode,
+                    onFinishLoad: scrollToFragment, proxy: readerProxy)
             } else if failed {
                 ContentUnavailableView(
                     "Couldn't open file", systemImage: "exclamationmark.triangle",
@@ -156,10 +166,11 @@ struct ReaderContent: View {
         .task { await load() }
     }
 
-    /// Download a tapped in-repo doc (same owner/repo/ref, new path) and push it.
+    /// Download a tapped in-repo doc (same owner/repo/ref, new path) and push it,
+    /// carrying the link's `#fragment` so the pushed doc scrolls to that anchor.
     /// Surfaces failures (offline, 404 on a broken link, rate limit) instead of
     /// silently clearing the spinner with nothing opened.
-    private func openInRepo(_ repoPath: String) {
+    private func openInRepo(_ repoPath: String, _ fragment: String?) {
         guard let sourceLink, !openingInRepo else { return }
         openingInRepo = true
         Task {
@@ -169,11 +180,19 @@ struct ReaderContent: View {
                 path: repoPath, isDirectory: false)
             do {
                 let doc = try await GitHubService.shared.openFile(link)
-                onPushDoc(InRepoTarget(fileURL: doc.fileURL, root: doc.root, link: doc.link))
+                onPushDoc(InRepoTarget(
+                    fileURL: doc.fileURL, root: doc.root, link: doc.link, fragment: fragment))
             } catch {
                 inRepoError = error.localizedDescription
             }
         }
+    }
+
+    /// After the doc finishes loading, scroll to the pending `#fragment` anchor
+    /// (a no-op when none was requested, or on a doc without the slug hook).
+    private func scrollToFragment() {
+        guard let fragment, !fragment.isEmpty else { return }
+        readerProxy.scrollToSlug(fragment)
     }
 
     private func load() async {

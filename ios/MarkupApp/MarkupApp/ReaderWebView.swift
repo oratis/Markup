@@ -65,6 +65,16 @@ final class WebViewProxy: ObservableObject {
             "document.getElementById('mk-h\(index)')?.scrollIntoView({behavior:'smooth',block:'start'});",
             completionHandler: nil)
     }
+
+    /// Scroll to the heading matching a GitHub-style `#fragment` slug (e.g.
+    /// `post-users`), resolved against the renderer's slug→heading-id map. A
+    /// no-op on documents without the hook (raw HTML, an unknown slug).
+    func scrollToSlug(_ slug: String) {
+        let arg = ReaderHTML.javaScriptStringLiteral(slug)
+        webView?.evaluateJavaScript(
+            "window.__markupScrollToSlug && window.__markupScrollToSlug(\(arg));",
+            completionHandler: nil)
+    }
 }
 
 /// Displays rendered HTML in a `WKWebView` and bridges scroll position and
@@ -95,9 +105,13 @@ struct ReaderWebView: UIViewRepresentable {
     /// GitHub working copy) is intercepted instead of navigated: the WebView
     /// cancels and `onInRepoDoc` is called with the repo-relative path, so the
     /// reader can download + open that doc in-app rather than 404 on a file that
-    /// was never materialized.
+    /// was never materialized. The optional second argument is the link's
+    /// `#fragment` (e.g. `post-users`), so the opened doc can scroll to the anchor.
     var inRepoRoot: URL? = nil
-    var onInRepoDoc: (String) -> Void = { _ in }
+    var onInRepoDoc: (String, String?) -> Void = { _, _ in }
+    /// Called each time the document finishes loading — used to scroll to a
+    /// pending `#fragment` once the headings exist.
+    var onFinishLoad: () -> Void = {}
     var proxy: WebViewProxy? = nil
     var onScroll: (Double) -> Void = { _ in }
     var onToggleTask: (Int) -> Void = { _ in }
@@ -127,6 +141,7 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.preferDesktop = preferDesktop
         context.coordinator.inRepoRoot = inRepoRoot
         context.coordinator.onInRepoDoc = onInRepoDoc
+        context.coordinator.onFinishLoad = onFinishLoad
         context.coordinator.loadedFilePath = fileURL?.standardizedFileURL.path
         let key = (fileURL.map { "file:" + $0.path } ?? html) + "#\(loadToken)"
         if context.coordinator.lastHTML != key {
@@ -158,7 +173,8 @@ struct ReaderWebView: UIViewRepresentable {
         var allowJavaScript = true
         var preferDesktop = false
         var inRepoRoot: URL?
-        var onInRepoDoc: (String) -> Void = { _ in }
+        var onInRepoDoc: (String, String?) -> Void = { _, _ in }
+        var onFinishLoad: () -> Void = {}
         /// Standardized path of the file currently loaded (so same-doc anchor
         /// taps aren't mistaken for in-repo navigations).
         var loadedFilePath: String?
@@ -194,6 +210,7 @@ struct ReaderWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish _: WKNavigation!) {
             loaded = true
             if let md = lastLive { pushMarkdown(into: webView, md) }
+            onFinishLoad()
         }
 
         func userContentController(
@@ -222,19 +239,37 @@ struct ReaderWebView: UIViewRepresentable {
                 // In-repo file links (working copy).
                 if url.isFileURL {
                     let p = url.standardizedFileURL.path
-                    // An anchor within the currently rendered doc → let WebKit
-                    // scroll natively (the rendered Markdown lives in a sibling
-                    // `<doc>.md.html`, so a self-link spelling the source name
-                    // resolves to `<doc>` itself — also "same doc", so don't
-                    // re-fetch it or load the raw .md; just stay put).
+                    // An anchor within the currently rendered doc → stay put; the
+                    // rendered Markdown lives in a sibling `<doc>.md.html`, so a
+                    // self-link spelling the source name resolves to `<doc>`
+                    // itself — also "same doc", so don't re-fetch or load the raw
+                    // .md.
                     if let loaded = loadedFilePath, p == loaded || loaded == p + ".html" {
-                        decisionHandler(p == loaded ? .allow : .cancel, preferences)
+                        if p == loaded {
+                            // The link targets the loaded file itself (e.g. a raw
+                            // HTML doc's own anchor) → let WebKit scroll natively.
+                            decisionHandler(.allow, preferences)
+                        } else {
+                            // The link spells the source `.md` but we loaded the
+                            // rendered `.md.html` sibling → cancel (don't open the
+                            // raw .md). Resolve a `#fragment` via the slug map,
+                            // since heading ids are mk-h{index}, not GitHub slugs.
+                            if let frag = url.fragment(percentEncoded: false), !frag.isEmpty {
+                                let arg = ReaderHTML.javaScriptStringLiteral(frag)
+                                webView.evaluateJavaScript(
+                                    "window.__markupScrollToSlug && window.__markupScrollToSlug(\(arg));",
+                                    completionHandler: nil)
+                            }
+                            decisionHandler(.cancel, preferences)
+                        }
                         return
                     }
                     // A link to a *different* in-repo doc → open it in-app rather
-                    // than 404 on a file we never materialized.
+                    // than 404 on a file we never materialized. Carry the link's
+                    // `#fragment` along so the opened doc scrolls to the anchor
+                    // (the standardized path above drops it).
                     if let root = inRepoRoot, let rel = Self.inRepoDocPath(url, under: root) {
-                        onInRepoDoc(rel)
+                        onInRepoDoc(rel, url.fragment(percentEncoded: false))
                         decisionHandler(.cancel, preferences)
                         return
                     }
