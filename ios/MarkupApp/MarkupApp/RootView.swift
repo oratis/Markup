@@ -7,6 +7,12 @@ private struct OpenedURL: Identifiable {
     var id: String { url.absoluteString }
 }
 
+/// Identifiable wrapper so a `markup://` directory deep-link can drive a sheet.
+private struct BrowseLink: Identifiable {
+    let link: GitHubLink
+    var id: String { "\(link.owner)/\(link.repo)@\(link.ref ?? "")/\(link.path)" }
+}
+
 /// App shell: a sidebar list of `.md` files and a reader detail. Adaptive —
 /// `NavigationSplitView` is multi-column on iPad and a stack on iPhone.
 struct RootView: View {
@@ -22,6 +28,7 @@ struct RootView: View {
     @State private var showVaultSwitcher = false
     @State private var showGitHub = false
     @State private var openedFile: OpenedURL?
+    @State private var githubBrowse: BrowseLink?
     /// relPath of a just-created note that should open straight into edit mode.
     @State private var pendingEditFileId: String?
     @State private var renameTarget: VaultFile?
@@ -32,6 +39,26 @@ struct RootView: View {
         guard let f = vault.createNote() else { return }
         pendingEditFileId = f.relPath
         selection = f
+    }
+
+    /// Route an inbound URL. `file://` (Files / share-sheet) opens in the reader;
+    /// `markup://github?repo=…` deep-links download a single file into the reader
+    /// or browse a repo folder. Anything unparseable is ignored.
+    private func handleOpenURL(_ url: URL) {
+        guard url.scheme?.lowercased() == "markup" else {
+            openedFile = OpenedURL(url: url)
+            return
+        }
+        guard let link = GitHubLinkParser.parseAppLink(url.absoluteString) else { return }
+        if link.isDirectory {
+            githubBrowse = BrowseLink(link: link)
+        } else {
+            Task {
+                if let fileURL = try? await GitHubService.shared.openFile(link) {
+                    openedFile = OpenedURL(url: fileURL)
+                }
+            }
+        }
     }
 
     private func open(_ file: VaultFile) {
@@ -63,7 +90,7 @@ struct RootView: View {
             tabs.closeAll()
             selection = nil
         }
-        .onOpenURL { url in openedFile = OpenedURL(url: url) }
+        .onOpenURL { url in handleOpenURL(url) }
         .sheet(isPresented: $showPicker) {
             FolderPicker { url in
                 vault.openFolder(url)
@@ -85,6 +112,25 @@ struct RootView: View {
             GitHubOpenView(onOpen: { openedFile = OpenedURL(url: $0) })
         }
         .sheet(item: $openedFile) { ExternalFileReader(url: $0.url) }
+        .sheet(item: $githubBrowse) { item in
+            NavigationStack {
+                GitHubBrowseView(link: item.link, onOpenFile: { url in
+                    githubBrowse = nil
+                    openedFile = OpenedURL(url: url)
+                })
+                .navigationDestination(for: GitHubLink.self) { child in
+                    GitHubBrowseView(link: child, onOpenFile: { url in
+                        githubBrowse = nil
+                        openedFile = OpenedURL(url: url)
+                    })
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(t(.cancel)) { githubBrowse = nil }
+                    }
+                }
+            }
+        }
         .alert(t(.rename), isPresented: Binding(
             get: { renameTarget != nil },
             set: { if !$0 { renameTarget = nil } })) {

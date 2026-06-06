@@ -1,5 +1,6 @@
 import MarkupKit
 import SwiftUI
+import UIKit
 import WebKit
 
 /// Custom URL scheme that serves the bundled renderer assets (marked, KaTeX,
@@ -188,6 +189,21 @@ struct ReaderWebView: UIViewRepresentable {
         ) {
             preferences.allowsContentJavaScript = allowJavaScript
             preferences.preferredContentMode = preferDesktop ? .desktop : .mobile
+
+            // A tapped link to an external destination (web / mail / phone)
+            // opens in the system handler instead of hijacking the reader —
+            // fixes silently-failing taps on http(s)/mailto/tel links in
+            // GitHub-sourced docs. The initial document load and in-bundle
+            // (file://, markupasset://) navigations are `.other`, so they fall
+            // through to `.allow`.
+            if navigationAction.navigationType == .linkActivated,
+               let url = navigationAction.request.url,
+               let scheme = url.scheme?.lowercased(),
+               ["http", "https", "mailto", "tel"].contains(scheme) {
+                UIApplication.shared.open(url)
+                decisionHandler(.cancel, preferences)
+                return
+            }
             decisionHandler(.allow, preferences)
         }
     }
