@@ -428,6 +428,40 @@ pure `MarkupKit` module with no UI changes. **First step:** `DocReferences` in
 with `swift test` coverage. (Implemented alongside this doc.)
 
 ---
+
+## 17. Implementation status — shipped (2026-06)
+
+The download-first pipeline and the repos-as-vault target are **shipped and
+device-verified**. Both reading gaps named in §16 are closed.
+
+| Capability | PR | Notes |
+| --- | --- | --- |
+| `DocReferences` scanner (pure) | #103 | markdown/HTML ref scan + classify/resolve, tested |
+| `markup://github?…` deep links + scheme registration | #104 | repo-root → vault, sub-folder → browse, file → reader |
+| External links → system handler (Safari/Mail/Phone) | #104 | `ReaderWebView` nav policy; closes gap #2 (external half) |
+| Managed download cache (no `/tmp` leak) | #104 | `<caches>/MarkupGitHub/` |
+| **Working copy: doc + in-repo assets materialized** | #105 | `GitHubAssetPlan` + `loadFileURL(allowingReadAccessTo:)`; **closes gap #1** (images/CSS) |
+| **In-repo link interception** (tap → open in-app) | #106 | closes gap #2 (in-repo half); pushes deeper docs on the nav stack |
+| **Repo → vault (zipball working copy)** | #107 | `GitHubZipball` strip + `openAsVault` → `VaultStore.openLocalVault`; full sidebar/search/index, offline |
+| Hardening (10 of 11 adversarial-review findings) | #108 | atomic extract, off-main decompress, zip64 fail-loud, `owner/ref/repo` vault path, 403-vs-rate-limit, surfaced in-repo errors |
+
+**On-disk layout (as built):** `<App Support>/GitHubVaults/<owner>/<refSlug>/<repo>/…`
+(separate path components — unambiguous, ref-keyed, repo name as the display leaf).
+Per-file working copies for single-doc opens live under `<caches>/MarkupGitHub/<id>/…`.
+
+### Deferred follow-ups (tracked)
+- **In-vault Markdown image fidelity** — `ReaderView`'s markdown read path still uses
+  `loadHTMLString` (shared with user folders); for app-owned GitHub vaults it should
+  render to a sibling `.html` + `loadFileURL` like the single-doc path. Single-doc
+  reading already renders images correctly.
+- **Cross-doc `#fragment` scrolling** (review #7) — intercepted in-repo links open the
+  target at the top; honoring the fragment needs a GitHub-slug → `mk-h{n}` heading map.
+- **Incremental refresh** — `RepoManifest` + `ManifestDiff` (git-trees API) to fetch
+  only changed files instead of re-downloading the whole zipball; plus a Refresh action.
+- **Offline reuse on re-open** + storage eviction policy for `GitHubVaults/`.
+- **Share Extension** (G2) and a unified `VaultSource`/Sources home (G0) remain as in §13.
+
+---
 _Companion docs: [`00-ios-app-design.md`](./00-ios-app-design.md) (reader/index/editor
 architecture, reused wholesale) · [`02-html-support.md`](./02-html-support.md) (faithful
 `.html` rendering)._
