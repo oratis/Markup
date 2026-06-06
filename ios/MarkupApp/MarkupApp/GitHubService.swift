@@ -9,7 +9,7 @@ final class GitHubService {
     static let shared = GitHubService()
 
     enum GitHubError: LocalizedError {
-        case notAFile, rateLimited, notFound, http(Int), badURL
+        case notAFile, rateLimited, notFound, http(Int), badURL, badArchive
         var errorDescription: String? {
             switch self {
             case .notAFile: return "That link points to a folder, not a file."
@@ -17,6 +17,7 @@ final class GitHubService {
             case .notFound: return "File not found (or the repo is private)."
             case .http(let c): return "GitHub request failed (HTTP \(c))."
             case .badURL: return "Couldn't build the request URL."
+            case .badArchive: return "Couldn't read the repository archive."
             }
         }
     }
@@ -113,6 +114,66 @@ final class GitHubService {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         return base.appendingPathComponent("MarkupGitHub", isDirectory: true)
     }()
+
+    /// Download a whole repo as a **vault**: fetch its zipball, extract it to a
+    /// durable app-owned directory mirroring the repo tree, and return that
+    /// directory for `VaultStore` to open. The reader, search, index, and
+    /// in-repo links then all work locally + offline — the design's
+    /// "zipball working-copy" target (§16). A previous copy of the same repo is
+    /// replaced so re-opening refreshes it.
+    func openAsVault(_ link: GitHubLink) async throws -> URL {
+        var s = "https://api.github.com/repos/\(link.owner)/\(link.repo)/zipball"
+        if let ref = link.ref, !ref.isEmpty { s += "/\(ref)" }
+        guard let url = URL(string: s) else { throw GitHubError.badURL }
+        var req = URLRequest(url: url)
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        switch code {
+        case 200: break
+        case 403, 429: throw GitHubError.rateLimited
+        case 404: throw GitHubError.notFound
+        default: throw GitHubError.http(code)
+        }
+
+        let root = Self.vaultRoot(for: link)
+        try Self.extractZipball(data, to: root)
+        return root
+    }
+
+    /// The durable, app-owned vault directory for a repo
+    /// (`<Application Support>/GitHubVaults/<owner>-<repo>`).
+    static func vaultRoot(for link: GitHubLink) -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return base
+            .appendingPathComponent("GitHubVaults", isDirectory: true)
+            .appendingPathComponent("\(link.owner)-\(link.repo)", isDirectory: true)
+    }
+
+    /// Extract a GitHub zipball (one `owner-repo-sha/` wrapper dir) into `root`,
+    /// stripping the wrapper so paths are repo-root-relative. Replaces any
+    /// existing `root`. Off the main actor — pure file I/O + decompression.
+    nonisolated static func extractZipball(_ data: Data, to root: URL) throws {
+        let entries = ZipArchive.extract(data)
+        guard let top = GitHubZipball.topLevelDir(entries.map(\.path)) else {
+            throw GitHubError.badArchive
+        }
+        let fm = FileManager.default
+        try? fm.removeItem(at: root)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        let rootPath = root.standardizedFileURL.path
+        for e in entries {
+            guard let rel = GitHubZipball.vaultPath(e.path, topLevel: top) else { continue }
+            let dest = root.appendingPathComponent(rel).standardizedFileURL
+            guard dest.path.hasPrefix(rootPath + "/") else { continue } // traversal guard
+            try? fm.createDirectory(
+                at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? e.data.write(to: dest)
+        }
+    }
 
     /// List a repo folder's entries (folders first, then files).
     func listDirectory(_ link: GitHubLink) async throws -> [GitHubEntry] {

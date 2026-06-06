@@ -6,6 +6,8 @@ import MarkupKit
 /// shared file.
 struct GitHubOpenView: View {
     var onOpen: (GitHubService.GitHubDoc) -> Void
+    /// Download the browsed repo as a vault.
+    var onOpenVault: (GitHubLink) -> Void = { _ in }
     @Environment(\.dismiss) private var dismiss
     @State private var urlText = ""
     @State private var loading = false
@@ -86,7 +88,10 @@ struct GitHubOpenView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.cancel)) { dismiss() } } }
             .navigationDestination(for: GitHubLink.self) { link in
-                GitHubBrowseView(link: link, onOpenFile: { doc in onOpen(doc); dismiss() })
+                GitHubBrowseView(
+                    link: link,
+                    onOpenFile: { doc in onOpen(doc); dismiss() },
+                    onOpenVault: { onOpenVault($0); dismiss() })
             }
             .sheet(isPresented: $showSignIn, onDismiss: { Task { await loadRepos() } }) {
                 GitHubSignInView()

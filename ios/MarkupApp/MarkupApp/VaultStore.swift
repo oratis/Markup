@@ -113,11 +113,21 @@ final class VaultStore {
         adopt(url, persist: true)
     }
 
+    /// Adopt an app-owned directory (e.g. a downloaded GitHub repo vault) as the
+    /// vault. Unlike a user-picked folder it needs no security scope — it lives
+    /// in our own container — so it's adopted + persisted directly.
+    func openLocalVault(_ url: URL) {
+        adopt(url, persist: true)
+    }
+
     private func adopt(_ url: URL, persist: Bool) {
         // Stop accessing any previous root.
         rootURL?.stopAccessingSecurityScopedResource()
 
-        guard url.startAccessingSecurityScopedResource() else {
+        // User-picked folders are security-scoped; our own (GitHub vault) dirs
+        // aren't, but are readable directly. Only bail if neither holds.
+        let scoped = url.startAccessingSecurityScopedResource()
+        if !scoped && !FileManager.default.isReadableFile(atPath: url.path) {
             errorMessage = "No permission to read that folder."
             return
         }
