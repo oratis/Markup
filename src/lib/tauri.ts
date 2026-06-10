@@ -137,6 +137,19 @@ export async function listenVaultChanged(cb: () => void): Promise<UnlistenFn> {
   return await listen<void>("vault-changed", () => cb());
 }
 
+export interface IndexProgress {
+  done: number;
+  total: number;
+}
+
+/** Progress while a vault is being (re)indexed on open. The frontend shows a
+ * transient indicator; a final tick with done === total clears it. */
+export async function listenVaultIndexProgress(
+  cb: (p: IndexProgress) => void,
+): Promise<UnlistenFn> {
+  return await listen<IndexProgress>("vault-index-progress", (e) => cb(e.payload));
+}
+
 /** Live "open these files" events from macOS (Finder double-click /
  * Open With) while the app is already running. */
 export async function listenOpenFiles(

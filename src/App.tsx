@@ -121,6 +121,7 @@ import {
   listenMenu,
   listenOpenFiles,
   listenVaultChanged,
+  listenVaultIndexProgress,
   openFileDialog,
   openNewWindow,
   openVault,
@@ -211,6 +212,10 @@ export function App() {
   const setSettings = useAppStore((s) => s.setSettings);
   const [reloadPromptDismissed, setReloadPromptDismissed] = useState<string | null>(null);
   const [externalMtime, setExternalMtime] = useState<number | null>(null);
+  const [indexProgress, setIndexProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const editorScrollRef = useRef<HTMLElement | null>(null);
   // One debounced save timer PER tab id — editing/switching another tab no
@@ -312,6 +317,19 @@ export function App() {
     // (esp. under the App Sandbox) needs Rust-side security-scoped
     // bookmarks; tracked separately. See docs/app-store/MAS-publishing-plan.md §1.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Transient "indexing…" indicator while a vault is (re)indexing on open. A
+  // large vault can take a beat; the backend emits throttled progress and a
+  // final done === total tick that clears the indicator.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listenVaultIndexProgress((p) => {
+      setIndexProgress(p.done >= p.total ? null : p);
+    }).then((u) => {
+      unlisten = u;
+    });
+    return () => unlisten?.();
   }, []);
 
   // macOS "open with Markup" — opens .md files double-clicked in Finder
@@ -3202,6 +3220,15 @@ export function App() {
             showToast(tr("toast.copied", text));
           }}
         />
+      )}
+      {indexProgress && (
+        <div
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 rounded bg-black/80 px-3 py-1.5 text-xs text-white shadow"
+          role="status"
+          aria-live="polite"
+        >
+          {tr("status.indexing", indexProgress.done, indexProgress.total)}
+        </div>
       )}
       <ToastHost />
       {!IS_MAS_BUILD && <UpdateBanner />}

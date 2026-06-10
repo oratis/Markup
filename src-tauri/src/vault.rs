@@ -23,6 +23,15 @@ pub struct VaultFileEntry {
     pub size: u64,
 }
 
+/// Progress payload emitted as `vault-index-progress` while a vault is being
+/// indexed on open. A final tick with `done == total` lets the UI clear its
+/// indicator; small vaults only ever emit that final tick.
+#[derive(Debug, Serialize, Clone)]
+pub struct IndexProgress {
+    pub done: usize,
+    pub total: usize,
+}
+
 #[derive(Default)]
 pub struct VaultState {
     inner: RwLock<Option<OpenVault>>,
@@ -92,10 +101,15 @@ impl VaultState {
         index.commit().await?;
 
         let files = scanner::scan_indexable_files(&root)?;
+        let total = files.len();
+        // A large vault can take a noticeable beat to index; without a signal
+        // the window looks frozen. Emit a start tick, throttled progress, and
+        // a final done == total tick the UI uses to clear its indicator.
+        let _ = app.emit("vault-index-progress", IndexProgress { done: 0, total });
 
         // Bulk index. Keep memory bounded by reading files one at a time.
         // HTML is stripped to visible text so it's searchable like markdown.
-        for path in &files {
+        for (i, path) in files.iter().enumerate() {
             let content = std::fs::read_to_string(path).unwrap_or_default();
             let (body, title) = if scanner::is_html(path) {
                 (scanner::strip_html(&content), scanner::html_title(&content))
@@ -106,10 +120,20 @@ impl VaultState {
             index
                 .upsert_file_titled(path, &body, mtime, title.as_deref())
                 .await?;
+            if (i + 1) % 64 == 0 {
+                let _ = app.emit(
+                    "vault-index-progress",
+                    IndexProgress {
+                        done: i + 1,
+                        total,
+                    },
+                );
+            }
         }
         index.commit().await?;
 
         let count = files.len();
+        let _ = app.emit("vault-index-progress", IndexProgress { done: count, total });
         let index_for_watcher = index.clone();
         let root_for_watcher = root.clone();
         let watcher = crate::watcher::watch_vault(&root, move |changes| {

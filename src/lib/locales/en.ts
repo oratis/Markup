@@ -10,6 +10,7 @@ export const en = {
   "status.selection": "Selected: {0} words, {1} chars",
   "status.caret": "Ln {0}, Col {1}",
   "status.vaultFiles": "{0} files",
+  "status.indexing": "Indexing vault… {0}/{1}",
   "status.dirtyCount": "{0} unsaved",
   "status.readingTime": "~{0} min read",
   "status.readingTimeTitle": "Estimated at 200 words / minute",
