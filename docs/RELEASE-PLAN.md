@@ -108,12 +108,12 @@ Owner = you (account-gated); scripts + exact steps provided. Full runbook: [app-
 ### v1.0.0 — criteria
 Ship 1.0 when **all** hold:
 - [x] Signed + notarized direct DMG (no Gatekeeper prompt). *(v0.6.0)*
-- [ ] **DECISION NEEDED:** either live on the Mac App Store, **or** a deliberate "direct-only" decision documented here. (Code is MAS-ready; the rest is account-gated. Direct distribution already gives signed + notarized + auto-update, so "direct-only" is a legitimate 1.0 choice.)
+- [x] **Distribution decided ([ADR-003](./decisions/ADR-003-positioning-and-distribution.md), 2026-06):** 1.0 ships **direct-distribution first** (signed + notarized + auto-update); MAS is deferred to a post-1.0 increment. Code is MAS-ready, so the option stays open with no added debt.
 - [x] No known data-loss or input-corruption bugs (IME content correct since 0.5.1).
 - [x] README screenshots + a real landing/marketing pass (hero GIF, screenshots, launch video, social card).
 - [ ] Crash-free across a week of daily use on a large vault (ongoing observation).
 
-> **The only hard blocker left for 1.0 is the MAS-vs-direct-only decision.** Everything else is done or is passive observation.
+> **Distribution is now decided (direct-first; see [ADR-003](./decisions/ADR-003-positioning-and-distribution.md)).** The remaining 1.0 gate is passive observation — crash-free across a week of daily use on a large vault.
 
 ---
 

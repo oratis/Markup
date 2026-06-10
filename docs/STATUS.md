@@ -15,10 +15,12 @@ type-checks, lint-clean, **870 React tests + 35 Rust unit + 9 integration**,
 Since the 153-batch core (v1 B001–B135, v2 Canvas B201–B218): v0.5.3–v0.5.5
 shipped high-fidelity HTML/PDF export (syntect / KaTeX / Mermaid) + an
 `App.tsx`→hooks refactor + Playwright E2E; v0.6.0 added signing; v0.6.1
-added auto-update. **The only hard blocker for 1.0 is the MAS-vs-direct-only
-decision** (see [RELEASE-PLAN.md](./RELEASE-PLAN.md) §6) — MAS is code-ready,
-the rest is account-gated. An iOS companion (M0–M4 done) is on a parallel
-track via PRs.
+added auto-update. Per [ADR-003](./decisions/ADR-003-positioning-and-distribution.md)
+(2026-06), **1.0 ships direct-distribution first; MAS is deferred to a post-1.0
+increment** — so MAS is no longer a 1.0 blocker. The latest full project review
+is [REVIEW-2026-06.md](./REVIEW-2026-06.md); product direction (focus: reader +
+GitHub) in [PRODUCT-DIRECTION.md](./PRODUCT-DIRECTION.md). An iOS companion
+(M0–M4 done) is on a parallel track via PRs.
 
 **Obsidian roadmap closed end-to-end:**
 - Tier-1 (must-have to be an Obsidian alternative): ✅ **5/5 complete**
