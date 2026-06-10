@@ -1,5 +1,6 @@
 //! Vault-scoped IPC commands (open vault, list files, search).
 
+use crate::authorized::WriteScope;
 use crate::error::{AppError, AppResult};
 use crate::index::{index_dir_for_vault, SearchHit};
 use crate::vault::{VaultFileEntry, VaultState};
@@ -66,6 +67,7 @@ pub async fn pick_vault(app: AppHandle) -> AppResult<Option<String>> {
 pub async fn open_vault(
     app: AppHandle,
     state: State<'_, VaultState>,
+    scope: State<'_, WriteScope>,
     path: String,
 ) -> AppResult<VaultOpened> {
     let root = PathBuf::from(&path);
@@ -76,6 +78,10 @@ pub async fn open_vault(
     let index_dir = index_dir_for_vault(&app_data, &root);
 
     let count = state.open(root.clone(), app.clone(), index_dir).await?;
+    // Grant write access to the whole vault tree so write_file / rename_file /
+    // write_image accept targets inside it (the scope guard rejects anything
+    // outside an opened folder).
+    scope.authorize_dir(&root);
     // Remember this vault (+ a security-scoped bookmark on sandbox builds)
     // so the next launch can restore it. Best-effort.
     persist_vault_session(&app, &path);

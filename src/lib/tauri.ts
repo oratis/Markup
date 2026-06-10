@@ -6,12 +6,21 @@ import type { LoadedFile, SearchHit, VaultFile, VaultOpened } from "./types";
 
 export { getVersion };
 
+/** Grant the Rust write-scope guard access to `paths` (used after the user
+ * picks a destination through an OS dialog — an explicit authorization). */
+export async function authorizePaths(paths: string[]): Promise<void> {
+  await invoke("authorize_paths", { paths });
+}
+
 export async function pickSavePath(defaultName: string): Promise<string | null> {
   const path = await saveDialog({
     title: "Save Markdown File",
     defaultPath: defaultName,
     filters: [{ name: "Markdown", extensions: ["md", "markdown", "mdx"] }],
   });
+  // The user explicitly chose this destination → authorize writing it before
+  // the caller's write_file call hits the backend scope guard.
+  if (path) await authorizePaths([path]);
   return path ?? null;
 }
 
