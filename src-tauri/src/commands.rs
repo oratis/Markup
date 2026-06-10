@@ -1,9 +1,10 @@
+use crate::authorized::WriteScope;
 use crate::error::{AppError, AppResult};
 use serde::Serialize;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use tauri::Manager;
+use tauri::{Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
 #[derive(Debug, Serialize)]
@@ -58,7 +59,10 @@ fn looks_like_editable(path: &Path) -> bool {
 }
 
 #[tauri::command]
-pub async fn open_file(app: tauri::AppHandle) -> AppResult<Option<LoadedFile>> {
+pub async fn open_file(
+    app: tauri::AppHandle,
+    scope: State<'_, WriteScope>,
+) -> AppResult<Option<LoadedFile>> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     app.dialog()
         .file()
@@ -79,13 +83,18 @@ pub async fn open_file(app: tauri::AppHandle) -> AppResult<Option<LoadedFile>> {
         .map_err(|e| AppError::Other(format!("dialog returned non-path target: {e}")))?;
 
     let loaded = read_file_inner(&path_buf).await?;
+    scope.authorize_file(&path_buf);
     Ok(Some(loaded))
 }
 
 #[tauri::command]
-pub async fn read_file(path: String) -> AppResult<LoadedFile> {
+pub async fn read_file(scope: State<'_, WriteScope>, path: String) -> AppResult<LoadedFile> {
     let p = PathBuf::from(&path);
-    read_file_inner(&p).await
+    let loaded = read_file_inner(&p).await?;
+    // A successful read authorizes saving the file back (and creating
+    // siblings in the same folder, e.g. Save As) — no frontend bookkeeping.
+    scope.authorize_file(&p);
+    Ok(loaded)
 }
 
 async fn read_file_inner(path: &Path) -> AppResult<LoadedFile> {
@@ -102,9 +111,15 @@ async fn read_file_inner(path: &Path) -> AppResult<LoadedFile> {
 }
 
 #[tauri::command]
-pub async fn rename_file(from: String, to: String) -> AppResult<()> {
+pub async fn rename_file(
+    scope: State<'_, WriteScope>,
+    from: String,
+    to: String,
+) -> AppResult<()> {
     let from_path = PathBuf::from(&from);
     let to_path = PathBuf::from(&to);
+    scope.ensure_allowed(&from_path)?;
+    scope.ensure_allowed(&to_path)?;
     if to_path.exists() {
         return Err(AppError::Other(format!("destination already exists: {to}")));
     }
@@ -142,6 +157,20 @@ pub async fn trash_file(path: String) -> AppResult<()> {
 /// extension without the dot (eg. "png").
 #[tauri::command]
 pub async fn write_image(
+    scope: State<'_, WriteScope>,
+    vault_root: String,
+    dir_relative: String,
+    bytes: Vec<u8>,
+    ext: String,
+) -> AppResult<String> {
+    // Reject a forged vault_root pointing outside any opened folder, then
+    // delegate to the scope-free writer (so unit tests can exercise the
+    // traversal guard without constructing Tauri State).
+    scope.ensure_allowed(&PathBuf::from(&vault_root))?;
+    write_image_inner(vault_root, dir_relative, bytes, ext).await
+}
+
+async fn write_image_inner(
     vault_root: String,
     dir_relative: String,
     bytes: Vec<u8>,
@@ -697,7 +726,7 @@ mod ext_tests {
         let root_dir = dir.path().join("vault");
         std::fs::create_dir(&root_dir).unwrap();
         let root = root_dir.to_string_lossy().into_owned();
-        let res = write_image(
+        let res = write_image_inner(
             root,
             "../escape".to_string(),
             vec![1, 2, 3],
@@ -717,7 +746,7 @@ mod ext_tests {
     async fn write_image_writes_into_a_vault_subdir() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path().to_string_lossy().into_owned();
-        let rel = write_image(root, "assets".to_string(), vec![1, 2, 3], "png".to_string())
+        let rel = write_image_inner(root, "assets".to_string(), vec![1, 2, 3], "png".to_string())
             .await
             .expect("a normal subdir write should succeed");
         assert!(rel.starts_with("assets"), "rel path was {rel}");
@@ -1020,11 +1049,13 @@ fn chrono_now_iso() -> String {
 
 #[tauri::command]
 pub async fn write_file(
+    scope: State<'_, WriteScope>,
     path: String,
     content: String,
     expected_mtime_ms: Option<u128>,
 ) -> AppResult<u128> {
     let path_buf = PathBuf::from(&path);
+    scope.ensure_allowed(&path_buf)?;
 
     if let Some(expected) = expected_mtime_ms {
         if let Ok(meta) = tokio::fs::metadata(&path_buf).await {

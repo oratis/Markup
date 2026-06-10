@@ -1,3 +1,4 @@
+mod authorized;
 mod bookmark;
 mod commands;
 mod commands_locale;
@@ -14,6 +15,7 @@ pub mod scanner;
 pub mod vault;
 pub mod watcher;
 
+use authorized::{authorize_paths, WriteScope};
 use commands::{
     log_perf, open_file, read_file, rename_file, render_html, trash_file, write_file, write_image,
     write_preview_html,
@@ -79,6 +81,7 @@ pub fn run() {
         .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(VaultState::new())
+        .manage(WriteScope::new())
         .manage(PendingOpenFiles::default())
         .setup(|app| {
             let menu = menu::build(app.handle())?;
@@ -115,6 +118,7 @@ pub fn run() {
             search_vault,
             restore_vault,
             take_pending_files,
+            authorize_paths,
             github::github_device_start,
             github::github_device_poll,
         ])

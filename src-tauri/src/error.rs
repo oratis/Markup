@@ -29,6 +29,9 @@ pub enum AppError {
     #[error("vault not open")]
     NoVault,
 
+    #[error("path is outside the authorized vault/folder scope: {0}")]
+    Unauthorized(String),
+
     #[error("{0}")]
     Other(String),
 }
