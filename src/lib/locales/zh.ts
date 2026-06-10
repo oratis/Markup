@@ -12,6 +12,7 @@ export const zh: Strings = {
   "status.selection": "已选：{0} 字 / {1} 字符",
   "status.caret": "行 {0}，列 {1}",
   "status.vaultFiles": "{0} 个文件",
+  "status.indexing": "正在索引… {0}/{1}",
   "status.dirtyCount": "{0} 个未保存",
   "status.readingTime": "约 {0} 分钟阅读",
   "status.readingTimeTitle": "按 200 字 / 分钟估算",
