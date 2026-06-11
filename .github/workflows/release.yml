@@ -167,11 +167,23 @@ jobs:
           set -euo pipefail
           BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
           DMG="$(ls "$BUNDLE_DIR/dmg/"Markup_*_${{ matrix.suffix }}.dmg | head -1)"
-          xcrun notarytool submit "$DMG" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID" \
-            --wait
+          # Apple's notary service occasionally times out or returns 5xx —
+          # retry the submit a few times before failing the whole release.
+          for attempt in 1 2 3; do
+            if xcrun notarytool submit "$DMG" \
+                --apple-id "$APPLE_ID" \
+                --password "$APPLE_PASSWORD" \
+                --team-id "$APPLE_TEAM_ID" \
+                --wait; then
+              break
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "notarytool failed after 3 attempts" >&2
+              exit 1
+            fi
+            echo "notarytool attempt $attempt failed; retrying in 30s…" >&2
+            sleep 30
+          done
           xcrun stapler staple "$DMG"
           xcrun stapler staple "$BUNDLE_DIR/macos/Markup.app"
           spctl --assess --type execute --verbose=2 "$BUNDLE_DIR/macos/Markup.app"
