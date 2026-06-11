@@ -191,7 +191,8 @@ export const en = {
   "find.replaceAll": "Replace All",
   "find.caseSensitive": "Match case",
   "find.regex": "Use regex",
-  "find.regexNavHint": "Step-through isn't available for regex in the reader — use source mode (⌘/) or Replace All.",
+  "find.regexNavHint":
+    "Step-through isn't available for regex in the reader — use source mode (⌘/) or Replace All.",
   "find.cmHint": "Press ⌘F again — CodeMirror has its own search overlay.",
 
   // misc
