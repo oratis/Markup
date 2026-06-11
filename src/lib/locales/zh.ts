@@ -190,6 +190,7 @@ export const zh: Strings = {
   "find.replaceAll": "全部替换",
   "find.caseSensitive": "区分大小写",
   "find.regex": "使用正则",
+  "find.regexNavHint": "正则无法在阅读视图逐项跳转 —— 请用源码模式（⌘/）或「全部替换」。",
   "find.cmHint": "再按一次 ⌘F — CodeMirror 有自己的搜索面板。",
 
   // misc

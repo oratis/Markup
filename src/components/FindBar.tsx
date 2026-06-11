@@ -181,16 +181,28 @@ export function FindBar({ sourceMode, onClose }: Props) {
           .*
         </button>
         <button
-          title="Previous"
+          title={useRegex ? t("find.regexNavHint") : "Previous"}
+          aria-label="Previous"
+          disabled={useRegex}
           onClick={() => findNext(true)}
-          className="w-5 h-5 leading-none rounded hover:bg-black/5 dark:hover:bg-white/10"
+          className={`w-5 h-5 leading-none rounded ${
+            useRegex
+              ? "opacity-30 cursor-not-allowed"
+              : "hover:bg-black/5 dark:hover:bg-white/10"
+          }`}
         >
           ↑
         </button>
         <button
-          title="Next"
+          title={useRegex ? t("find.regexNavHint") : "Next"}
+          aria-label="Next"
+          disabled={useRegex}
           onClick={() => findNext(false)}
-          className="w-5 h-5 leading-none rounded hover:bg-black/5 dark:hover:bg-white/10"
+          className={`w-5 h-5 leading-none rounded ${
+            useRegex
+              ? "opacity-30 cursor-not-allowed"
+              : "hover:bg-black/5 dark:hover:bg-white/10"
+          }`}
         >
           ↓
         </button>

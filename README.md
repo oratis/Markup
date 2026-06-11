@@ -14,7 +14,7 @@ Read your Markdown like a beautiful web page — edit when you want.
 [![Downloads](https://img.shields.io/github/downloads/oratis/Markup/total)](https://github.com/oratis/Markup/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-[**Download for macOS**](https://github.com/oratis/Markup/releases/latest) · [▶ Demo](https://youtu.be/X2_MDL9v7As) · [中文说明](#中文) · [Docs](./docs/README.md)
+[**Download for macOS**](https://github.com/oratis/Markup/releases/latest) · [▶ Demo](https://youtu.be/X2_MDL9v7As) · [中文说明](#中文) · [Usage](./docs/USAGE.md) · [Docs](./docs/README.md)
 
 ⭐ **If Markup is useful to you, a star helps other people find it.**
 
