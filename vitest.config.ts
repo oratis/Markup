@@ -26,6 +26,15 @@ export default defineConfig({
         "src/**/*.spec.{ts,tsx}",
         "src/lib/locales/**",
       ],
+      // Regression floor, set just under the measured baseline (2026-06:
+      // 49.7 / 46.3 / 46.7 / 50.4). Raise as coverage grows; never lower
+      // to make a PR pass.
+      thresholds: {
+        statements: 48,
+        branches: 44,
+        functions: 45,
+        lines: 48,
+      },
     },
   },
 });
