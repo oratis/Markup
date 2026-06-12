@@ -7,6 +7,7 @@ mod commands_window;
 mod github;
 mod menu;
 mod recent;
+mod token_store;
 
 pub mod error;
 pub mod i18n;
@@ -121,6 +122,9 @@ pub fn run() {
             authorize_paths,
             github::github_device_start,
             github::github_device_poll,
+            token_store::github_token_load,
+            token_store::github_token_save,
+            token_store::github_token_delete,
         ])
         .build(tauri::generate_context!())
         .expect("error while building markup")

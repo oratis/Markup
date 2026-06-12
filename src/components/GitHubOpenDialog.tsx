@@ -4,6 +4,7 @@ import {
   getGitHubToken,
   githubAuthHeaders,
   isGitHubSignedIn,
+  loadGitHubToken,
   setGitHubToken,
 } from "../lib/github-auth";
 import { awaitDeviceToken, startDeviceFlow } from "../lib/github-device-client";
@@ -91,6 +92,12 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
 
   // Stop any in-flight poll when the dialog unmounts.
   useEffect(() => () => signInAbort.current?.abort(), []);
+
+  // Hydrate the token from the Keychain on first open (migrating any token a
+  // pre-Keychain build left in localStorage), then refresh the signed-in state.
+  useEffect(() => {
+    loadGitHubToken().then(() => setSignedIn(isGitHubSignedIn()));
+  }, []);
 
   async function signIn() {
     setError(null);
