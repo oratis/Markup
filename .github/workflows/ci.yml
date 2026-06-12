@@ -46,7 +46,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: hashFiles('coverage/lcov.info') != ''
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage/lcov.info
           flags: frontend
@@ -164,7 +164,7 @@ jobs:
 
       - name: Upload Rust coverage to Codecov
         if: hashFiles('src-tauri/lcov.info') != ''
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./src-tauri/lcov.info
           flags: rust
