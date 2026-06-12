@@ -69,12 +69,21 @@ Store Connect. Below is the exact runbook; I've scripted everything that runs
 locally.
 
 ### 2.1 Bundle identifier
-Current: `com.appkon.markup`. For wangharp's team you need a bundle ID **you own**. Options:
-- Keep `com.appkon.markup` *iff* "appkon" is a domain/identifier under this account.
-- Otherwise register a new one, e.g. `com.wangharp.markup`.
+**Decision: keep `com.appkon.markup`.** The iOS app already ships under
+`com.appkon.markup.ios` on the same Apple Team (`9LH9NBX7P4`), so the `com.appkon.*`
+prefix is already in use by this account — keeping the Mac id as `com.appkon.markup`
+is consistent and needs no code change (`src-tauri/tauri.conf.json` already uses it).
+A bundle ID does not require owning the matching domain; it only has to be unique
+and registered under your team. (The earlier `com.wangharp.markup` alternative is
+unnecessary now that `com.appkon.*` is confirmed under this team.)
 
 → **App Store Connect → Certificates, IDs & Profiles → Identifiers → App IDs → +**
-Register the chosen ID. Enable capability: **App Sandbox** (no others needed).
+Register `com.appkon.markup`. Enable capability: **App Sandbox** (no others needed).
+
+> Note: iOS `com.appkon.markup.ios` and Mac `com.appkon.markup` are **separate**
+> App Store products (a Tauri Mac app and a native iOS app can't share one
+> universal binary). That's expected; they share branding + this account, not a
+> single listing.
 
 ### 2.2 Certificates (3 needed for MAS)
 Generate a CSR on *this* Mac (Keychain Access → Certificate Assistant → Request a Certificate from a Certificate Authority → save to disk), then in the portal create:
