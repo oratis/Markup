@@ -29,6 +29,11 @@ tokio = { version = "1", features = ["fs", "rt-multi-thread", "macros", "sync", 
 # send CORS headers, so the exchange must run here, not in the webview).
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 
+# GitHub access token at rest: the macOS login Keychain instead of the webview's
+# localStorage (any script running in the webview can read localStorage). The
+# `apple-native` backend uses Security.framework; other platform backends off.
+keyring = { version = "3", default-features = false, features = ["apple-native"] }
+
 # Spike 0.3: vault management
 walkdir = "2"
 notify = "8"
