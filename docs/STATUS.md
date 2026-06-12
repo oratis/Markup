@@ -1,16 +1,17 @@
-# Status — Last updated 2026-05-31 (v0.6.1 shipped: signed + auto-updating)
+# Status — Last updated 2026-06-12 (v0.7.0 + post-review hardening cycle)
 
 This is the wake-up brief. Read this first.
 
 ## TL;DR
 
 `main` branch is protected (linear history, required CI = Frontend + Rust,
-no force-push). **`v0.6.1` is the latest release** — dual-arch DMG **signed
+no force-push). **`v0.7.0` is the latest release** — dual-arch DMG **signed
 with an Apple Developer ID + notarized** (opens with no Gatekeeper prompt)
 **and self-updating** (Tauri signed updater; the release workflow publishes
 an Ed25519-signed `latest.json` feed per release). The app compiles,
-type-checks, lint-clean, **870 React tests + 35 Rust unit + 9 integration**,
-2 Playwright E2E, double-Codecov coverage upload, runs cleanly in dev.
+type-checks, lint-clean; the React + Rust + iOS MarkupKit suites run in CI
+with Playwright E2E, double-Codecov coverage upload, and a coverage
+regression floor (#130).
 
 Since the 153-batch core (v1 B001–B135, v2 Canvas B201–B218): v0.5.3–v0.5.5
 shipped high-fidelity HTML/PDF export (syntect / KaTeX / Mermaid) + an
@@ -27,6 +28,39 @@ GitHub) in [PRODUCT-DIRECTION.md](./PRODUCT-DIRECTION.md). An iOS companion
 - Tier-2 (nice-to-have power features): ✅ **7/7 complete** — Canvas
   shipped in v2 (B201–B218); the other six landed earlier
 - Tier-3 (out of scope for v1): plugins, sync, mobile
+
+## What landed in the post-review hardening cycle (2026-06 · #125–#132)
+
+A full project review ([REVIEW-2026-06.md](./REVIEW-2026-06.md)) drove one
+PR per finding, newest first:
+
+- **#132** GitHub round-trip design for desktop —
+  [design/06-github-roundtrip.md](./design/06-github-roundtrip.md), batches
+  B301–B307 (repo-as-vault via zipball materialization; PR write-back via
+  the contents API). **This is the next implementation track.**
+- **#131** App.tsx 3,249 → 3,039 lines — the nine editor link/nav listener
+  effects extracted verbatim into `hooks/useEditorInteractions.ts` (first
+  slice of the monolith breakup).
+- **#130** Component smoke tests (FindBar / Toast / ErrorBoundary /
+  BookmarksPane, 19 cases) + vitest coverage floor 48/44/45/48.
+- **#129** GitHub OAuth token moved from localStorage to the macOS
+  Keychain (`keyring` crate; sync in-memory cache + one-time migration).
+  ⚠️ Needs a one-time local sign-in verification; `cargo update` locally to
+  pin `keyring` in Cargo.lock.
+- **#128** Find-bar regex UX (disabled ↑/↓ + hint in WYSIWYG),
+  [USAGE.md](./USAGE.md) (search operators / canvas / shortcuts), notarize
+  retry (3×) in release.yml.
+- **#127** Vault-open indexing progress events + StatusBar indicator.
+- **#126** P0: `read_file` / `write_file` / `rename_file` scoped to
+  user-authorized roots (`WriteScope`, dialog/vault/drag grants).
+- **#125** Review report + [PRODUCT-DIRECTION.md](./PRODUCT-DIRECTION.md)
+  (positioning: reader-first + GitHub) +
+  [ADR-003](./decisions/ADR-003-positioning-and-distribution.md) (1.0 ships
+  direct-first; MAS post-1.0).
+
+Deferred from the review (need a working local toolchain): more App.tsx
+slices, dependabot majors #115/#116 (release.yml actions — verify changelogs
++ a real release), GitHub-vault parity work per the B3xx design.
 
 ## v2 — Obsidian-compatible Canvas (B201–B218, all green)
 
