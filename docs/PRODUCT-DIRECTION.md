@@ -71,7 +71,7 @@
 
 ### B 层 · 强化差异化（1.x，把"阅读 + GitHub"做深）
 
-- **桌面端 GitHub 双向化**：现仅拉取，补"编辑副本 → 提交 PR / fork"，从只读阅读器升级为 GitHub 文档轻量协作端。**与所有竞品拉开差距的点。** → 设计已就绪：[design/06-github-roundtrip.md](design/06-github-roundtrip.md)（批次 B301–B307）。
+- **桌面端 GitHub 双向化**：现仅拉取，补"编辑副本 → 提交 PR / fork"，从只读阅读器升级为 GitHub 文档轻量协作端。**与所有竞品拉开差距的点。** → ✅ **已落地** B301–B307（#136–#142，2026-06）：开 repo 为 vault、拉取、检测改动、提 PR。见 [design/06-github-roundtrip.md](design/06-github-roundtrip.md)。剩 fork-PR + 真实仓库端到端验证。
 - **文档站点式阅读**：把一个仓库/文件夹当站点来读——侧栏目录树 + 全局 TOC + 跨文档面包屑 + `#fragment` 锚点跳转（iOS 已记待办，桌面也值得）。让"读一整套文档"成为强项。
 - **Mac ↔ iOS 体验对齐**：统一 GitHub vault 的打开/刷新/缓存模型；reader 设置（字号/行宽/主题）两端对齐。
 - **整站导出**：多文档 + 资源打包成可离线 HTML，强化"一键把 Markdown 变成可分享网页"。

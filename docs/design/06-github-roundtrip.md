@@ -1,10 +1,16 @@
 # Desktop — GitHub round-trip (read a repo as a vault, propose changes as a PR)
 
-> Status: **design approved for build** (B-layer track 1 from
-> [PRODUCT-DIRECTION.md](../PRODUCT-DIRECTION.md) — "桌面端 GitHub 双向化").
-> Batches **B301–B307**. Companion to the shipped iOS design
-> ([ios/03-github-primary-vault.md](ios/03-github-primary-vault.md)); reuse its
-> decisions wherever the platform allows.
+> Status: **B301–B307 shipped** (2026-06, PRs #136–#142) — open a repo as a
+> vault, pull latest, detect local edits, propose a PR. B-layer track 1 from
+> [PRODUCT-DIRECTION.md](../PRODUCT-DIRECTION.md) — "桌面端 GitHub 双向化".
+> Companion to the shipped iOS design
+> ([ios/03-github-primary-vault.md](ios/03-github-primary-vault.md)).
+>
+> **Deferred** (not in B301–B307): fork-based PRs for repos without push
+> access (B306 errors clearly instead); the site-style reading track (global
+> TOC / breadcrumbs / cross-doc `#fragment` anchors, §B31x). **Needs manual
+> verification** against a real pushable repo before the write path is trusted
+> — the live commit/PR orchestration can't run in CI.
 
 ## 0. The ask, restated
 
