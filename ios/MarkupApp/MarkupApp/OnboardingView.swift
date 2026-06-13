@@ -5,6 +5,7 @@ import SwiftUI
 /// picker (design §6.1). Shown as the no-vault state.
 struct OnboardingView: View {
     var onOpenFolder: () -> Void
+    var onOpenGitHub: () -> Void
     @State private var page = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -30,17 +31,33 @@ struct OnboardingView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
 
-            Button {
+            // Non-final cards advance the intro; the last card forks into two
+            // equal-weight vault sources — a local folder, or a GitHub repo.
+            Group {
                 if page < cards.count - 1 {
-                    if reduceMotion { page += 1 } else { withAnimation { page += 1 } }
+                    Button {
+                        if reduceMotion { page += 1 } else { withAnimation { page += 1 } }
+                    } label: {
+                        Text(t(.onboardNext)).frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
                 } else {
-                    onOpenFolder()
+                    HStack(spacing: 12) {
+                        Button(action: onOpenFolder) {
+                            Text(t(.openFolder))
+                                .frame(maxWidth: .infinity)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Button(action: onOpenGitHub) {
+                            Text(t(.openFromGitHub))
+                                .frame(maxWidth: .infinity)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
-            } label: {
-                Text(page < cards.count - 1 ? t(.onboardNext) : t(.onboardStart))
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .padding(.horizontal, 24)
             .padding(.bottom, 16)

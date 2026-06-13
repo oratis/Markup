@@ -20,6 +20,12 @@ struct GitHubOpenView: View {
     @State private var reposError: String?
     private let auth = GitHubAuth.shared
 
+    /// The link currently typed in the URL field, if it parses. Drives whether
+    /// we offer "Open as Vault" (repo root) vs "Browse"/"Open" (folder/file).
+    private var parsedLink: GitHubLink? {
+        GitHubLinkParser.parse(urlText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             Form {
@@ -54,15 +60,32 @@ struct GitHubOpenView: View {
                 }
 
                 Section {
-                    Button {
-                        Task { await open() }
-                    } label: {
-                        HStack {
-                            if loading { ProgressView().controlSize(.small) }
-                            Text(t(.open))
+                    if let link = parsedLink, link.isDirectory, link.path.isEmpty {
+                        // Repo root → mount the whole repo as a vault in one tap.
+                        Button {
+                            onOpenVault(link)
+                            dismiss()
+                        } label: {
+                            Label(t(.openAsVault), systemImage: "arrow.down.circle")
                         }
+                        // …or just browse its files / open a single doc.
+                        Button {
+                            path.append(link)
+                        } label: {
+                            Label(t(.browseFiles), systemImage: "folder")
+                        }
+                    } else {
+                        // Sub-folder → browse; file → open; unparseable → error.
+                        Button {
+                            Task { await open() }
+                        } label: {
+                            HStack {
+                                if loading { ProgressView().controlSize(.small) }
+                                Text(t(.open))
+                            }
+                        }
+                        .disabled(urlText.trimmingCharacters(in: .whitespaces).isEmpty || loading)
                     }
-                    .disabled(urlText.trimmingCharacters(in: .whitespaces).isEmpty || loading)
                 }
 
                 if auth.isSignedIn {
@@ -73,12 +96,30 @@ struct GitHubOpenView: View {
                             Text(reposError).foregroundStyle(.red).font(.caption)
                         }
                         ForEach(repos) { repo in
-                            NavigationLink(value: repo.link) {
-                                Label {
-                                    Text(repo.fullName).font(.callout)
-                                } icon: {
-                                    Image(systemName: repo.isPrivate ? "lock.fill" : "book")
+                            // Tap mounts the repo as a vault; swipe to browse it.
+                            Button {
+                                onOpenVault(repo.link)
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    Label {
+                                        Text(repo.fullName).font(.callout)
+                                    } icon: {
+                                        Image(systemName: repo.isPrivate ? "lock.fill" : "book")
+                                    }
+                                    Spacer()
+                                    Image(systemName: "arrow.down.circle")
+                                        .foregroundStyle(.secondary)
                                 }
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing) {
+                                Button {
+                                    path.append(repo.link)
+                                } label: {
+                                    Label(t(.browseFiles), systemImage: "folder")
+                                }
+                                .tint(.blue)
                             }
                         }
                     }
