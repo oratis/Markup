@@ -23,7 +23,10 @@ export default defineConfig({
 
   envPrefix: ["VITE_", "TAURI_ENV_*"],
   build: {
-    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
+    // safari15 (not Tauri's legacy safari13 default): vite 8 / Rolldown can't
+    // downlevel some destructuring in the outline web worker to safari13, and
+    // the macOS system WebView this ships against is modern WebKit anyway.
+    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari15",
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
     chunkSizeWarningLimit: 1600,
