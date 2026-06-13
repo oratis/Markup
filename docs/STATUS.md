@@ -54,18 +54,20 @@ you can't → fork) — it can't run in CI. The local toolchain is now fixed
 (rustup unshadowed + China mirrors), so this whole track was developed with
 full local verification (cargo test / vitest / tsc / biome) before each PR.
 
-**Site-style reading — cross-doc navigation (2026-06 · #145–#148):**
+**Site-style reading (2026-06 · #145–#151):**
 - **B311** (#145) `[[file#heading]]` wikilinks open + scroll to the heading.
 - **B312** (#147) full folder breadcrumb in the title bar (`vault / docs /
   guides / file.md`); each folder clicks through to `path:<folder>/` search.
 - **B313** (#148) standard relative markdown links (`[x](./other.md#sec)`)
   open in-app and jump to the heading; external links route to the browser.
+- **B314** (#151) prev/next document pager under the reader, walking docs in
+  the file tree's order (shared `lib/vault-order.ts`, so they can't drift).
 
 **Also this session:** vite 7→8 + plugin-react 5→6 migration (#122, build
 target bumped to safari15 for Rolldown) and the full dependabot backlog
-cleared (#115–#124). **Remaining open design work** (subjective — scope
-before building): a sequential prev/next pager (no canonical doc order) and
-a custom "sources" sidebar.
+cleared (#115–#124). **Remaining open design work** (larger / opinionated,
+scope before building): a custom "sources" sidebar — note FileTree already
+covers the vault doc list, so this needs a clear spec to avoid duplicating it.
 
 ## What landed in the post-review hardening cycle (2026-06 · #125–#132)
 
