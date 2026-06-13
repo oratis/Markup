@@ -29,7 +29,7 @@ GitHub) in [PRODUCT-DIRECTION.md](./PRODUCT-DIRECTION.md). An iOS companion
   shipped in v2 (B201–B218); the other six landed earlier
 - Tier-3 (out of scope for v1): plugins, sync, mobile
 
-## GitHub round-trip shipped (2026-06 · #136–#142)
+## GitHub round-trip shipped (2026-06 · #136–#145)
 
 The B-layer differentiation bet — **read any GitHub repo as a vault and send
 edits back as a PR** — is implemented end-to-end on desktop
@@ -42,13 +42,23 @@ edits back as a PR** — is implemented end-to-end on desktop
 - **B305** (#140) local edit tracking (git blob SHA → added/modified/deleted).
 - **B306** (#141) write back: commit selected files to a branch + open a PR.
 - **B307** (#142) the propose-changes dialog (checklist + title/message).
+- **B308** (#144) fork-based PRs — no push access → fork, commit there, open
+  a cross-repo PR; the dialog drives both paths unchanged.
+- **B311** (#145) follow `[[file#heading]]` across docs (open + scroll to the
+  heading; also fixed headinged wikilinks silently not opening).
 
-17 offline Rust tests (extract, manifest diff, blob SHA, branch slug, commit
-payload) + dialog tests. ⚠️ **The live commit/PR path needs a manual check
-against a pushable repo** (can't run in CI). Deferred: fork-based PRs (no-push
-repos get a clear error) and site-style reading (global TOC / cross-doc
-anchors). The local toolchain is now fixed, so this track was developed with
+18 offline Rust tests (extract, manifest diff, blob SHA, branch slug, commit
+payload, fork head-ref) + dialog/headings tests. ⚠️ **The live commit / PR /
+fork path needs a manual check against real repos** (one you can push to, one
+you can't → fork) — it can't run in CI. The local toolchain is now fixed
+(rustup unshadowed + China mirrors), so this whole track was developed with
 full local verification (cargo test / vitest / tsc / biome) before each PR.
+
+**Also this session:** vite 7→8 + plugin-react 5→6 migration (#122, build
+target bumped to safari15 for Rolldown) and the full dependabot backlog
+cleared (#115–#124). **Remaining open design work:** the rest of site-style
+reading (global TOC, cross-doc breadcrumbs, a sources sidebar) — an
+open-ended track to scope before building.
 
 ## What landed in the post-review hardening cycle (2026-06 · #125–#132)
 
