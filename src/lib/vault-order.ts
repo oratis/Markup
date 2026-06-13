@@ -20,6 +20,28 @@ export function sortVaultFiles(
   return copy;
 }
 
+/** Parent-directory path of `path` (everything before the last "/"). */
+export function parentDir(path: string): string {
+  const i = path.lastIndexOf("/");
+  return i <= 0 ? "" : path.slice(0, i);
+}
+
+/**
+ * Markdown documents in the same folder as `activePath`, in file-tree order —
+ * the "this section" list. Empty when there's no active vault file.
+ */
+export function siblingDocs(
+  files: VaultFile[],
+  vaultSort: "name" | "mtime",
+  activePath: string | null | undefined,
+): VaultFile[] {
+  if (!activePath) return [];
+  const dir = parentDir(activePath);
+  return sortVaultFiles(files, vaultSort).filter(
+    (f) => MARKDOWN.test(f.name) && parentDir(f.path) === dir,
+  );
+}
+
 export interface Adjacent {
   prev: VaultFile | null;
   next: VaultFile | null;
