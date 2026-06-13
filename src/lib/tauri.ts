@@ -167,6 +167,37 @@ export async function openGitHubRepoVault(
   });
 }
 
+export interface GitHubVaultInfo {
+  owner: string;
+  repo: string;
+  ref: string;
+  commitSha: string;
+}
+
+/** GitHub-vault summary for a directory, or null for an ordinary local vault.
+ * Drives the "Pull latest" affordance + a source label. */
+export async function githubVaultInfo(vaultDir: string): Promise<GitHubVaultInfo | null> {
+  return await invoke<GitHubVaultInfo | null>("github_vault_info", { vaultDir });
+}
+
+export interface GitHubVaultDiff {
+  added: string[];
+  changed: string[];
+  removed: string[];
+}
+
+/** Refresh a materialized GitHub vault to its latest commit (B303): download
+ * only changed/added files, delete removed ones. Returns what changed. */
+export async function refreshGitHubVault(
+  vaultDir: string,
+  token?: string,
+): Promise<GitHubVaultDiff> {
+  return await invoke<GitHubVaultDiff>("github_refresh_vault", {
+    vaultDir,
+    token: token ?? null,
+  });
+}
+
 export interface GitHubVaultProgress {
   /** "download" | "extract" | "manifest". */
   phase: string;
