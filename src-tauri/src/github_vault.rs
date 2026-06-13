@@ -9,6 +9,7 @@
 use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
@@ -825,9 +826,63 @@ async fn existing_file_sha(
         .and_then(|v| v.get("sha").and_then(|s| s.as_str()).map(str::to_owned))
 }
 
-/// Commit the selected files to a new branch on the repo and open a PR back to
-/// the vault's ref. Requires push access to the repo (fork-based PRs are a
-/// later batch). Network-only — exercised manually against a real repo.
+/// The `head` field for a PR: a bare branch when the head repo is the
+/// upstream (push access), or `forkowner:branch` for a cross-repo PR from a
+/// fork.
+pub fn pr_head_ref(head_owner: &str, upstream_owner: &str, branch: &str) -> String {
+    if head_owner == upstream_owner {
+        branch.to_string()
+    } else {
+        format!("{head_owner}:{branch}")
+    }
+}
+
+/// Ensure a fork of `owner/repo` exists under the authenticated user and
+/// return its owner login. `POST /forks` is idempotent (returns the existing
+/// fork) and 202-async, so poll until the fork is reachable before we try to
+/// branch on it.
+async fn ensure_fork(
+    client: &reqwest::Client,
+    owner: &str,
+    repo: &str,
+    token: &Option<String>,
+) -> AppResult<String> {
+    let (st, body) = api_send_json(
+        client,
+        reqwest::Method::POST,
+        &format!("{API}/repos/{owner}/{repo}/forks"),
+        token,
+        &serde_json::json!({}),
+    )
+    .await?;
+    if !st.is_success() && st.as_u16() != 202 {
+        return Err(AppError::Other(format!(
+            "couldn't fork {owner}/{repo}: HTTP {st}"
+        )));
+    }
+    let login = body
+        .pointer("/owner/login")
+        .and_then(|l| l.as_str())
+        .ok_or_else(|| AppError::Other("fork response missing owner".into()))?
+        .to_owned();
+
+    // Forking is asynchronous; wait for the fork repo to materialize.
+    let fork_url = format!("{API}/repos/{login}/{repo}");
+    for _ in 0..10 {
+        if api_get_json(client, &fork_url, token).await.is_ok() {
+            return Ok(login);
+        }
+        tokio::time::sleep(Duration::from_millis(1500)).await;
+    }
+    // Best-effort: hand the login back anyway; the branch-creation call will
+    // surface a concrete error if the fork still isn't ready.
+    Ok(login)
+}
+
+/// Commit the selected files to a new branch and open a PR back to the vault's
+/// ref. Commits directly when you can push, else forks the repo and opens a
+/// cross-repo PR from the fork. Network-only — exercised manually against a
+/// real repo.
 #[tauri::command]
 pub async fn github_propose_changes(
     vault_dir: String,
@@ -846,24 +901,25 @@ pub async fn github_propose_changes(
     let repo = &manifest.repo;
     let client = http_client()?;
 
-    // Require push access; fork fallback is a later batch.
+    // Commit to the repo directly when we can push; otherwise fork it and
+    // commit there. The PR is always opened against the upstream repo.
     let repo_info = api_get_json(&client, &format!("{API}/repos/{owner}/{repo}"), &token).await?;
     let can_push = repo_info
         .pointer("/permissions/push")
         .and_then(|p| p.as_bool())
         .unwrap_or(false);
-    if !can_push {
-        return Err(AppError::Other(format!(
-            "You don't have push access to {owner}/{repo}. Fork-based PRs are coming in a later update."
-        )));
-    }
+    let head_owner = if can_push {
+        owner.clone()
+    } else {
+        ensure_fork(&client, owner, repo, &token).await?
+    };
 
-    // Branch off the pinned base commit.
+    // Branch off the pinned base commit (on the head repo — repo or fork).
     let branch = branch_name_for(&pr_title);
     let (create_status, _) = api_send_json(
         &client,
         reqwest::Method::POST,
-        &format!("{API}/repos/{owner}/{repo}/git/refs"),
+        &format!("{API}/repos/{head_owner}/{repo}/git/refs"),
         &token,
         &serde_json::json!({ "ref": format!("refs/heads/{branch}"), "sha": manifest.commit_sha }),
     )
@@ -883,13 +939,13 @@ pub async fn github_propose_changes(
 
     for path in &paths {
         let state = state_of.get(path.as_str()).copied().unwrap_or("modified");
-        let existing = existing_file_sha(&client, owner, repo, path, &branch, &token).await;
+        let existing = existing_file_sha(&client, &head_owner, repo, path, &branch, &token).await;
         if state == "deleted" {
             let Some(sha) = existing else { continue };
             let (st, _) = api_send_json(
                 &client,
                 reqwest::Method::DELETE,
-                &format!("{API}/repos/{owner}/{repo}/contents/{path}"),
+                &format!("{API}/repos/{head_owner}/{repo}/contents/{path}"),
                 &token,
                 &serde_json::json!({ "message": message, "branch": branch, "sha": sha }),
             )
@@ -903,7 +959,7 @@ pub async fn github_propose_changes(
             let (st, _) = api_send_json(
                 &client,
                 reqwest::Method::PUT,
-                &format!("{API}/repos/{owner}/{repo}/contents/{path}"),
+                &format!("{API}/repos/{head_owner}/{repo}/contents/{path}"),
                 &token,
                 &payload,
             )
@@ -922,7 +978,7 @@ pub async fn github_propose_changes(
         &token,
         &serde_json::json!({
             "title": pr_title,
-            "head": branch,
+            "head": pr_head_ref(&head_owner, owner, &branch),
             "base": manifest.ref_name,
             "body": pr_body,
         }),
@@ -1148,6 +1204,17 @@ mod tests {
         // Long titles are capped (slug ≤ 60 chars before the prefix).
         let long = branch_name_for(&"word ".repeat(40));
         assert!(long.len() <= "markup/".len() + 60, "got {long}");
+    }
+
+    #[test]
+    fn pr_head_ref_is_bare_for_upstream_and_qualified_for_a_fork() {
+        // Push access → same owner → bare branch name.
+        assert_eq!(pr_head_ref("oratis", "oratis", "markup/fix"), "markup/fix");
+        // Fork → cross-repo head "forkowner:branch".
+        assert_eq!(
+            pr_head_ref("contributor", "oratis", "markup/fix"),
+            "contributor:markup/fix"
+        );
     }
 
     #[test]
