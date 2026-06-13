@@ -6,11 +6,14 @@
 > Companion to the shipped iOS design
 > ([ios/03-github-primary-vault.md](ios/03-github-primary-vault.md)).
 >
-> **Deferred** (not in B301–B307): fork-based PRs for repos without push
-> access (B306 errors clearly instead); the site-style reading track (global
-> TOC / breadcrumbs / cross-doc `#fragment` anchors, §B31x). **Needs manual
-> verification** against a real pushable repo before the write path is trusted
-> — the live commit/PR orchestration can't run in CI.
+> **B308** (next) adds **fork-based PRs**: when you lack push access, Markup
+> forks the repo, commits to the fork, and opens a cross-repo PR — no UI
+> change, the propose dialog just works either way.
+>
+> **Deferred**: the site-style reading track (global TOC / breadcrumbs /
+> cross-doc `#fragment` anchors, §B31x). **Needs manual verification** against
+> real repos (one you can push to, and one you can't → fork) before the write
+> path is trusted — the live commit/PR/fork orchestration can't run in CI.
 
 ## 0. The ask, restated
 
