@@ -128,6 +128,7 @@ pub fn run() {
             token_store::github_token_delete,
             github_vault::github_open_repo_vault,
             github_vault::github_refresh_vault,
+            github_vault::github_vault_info,
         ])
         .build(tauri::generate_context!())
         .expect("error while building markup")

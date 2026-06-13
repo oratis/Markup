@@ -534,6 +534,32 @@ async fn download_file(
     Ok(())
 }
 
+/// Lightweight manifest summary for the frontend — enough to label a vault
+/// as GitHub-backed and offer "Pull latest", without shipping the full entry
+/// list. `None` when the directory has no manifest (an ordinary local vault).
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubVaultInfo {
+    pub owner: String,
+    pub repo: String,
+    #[serde(rename = "ref")]
+    pub ref_name: String,
+    pub commit_sha: String,
+}
+
+/// Return GitHub-vault info for a directory, or `None` if it isn't one.
+#[tauri::command]
+pub fn github_vault_info(vault_dir: String) -> Option<GitHubVaultInfo> {
+    read_manifest(&PathBuf::from(&vault_dir))
+        .ok()
+        .map(|m| GitHubVaultInfo {
+            owner: m.owner,
+            repo: m.repo,
+            ref_name: m.ref_name,
+            commit_sha: m.commit_sha,
+        })
+}
+
 /// Refresh an already-materialized GitHub vault: refetch the tree at the
 /// (possibly moved) ref, diff against the stored manifest, download only the
 /// added + changed files, delete the removed ones, and rewrite the manifest.
@@ -786,5 +812,30 @@ mod tests {
         assert!(safe_vault_join(root, "../escape.md").is_err());
         assert!(safe_vault_join(root, "docs/../../escape.md").is_err());
         assert!(safe_vault_join(root, "/etc/passwd").is_err());
+    }
+
+    #[test]
+    fn vault_info_reads_a_manifest_and_is_none_otherwise() {
+        let tmp = tempfile::tempdir().unwrap();
+        // No manifest yet → not a GitHub vault.
+        assert!(github_vault_info(tmp.path().to_string_lossy().into_owned()).is_none());
+
+        write_manifest(
+            tmp.path(),
+            &GitHubVaultManifest {
+                owner: "oratis".into(),
+                repo: "Markup".into(),
+                ref_name: "main".into(),
+                commit_sha: "c0ffee".into(),
+                entries: vec![entry("a.md", "s")],
+            },
+        )
+        .unwrap();
+
+        let info = github_vault_info(tmp.path().to_string_lossy().into_owned()).unwrap();
+        assert_eq!(info.owner, "oratis");
+        assert_eq!(info.repo, "Markup");
+        assert_eq!(info.ref_name, "main");
+        assert_eq!(info.commit_sha, "c0ffee");
     }
 }
