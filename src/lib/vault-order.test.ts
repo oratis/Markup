@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { VaultFile } from "../store";
-import { adjacentDocs, sortVaultFiles } from "./vault-order";
+import { adjacentDocs, parentDir, siblingDocs, sortVaultFiles } from "./vault-order";
 
 function f(relPath: string, mtimeMs = 0): VaultFile {
   const name = relPath.slice(relPath.lastIndexOf("/") + 1);
@@ -46,5 +46,40 @@ describe("adjacentDocs", () => {
   it("yields nothing for an unknown or missing active path", () => {
     expect(adjacentDocs(files, "name", "/v/nope.md")).toEqual({ prev: null, next: null });
     expect(adjacentDocs(files, "name", null)).toEqual({ prev: null, next: null });
+  });
+});
+
+describe("siblingDocs", () => {
+  const files = [
+    f("guide.md"),
+    f("intro.md"),
+    f("docs/a.md"),
+    f("docs/b.md"),
+    f("docs/pic.canvas"),
+  ];
+
+  it("lists markdown docs in the active file's folder, in order", () => {
+    expect(siblingDocs(files, "name", "/v/docs/a.md").map((x) => x.relPath)).toEqual([
+      "docs/a.md",
+      "docs/b.md",
+    ]);
+  });
+
+  it("lists root-level siblings for a root file", () => {
+    expect(siblingDocs(files, "name", "/v/intro.md").map((x) => x.relPath)).toEqual([
+      "guide.md",
+      "intro.md",
+    ]);
+  });
+
+  it("is empty without an active path", () => {
+    expect(siblingDocs(files, "name", null)).toEqual([]);
+  });
+});
+
+describe("parentDir", () => {
+  it("returns the directory portion", () => {
+    expect(parentDir("/v/docs/a.md")).toBe("/v/docs");
+    expect(parentDir("a.md")).toBe("");
   });
 });
