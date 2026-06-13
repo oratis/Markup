@@ -129,6 +129,7 @@ pub fn run() {
             github_vault::github_open_repo_vault,
             github_vault::github_refresh_vault,
             github_vault::github_vault_info,
+            github_vault::github_vault_status,
         ])
         .build(tauri::generate_context!())
         .expect("error while building markup")

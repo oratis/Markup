@@ -11,7 +11,9 @@ use std::io;
 use std::path::{Component, Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 use tauri::{AppHandle, Emitter, Manager};
+use walkdir::WalkDir;
 
 use crate::error::{AppError, AppResult};
 
@@ -623,6 +625,103 @@ pub async fn github_refresh_vault(
 }
 
 // ---------------------------------------------------------------------------
+// B305 — local edit tracking (which files differ from the manifest)
+// ---------------------------------------------------------------------------
+
+/// A vault file that diverges from the pinned manifest.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultFileStatus {
+    pub path: String,
+    /// "added" (not in the manifest), "modified" (sha differs), or "deleted"
+    /// (tracked but missing on disk).
+    pub state: String,
+}
+
+/// Compute the git blob SHA-1 of `content`: `sha1("blob " + len + "\0" + bytes)`
+/// — the same object id GitHub reports per blob in a tree. Lets us detect which
+/// local files have been edited relative to the manifest.
+pub fn git_blob_sha(content: &[u8]) -> String {
+    let mut hasher = Sha1::new();
+    hasher.update(format!("blob {}\0", content.len()).as_bytes());
+    hasher.update(content);
+    let digest = hasher.finalize();
+    let mut hex = String::with_capacity(40);
+    for b in digest {
+        hex.push_str(&format!("{b:02x}"));
+    }
+    hex
+}
+
+/// Compare a vault's files against its manifest: tracked files whose content
+/// hash differs are "modified", tracked files missing on disk are "deleted",
+/// and on-disk files absent from the manifest (excluding `.markup/`) are
+/// "added". Sorted by path for stable output.
+pub fn vault_dirty_status(
+    vault_dir: &Path,
+    manifest: &GitHubVaultManifest,
+) -> Vec<VaultFileStatus> {
+    use std::collections::HashSet;
+    let manifest_paths: HashSet<&str> = manifest.entries.iter().map(|e| e.path.as_str()).collect();
+    let mut out = Vec::new();
+
+    for e in &manifest.entries {
+        match fs::read(vault_dir.join(&e.path)) {
+            Ok(bytes) => {
+                if git_blob_sha(&bytes) != e.sha {
+                    out.push(VaultFileStatus {
+                        path: e.path.clone(),
+                        state: "modified".into(),
+                    });
+                }
+            }
+            Err(_) => out.push(VaultFileStatus {
+                path: e.path.clone(),
+                state: "deleted".into(),
+            }),
+        }
+    }
+
+    for entry in WalkDir::new(vault_dir)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let Ok(rel) = entry.path().strip_prefix(vault_dir) else {
+            continue;
+        };
+        let rel_str = rel.to_string_lossy().replace('\\', "/");
+        if rel_str.starts_with(".markup/") {
+            continue;
+        }
+        if !manifest_paths.contains(rel_str.as_str()) {
+            out.push(VaultFileStatus {
+                path: rel_str,
+                state: "added".into(),
+            });
+        }
+    }
+
+    out.sort_by(|a, b| a.path.cmp(&b.path));
+    out
+}
+
+/// Files in a GitHub vault that differ from its manifest (the candidate set
+/// for "propose changes"). Empty for a clean vault or a non-GitHub one.
+#[tauri::command]
+pub fn github_vault_status(vault_dir: String) -> AppResult<Vec<VaultFileStatus>> {
+    let dir = PathBuf::from(&vault_dir);
+    match read_manifest(&dir) {
+        Ok(manifest) => Ok(vault_dirty_status(&dir, &manifest)),
+        // Not a GitHub vault → nothing to track.
+        Err(_) => Ok(Vec::new()),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests — offline: zips are built in-process, no network
 // ---------------------------------------------------------------------------
 
@@ -812,6 +911,61 @@ mod tests {
         assert!(safe_vault_join(root, "../escape.md").is_err());
         assert!(safe_vault_join(root, "docs/../../escape.md").is_err());
         assert!(safe_vault_join(root, "/etc/passwd").is_err());
+    }
+
+    #[test]
+    fn git_blob_sha_matches_known_git_vectors() {
+        // Reproducible with `printf '…' | git hash-object --stdin`.
+        assert_eq!(
+            git_blob_sha(b""),
+            "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        );
+        assert_eq!(
+            git_blob_sha(b"hello\n"),
+            "ce013625030ba8dba906f756967f9e9ca394464a"
+        );
+        assert_eq!(
+            git_blob_sha(b"what is up, doc?"),
+            "bd9dbf5aae1a3862dd1526723246b20206e5fc37"
+        );
+    }
+
+    #[test]
+    fn dirty_status_flags_modified_added_deleted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        // Tracked files: keep.md (unchanged), edit.md (will modify),
+        // gone.md (will delete).
+        fs::write(root.join("keep.md"), b"keep").unwrap();
+        fs::write(root.join("edit.md"), b"original").unwrap();
+        let manifest = GitHubVaultManifest {
+            owner: "o".into(),
+            repo: "r".into(),
+            ref_name: "main".into(),
+            commit_sha: "c".into(),
+            entries: vec![
+                entry("keep.md", &git_blob_sha(b"keep")),
+                entry("edit.md", &git_blob_sha(b"original")),
+                entry("gone.md", &git_blob_sha(b"was here")),
+            ],
+        };
+        // Mutate the working copy: edit one, leave gone.md absent, add a new one.
+        fs::write(root.join("edit.md"), b"changed").unwrap();
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(root.join("docs/new.md"), b"brand new").unwrap();
+        // A .markup/ file must never count as "added".
+        write_manifest(root, &manifest).unwrap();
+
+        let status = vault_dirty_status(root, &manifest);
+        let by: std::collections::HashMap<&str, &str> = status
+            .iter()
+            .map(|s| (s.path.as_str(), s.state.as_str()))
+            .collect();
+        assert_eq!(by.get("edit.md"), Some(&"modified"));
+        assert_eq!(by.get("gone.md"), Some(&"deleted"));
+        assert_eq!(by.get("docs/new.md"), Some(&"added"));
+        assert_eq!(by.get("keep.md"), None); // unchanged → not listed
+        assert!(!by.keys().any(|k| k.starts_with(".markup/")));
     }
 
     #[test]
