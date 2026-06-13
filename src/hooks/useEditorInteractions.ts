@@ -1,7 +1,8 @@
-import { type RefObject, useEffect } from "react";
+import { type RefObject, useCallback, useEffect } from "react";
 import { showToast } from "../components/Toast";
+import { splitEmbedTarget } from "../lib/embed-slice";
 import { wikilinkAtCursor } from "../lib/follow-wikilink";
-import { jumpToSourceLine } from "../lib/headings";
+import { headingLineIndex, jumpToSourceLine } from "../lib/headings";
 import { installHoverPreview } from "../lib/hover-preview";
 import type { useT } from "../lib/i18n";
 import { subscribe as subscribeIndex } from "../lib/link-index-store";
@@ -46,29 +47,50 @@ export function useEditorInteractions({
   openLoadedFile,
   tr,
 }: EditorInteractionArgs) {
-  // Cmd+click on a `[[wikilink]]` in source mode — SourceEditor dispatches
-  // a window event with the click position; resolve + open the file.
-  useEffect(() => {
-    const onFollow = async (e: Event) => {
-      const detail = (e as CustomEvent<{ pos: number }>).detail;
-      const name = wikilinkAtCursor(detail?.pos);
-      if (!name) return;
-      const target = findVaultFile(useAppStore.getState().vaultFiles, name);
-      if (!target) {
-        showToast(tr("toast.wikilinkMiss", name));
+  // Resolve a `[[name]]` / `![[name]]` target (with an optional `#heading`),
+  // open the file, and scroll to the heading when present. Shared by the
+  // source-mode follow, the WYSIWYG wikilink click, and the embed click so
+  // all three navigate `file#heading` identically.
+  const openTargetByName = useCallback(
+    async (raw: string) => {
+      const { file, heading } = splitEmbedTarget(raw);
+      const hit = findVaultFile(useAppStore.getState().vaultFiles, file);
+      if (!hit) {
+        showToast(tr("toast.wikilinkMiss", file || raw));
         return;
       }
       try {
-        const loaded = await readFile(target.path);
+        const loaded = await readFile(hit.path);
         openLoadedFile(loaded);
+        if (heading) {
+          const idx = headingLineIndex(loaded.content, heading);
+          if (idx >= 0) {
+            window.requestAnimationFrame(() => {
+              window.dispatchEvent(
+                new CustomEvent("markup:jump-to-line", { detail: { line: idx } }),
+              );
+            });
+          }
+        }
       } catch (err) {
-        console.error("follow_wikilink_at_pos failed", err);
-        showToast(tr("toast.openFailed", target.path));
+        console.error("open wikilink/embed target failed", err);
+        showToast(tr("toast.openFailed", hit.name));
       }
+    },
+    [openLoadedFile, tr],
+  );
+
+  // Cmd+click on a `[[wikilink]]` in source mode — SourceEditor dispatches
+  // a window event with the click position; resolve + open the file.
+  useEffect(() => {
+    const onFollow = (e: Event) => {
+      const detail = (e as CustomEvent<{ pos: number }>).detail;
+      const name = wikilinkAtCursor(detail?.pos);
+      if (name) void openTargetByName(name);
     };
     window.addEventListener("markup:follow-wikilink-at-pos", onFollow);
     return () => window.removeEventListener("markup:follow-wikilink-at-pos", onFollow);
-  }, [openLoadedFile, tr]);
+  }, [openTargetByName]);
 
   // Source-mode `[[` trigger: SourceEditor's CM6 input handler dispatches
   // markup:wikilink-trigger; we open the picker in completion mode here.
@@ -167,23 +189,11 @@ export function useEditorInteractions({
       if (!name) return;
       e.preventDefault();
       e.stopPropagation();
-      const files = useAppStore.getState().vaultFiles;
-      const target = findVaultFile(files, name);
-      if (!target) {
-        showToast(tr("toast.wikilinkMiss", name));
-        return;
-      }
-      try {
-        const loaded = await readFile(target.path);
-        openLoadedFile(loaded);
-      } catch (err) {
-        console.error("readFile failed", err);
-        showToast(tr("toast.openFailed", target.name));
-      }
+      void openTargetByName(name);
     };
     host.addEventListener("click", onClick);
     return () => host.removeEventListener("click", onClick);
-  }, [openLoadedFile]);
+  }, [openTargetByName]);
 
   // Click on an `.embed` decoration (`![[target]]`) → open the target
   // file in a new tab; if an `#heading` anchor is present, dispatch a
@@ -192,7 +202,7 @@ export function useEditorInteractions({
   useEffect(() => {
     const host = editorScrollRef.current;
     if (!host) return;
-    const onEmbedClick = async (e: MouseEvent) => {
+    const onEmbedClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       const el = target?.closest?.(".embed") as HTMLElement | null;
       if (!el) return;
@@ -200,39 +210,11 @@ export function useEditorInteractions({
       if (!raw) return;
       e.preventDefault();
       e.stopPropagation();
-      const { splitEmbedTarget } = await import("../lib/embed-slice");
-      const { file, heading } = splitEmbedTarget(raw);
-      const files = useAppStore.getState().vaultFiles;
-      const hit = findVaultFile(files, file);
-      if (!hit) {
-        showToast(tr("toast.wikilinkMiss", file));
-        return;
-      }
-      try {
-        const loaded = await readFile(hit.path);
-        openLoadedFile(loaded);
-        if (heading) {
-          const lines = loaded.content.split("\n");
-          const idx = lines.findIndex((ln) => {
-            const m = ln.match(/^\s*#{1,6}\s+(.+?)\s*#*\s*$/);
-            return !!m && m[1].trim() === heading;
-          });
-          if (idx >= 0) {
-            window.requestAnimationFrame(() => {
-              window.dispatchEvent(
-                new CustomEvent("markup:jump-to-line", { detail: { line: idx } }),
-              );
-            });
-          }
-        }
-      } catch (err) {
-        console.error("embed open failed", err);
-        showToast(tr("toast.openFailed", hit.name));
-      }
+      void openTargetByName(raw);
     };
     host.addEventListener("click", onEmbedClick);
     return () => host.removeEventListener("click", onEmbedClick);
-  }, [openLoadedFile, tr]);
+  }, [openTargetByName]);
 
   // Click on a tag chip (`.tag` decoration in WYSIWYG) → open
   // SearchPanel filtered by that tag. Mirrors the TagsPane behaviour.

@@ -5,6 +5,7 @@ import { setActiveSourceView } from "./active-source-view";
 import {
   type Heading,
   headingBreadcrumb,
+  headingLineIndex,
   jumpToSourceLine,
   nextHeadingFrom,
   parseHeadings,
@@ -12,6 +13,21 @@ import {
 } from "./headings";
 
 afterEach(() => setActiveSourceView(null));
+
+describe("headingLineIndex", () => {
+  const doc = "# Top\n\nintro\n\n## Setup steps\n\nbody\n\n### Notes ##\n";
+  it("finds an ATX heading by trimmed text, returning its 0-based line", () => {
+    expect(headingLineIndex(doc, "Setup steps")).toBe(4);
+    expect(headingLineIndex(doc, "  Setup steps  ")).toBe(4);
+  });
+  it("ignores trailing closing hashes", () => {
+    expect(headingLineIndex(doc, "Notes")).toBe(8);
+  });
+  it("returns -1 when there's no match or an empty query", () => {
+    expect(headingLineIndex(doc, "Nope")).toBe(-1);
+    expect(headingLineIndex(doc, "")).toBe(-1);
+  });
+});
 
 const SAMPLE = `# Top
 

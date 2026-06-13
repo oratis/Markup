@@ -133,3 +133,17 @@ export function jumpToSourceLine(line: number): boolean {
   view.focus();
   return true;
 }
+
+/**
+ * 0-based line index of the ATX heading whose text matches `heading`
+ * (trimmed, case-sensitive), or -1 if none. Powers scroll-to-heading for
+ * `[[file#heading]]` / `![[file#heading]]` after the target file opens.
+ */
+export function headingLineIndex(content: string, heading: string): number {
+  const want = heading.trim();
+  if (!want) return -1;
+  return content.split("\n").findIndex((ln) => {
+    const m = ln.match(/^\s*#{1,6}\s+(.+?)\s*#*\s*$/);
+    return !!m && m[1].trim() === want;
+  });
+}
