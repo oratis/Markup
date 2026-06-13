@@ -227,7 +227,7 @@ jobs:
           ls -lh staged/
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dmg-${{ matrix.suffix }}
           path: staged/*
@@ -324,7 +324,7 @@ jobs:
 
       - name: Upload MAS package artifact
         if: ${{ env.HAS_MAS_SIGNING == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mas-pkg
           path: src-tauri/target/release/bundle/macos/Markup.pkg
