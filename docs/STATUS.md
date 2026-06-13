@@ -1,4 +1,4 @@
-# Status — Last updated 2026-06-12 (v0.7.0 + post-review hardening cycle)
+# Status — Last updated 2026-06-12 (v0.7.0 + hardening + GitHub round-trip)
 
 This is the wake-up brief. Read this first.
 
@@ -28,6 +28,27 @@ GitHub) in [PRODUCT-DIRECTION.md](./PRODUCT-DIRECTION.md). An iOS companion
 - Tier-2 (nice-to-have power features): ✅ **7/7 complete** — Canvas
   shipped in v2 (B201–B218); the other six landed earlier
 - Tier-3 (out of scope for v1): plugins, sync, mobile
+
+## GitHub round-trip shipped (2026-06 · #136–#142)
+
+The B-layer differentiation bet — **read any GitHub repo as a vault and send
+edits back as a PR** — is implemented end-to-end on desktop
+([design/06-github-roundtrip.md](./design/06-github-roundtrip.md)):
+
+- **B301** (#136) materialize a repo (zipball → atomic extract → manifest).
+- **B302** (#137) "Open as vault" in the GitHub dialog.
+- **B303** (#138) refresh via manifest diff (download only changed files).
+- **B304** (#139) "Pull latest from GitHub" command + vault detection.
+- **B305** (#140) local edit tracking (git blob SHA → added/modified/deleted).
+- **B306** (#141) write back: commit selected files to a branch + open a PR.
+- **B307** (#142) the propose-changes dialog (checklist + title/message).
+
+17 offline Rust tests (extract, manifest diff, blob SHA, branch slug, commit
+payload) + dialog tests. ⚠️ **The live commit/PR path needs a manual check
+against a pushable repo** (can't run in CI). Deferred: fork-based PRs (no-push
+repos get a clear error) and site-style reading (global TOC / cross-doc
+anchors). The local toolchain is now fixed, so this track was developed with
+full local verification (cargo test / vitest / tsc / biome) before each PR.
 
 ## What landed in the post-review hardening cycle (2026-06 · #125–#132)
 
