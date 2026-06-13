@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AboutDialog } from "./components/AboutDialog";
 import { CanvasView } from "./components/CanvasView";
+import { DocPager } from "./components/DocPager";
 import { type Command, CommandPalette } from "./components/CommandPalette";
 import { MarkupEditor } from "./components/Editor";
 import { FileTree } from "./components/FileTree";
@@ -2994,6 +2995,7 @@ export function App() {
                 isDark={isDark}
                 onChange={handleEditorChange}
               />
+              {readMode && !sourceMode && <DocPager />}
             </>
           )}
         </section>
