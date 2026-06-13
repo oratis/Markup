@@ -31,6 +31,36 @@ describe("Toolbar", () => {
     expect(screen.getByText("n.md")).toBeInTheDocument();
   });
 
+  it("shows clickable folder breadcrumbs for a nested vault file", () => {
+    useAppStore.setState({
+      vaultRoot: "/vault",
+      tabs: [
+        {
+          id: "/vault/docs/guides/setup.md",
+          path: "/vault/docs/guides/setup.md",
+          name: "setup.md",
+          content: "x",
+          mtimeMs: 1,
+          status: "saved",
+          errorMessage: null,
+        },
+      ],
+      activeTabId: "/vault/docs/guides/setup.md",
+    });
+    render(<Toolbar />);
+    expect(screen.getByText("docs")).toBeInTheDocument();
+    expect(screen.getByText("guides")).toBeInTheDocument();
+
+    const dispatched: string[] = [];
+    const onSearch = (e: Event) => {
+      dispatched.push((e as CustomEvent).detail?.query);
+    };
+    window.addEventListener("markup:open-search", onSearch);
+    fireEvent.click(screen.getByText("guides"));
+    window.removeEventListener("markup:open-search", onSearch);
+    expect(dispatched).toEqual(["path:docs/guides/"]);
+  });
+
   it("shows a dirty indicator when the active tab is dirty", () => {
     useAppStore.setState({
       tabs: [

@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+import { breadcrumbDirs } from "../lib/breadcrumb";
 import { insertMarkdown, toggleWrap, wrapMarkdown } from "../lib/insert-md";
 import { previewInBrowser } from "../lib/preview-html";
 import { getActiveTab, useAppStore } from "../store";
@@ -51,6 +53,14 @@ export function Toolbar({ onInsertLink }: ToolbarProps) {
   const fileName = tab?.name ?? "Untitled";
   const dirty = tab?.status === "dirty";
   const vaultName = vaultBasename(vaultRoot);
+  // Intermediate folders between the vault and the open doc. Clicking one
+  // searches `path:<folder>/` (reuses the SearchPanel path operator).
+  const crumbs = breadcrumbDirs(tab?.path, vaultRoot);
+  const openFolder = (path: string) => {
+    window.dispatchEvent(
+      new CustomEvent("markup:open-search", { detail: { query: `path:${path}/` } }),
+    );
+  };
 
   const fmtButtons: FormatButton[] = [
     { label: "B", title: "Bold (⌘B)", run: () => toggleWrap("**", "**") },
@@ -87,6 +97,19 @@ export function Toolbar({ onInsertLink }: ToolbarProps) {
               </span>
             </>
           )}
+          {crumbs.map((c) => (
+            <Fragment key={c.path}>
+              <span className="mk-sep">/</span>
+              <button
+                type="button"
+                className="mk-crumb truncate"
+                title={`Search path:${c.path}/`}
+                onClick={() => openFolder(c.path)}
+              >
+                {c.name}
+              </button>
+            </Fragment>
+          ))}
           <span className="mk-sep">/</span>
           <span className="mk-file-name truncate" title={tab?.path ?? fileName}>
             {fileName}
