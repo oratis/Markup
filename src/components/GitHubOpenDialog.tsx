@@ -9,6 +9,7 @@ import {
 } from "../lib/github-auth";
 import { awaitDeviceToken, startDeviceFlow } from "../lib/github-device-client";
 import type { GitHubDeviceCode } from "../lib/github-device-flow";
+import { listenGitHubVaultProgress, openGitHubRepoVault } from "../lib/tauri";
 import {
   childLink,
   contentsApiUrl,
@@ -26,6 +27,9 @@ interface Props {
   onClose: () => void;
   /** Called with (name, content) when a file is fetched. */
   onOpen: (name: string, content: string) => void;
+  /** Called with the local working-copy path after a repo is materialized as
+   *  a vault; the app then opens + indexes that directory. */
+  onOpenVault: (dir: string) => void | Promise<void>;
 }
 
 const JSON_HEADERS = {
@@ -50,9 +54,10 @@ function httpError(status: number): string {
  * private repos, and lists your repositories. The fetched file opens as a new
  * unsaved buffer.
  */
-export function GitHubOpenDialog({ onClose, onOpen }: Props) {
+export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [vaultStatus, setVaultStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Browse stack: empty = the URL input; non-empty = browsing the last dir.
   const [stack, setStack] = useState<GitHubLink[]>([]);
@@ -149,6 +154,42 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
     }
   }
 
+  async function openAsVault(link: GitHubLink) {
+    setLoading(true);
+    setError(null);
+    setVaultStatus("Preparing…");
+    let unlisten: (() => void) | undefined;
+    try {
+      unlisten = await listenGitHubVaultProgress((p) => {
+        if (p.phase === "download") {
+          setVaultStatus(
+            p.total > 0
+              ? `Downloading… ${Math.round((p.done / p.total) * 100)}%`
+              : "Downloading…",
+          );
+        } else if (p.phase === "extract") {
+          setVaultStatus("Extracting…");
+        } else {
+          setVaultStatus("Reading file list…");
+        }
+      });
+      const dir = await openGitHubRepoVault(
+        link.owner,
+        link.repo,
+        link.ref ?? undefined,
+        getGitHubToken() ?? undefined,
+      );
+      await onOpenVault(dir);
+      onClose();
+    } catch (e) {
+      setError(`Couldn't open the repo as a vault: ${e}`);
+    } finally {
+      unlisten?.();
+      setVaultStatus(null);
+      setLoading(false);
+    }
+  }
+
   async function enterDir(link: GitHubLink, push: boolean) {
     setLoading(true);
     setError(null);
@@ -209,6 +250,16 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
           <span className="flex-1">
             {browsing ? `${current.repo}/${current.path}` : "Open from GitHub"}
           </span>
+          {browsing && (
+            <button
+              onClick={() => openAsVault(current)}
+              disabled={loading}
+              title="Download the whole repo and open it as a vault"
+              className="text-[12px] font-normal text-blue-500 hover:text-blue-600 disabled:opacity-50"
+            >
+              Open as vault
+            </button>
+          )}
           {!browsing &&
             (haveToken ? (
               <button
@@ -315,6 +366,7 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
           </div>
         )}
 
+        {vaultStatus && <div className="mt-2 text-[12px] opacity-70">{vaultStatus}</div>}
         {error && <div className="mt-2 text-[12px] text-red-500">{error}</div>}
 
         <div className="mt-4 flex items-center justify-end gap-2 text-[12px]">
