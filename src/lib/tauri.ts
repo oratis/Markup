@@ -198,6 +198,43 @@ export async function refreshGitHubVault(
   });
 }
 
+export interface VaultFileStatus {
+  path: string;
+  /** "added" | "modified" | "deleted". */
+  state: string;
+}
+
+/** Files in a GitHub vault that differ from its manifest — the candidate set
+ * for "propose changes". Empty for a clean or non-GitHub vault. */
+export async function githubVaultStatus(vaultDir: string): Promise<VaultFileStatus[]> {
+  return await invoke<VaultFileStatus[]>("github_vault_status", { vaultDir });
+}
+
+export interface ProposeResult {
+  prUrl: string;
+  branch: string;
+}
+
+/** Commit the selected files to a new branch and open a PR back to the
+ * vault's ref. Requires push access to the repo. */
+export async function githubProposeChanges(args: {
+  vaultDir: string;
+  paths: string[];
+  message: string;
+  prTitle: string;
+  prBody: string;
+  token?: string;
+}): Promise<ProposeResult> {
+  return await invoke<ProposeResult>("github_propose_changes", {
+    vaultDir: args.vaultDir,
+    paths: args.paths,
+    message: args.message,
+    prTitle: args.prTitle,
+    prBody: args.prBody,
+    token: args.token ?? null,
+  });
+}
+
 export interface GitHubVaultProgress {
   /** "download" | "extract" | "manifest". */
   phase: string;

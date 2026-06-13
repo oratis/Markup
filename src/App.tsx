@@ -17,6 +17,7 @@ import { RightRail } from "./components/RightRail";
 import { SearchPanel } from "./components/SearchPanel";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { GitHubOpenDialog } from "./components/GitHubOpenDialog";
+import { ProposeChangesDialog } from "./components/ProposeChangesDialog";
 import { ShortcutsCheatsheet } from "./components/ShortcutsCheatsheet";
 import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
@@ -202,6 +203,7 @@ export function App() {
   const [showCheatsheet, setShowCheatsheet] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showGitHub, setShowGitHub] = useState(false);
+  const [showPropose, setShowPropose] = useState(false);
   const openScratchWithContent = useAppStore((s) => s.openScratchWithContent);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWikilinkPicker, setShowWikilinkPicker] = useState(false);
@@ -2888,6 +2890,12 @@ export function App() {
             hint: `${githubVault.owner}/${githubVault.repo}@${githubVault.ref}`,
             run: pullLatestGitHub,
           },
+          {
+            id: "github_propose_changes",
+            label: "Propose changes to GitHub…",
+            hint: `${githubVault.owner}/${githubVault.repo}@${githubVault.ref}`,
+            run: () => setShowPropose(true),
+          },
         ]
       : [];
     return [...base, ...githubCmds, ...switchTabCmds, ...recents, ...recentVaultCmds];
@@ -3041,6 +3049,13 @@ export function App() {
           onClose={() => setShowGitHub(false)}
           onOpen={openScratchWithContent}
           onOpenVault={openVaultAtPath}
+        />
+      )}
+      {showPropose && githubVault && vaultRoot && (
+        <ProposeChangesDialog
+          vaultDir={vaultRoot}
+          label={`${githubVault.owner}/${githubVault.repo}@${githubVault.ref}`}
+          onClose={() => setShowPropose(false)}
         />
       )}
       {showOnboarding && (
