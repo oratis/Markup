@@ -722,6 +722,225 @@ pub fn github_vault_status(vault_dir: String) -> AppResult<Vec<VaultFileStatus>>
 }
 
 // ---------------------------------------------------------------------------
+// B306 — write back: commit selected files to a branch + open a PR
+// ---------------------------------------------------------------------------
+
+use base64::Engine as _;
+
+/// Derive a branch name from a PR title: `markup/<slug>`, lowercased, runs of
+/// non-alphanumerics collapsed to a single dash, capped, with a stable
+/// fallback when nothing usable remains.
+pub fn branch_name_for(title: &str) -> String {
+    let mut slug = String::new();
+    let mut prev_dash = false;
+    for c in title.chars() {
+        if slug.len() >= 60 {
+            break;
+        }
+        if c.is_ascii_alphanumeric() {
+            slug.push(c.to_ascii_lowercase());
+            prev_dash = false;
+        } else if !prev_dash && !slug.is_empty() {
+            slug.push('-');
+            prev_dash = true;
+        }
+    }
+    let slug = slug.trim_matches('-');
+    if slug.is_empty() {
+        "markup/docs-update".to_string()
+    } else {
+        format!("markup/{slug}")
+    }
+}
+
+/// Build the JSON body for `PUT /repos/.../contents/{path}`: base64 content,
+/// commit message, branch, and the existing blob `sha` when updating a file
+/// that already exists on the branch (omitted for a brand-new file).
+pub fn put_contents_payload(
+    content: &[u8],
+    message: &str,
+    branch: &str,
+    existing_sha: Option<&str>,
+) -> serde_json::Value {
+    let mut v = serde_json::json!({
+        "message": message,
+        "content": base64::engine::general_purpose::STANDARD.encode(content),
+        "branch": branch,
+    });
+    if let Some(sha) = existing_sha {
+        v["sha"] = serde_json::Value::String(sha.to_string());
+    }
+    v
+}
+
+/// Result of a successful proposal.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProposeResult {
+    pub pr_url: String,
+    pub branch: String,
+}
+
+async fn api_send_json(
+    client: &reqwest::Client,
+    method: reqwest::Method,
+    url: &str,
+    token: &Option<String>,
+    body: &serde_json::Value,
+) -> AppResult<(reqwest::StatusCode, serde_json::Value)> {
+    let mut req = client
+        .request(method, url)
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .json(body);
+    if let Some(h) = auth_header(token) {
+        req = req.header("Authorization", h);
+    }
+    let resp = req
+        .send()
+        .await
+        .map_err(|e| AppError::Other(format!("github request failed: {e}")))?;
+    let status = resp.status();
+    let json = resp
+        .json::<serde_json::Value>()
+        .await
+        .unwrap_or(serde_json::Value::Null);
+    Ok((status, json))
+}
+
+/// Look up the blob sha of `path` on `branch`, or `None` if it doesn't exist
+/// there yet (a new file).
+async fn existing_file_sha(
+    client: &reqwest::Client,
+    owner: &str,
+    repo: &str,
+    path: &str,
+    branch: &str,
+    token: &Option<String>,
+) -> Option<String> {
+    let url = format!("{API}/repos/{owner}/{repo}/contents/{path}?ref={branch}");
+    api_get_json(client, &url, token)
+        .await
+        .ok()
+        .and_then(|v| v.get("sha").and_then(|s| s.as_str()).map(str::to_owned))
+}
+
+/// Commit the selected files to a new branch on the repo and open a PR back to
+/// the vault's ref. Requires push access to the repo (fork-based PRs are a
+/// later batch). Network-only — exercised manually against a real repo.
+#[tauri::command]
+pub async fn github_propose_changes(
+    vault_dir: String,
+    paths: Vec<String>,
+    message: String,
+    pr_title: String,
+    pr_body: String,
+    token: Option<String>,
+) -> AppResult<ProposeResult> {
+    if paths.is_empty() {
+        return Err(AppError::Other("no files selected".into()));
+    }
+    let dir = PathBuf::from(&vault_dir);
+    let manifest = read_manifest(&dir)?;
+    let owner = &manifest.owner;
+    let repo = &manifest.repo;
+    let client = http_client()?;
+
+    // Require push access; fork fallback is a later batch.
+    let repo_info = api_get_json(&client, &format!("{API}/repos/{owner}/{repo}"), &token).await?;
+    let can_push = repo_info
+        .pointer("/permissions/push")
+        .and_then(|p| p.as_bool())
+        .unwrap_or(false);
+    if !can_push {
+        return Err(AppError::Other(format!(
+            "You don't have push access to {owner}/{repo}. Fork-based PRs are coming in a later update."
+        )));
+    }
+
+    // Branch off the pinned base commit.
+    let branch = branch_name_for(&pr_title);
+    let (create_status, _) = api_send_json(
+        &client,
+        reqwest::Method::POST,
+        &format!("{API}/repos/{owner}/{repo}/git/refs"),
+        &token,
+        &serde_json::json!({ "ref": format!("refs/heads/{branch}"), "sha": manifest.commit_sha }),
+    )
+    .await?;
+    if !create_status.is_success() && create_status.as_u16() != 422 {
+        return Err(AppError::Other(format!(
+            "couldn't create branch {branch}: HTTP {create_status}"
+        )));
+    }
+
+    // Classify the selected paths against the current working copy.
+    let dirty = vault_dirty_status(&dir, &manifest);
+    let state_of: std::collections::HashMap<&str, &str> = dirty
+        .iter()
+        .map(|s| (s.path.as_str(), s.state.as_str()))
+        .collect();
+
+    for path in &paths {
+        let state = state_of.get(path.as_str()).copied().unwrap_or("modified");
+        let existing = existing_file_sha(&client, owner, repo, path, &branch, &token).await;
+        if state == "deleted" {
+            let Some(sha) = existing else { continue };
+            let (st, _) = api_send_json(
+                &client,
+                reqwest::Method::DELETE,
+                &format!("{API}/repos/{owner}/{repo}/contents/{path}"),
+                &token,
+                &serde_json::json!({ "message": message, "branch": branch, "sha": sha }),
+            )
+            .await?;
+            if !st.is_success() {
+                return Err(AppError::Other(format!("delete {path} failed: HTTP {st}")));
+            }
+        } else {
+            let content = fs::read(safe_vault_join(&dir, path)?)?;
+            let payload = put_contents_payload(&content, &message, &branch, existing.as_deref());
+            let (st, _) = api_send_json(
+                &client,
+                reqwest::Method::PUT,
+                &format!("{API}/repos/{owner}/{repo}/contents/{path}"),
+                &token,
+                &payload,
+            )
+            .await?;
+            if !st.is_success() {
+                return Err(AppError::Other(format!("commit {path} failed: HTTP {st}")));
+            }
+        }
+    }
+
+    // Open the PR back to the vault's ref.
+    let (pr_status, pr) = api_send_json(
+        &client,
+        reqwest::Method::POST,
+        &format!("{API}/repos/{owner}/{repo}/pulls"),
+        &token,
+        &serde_json::json!({
+            "title": pr_title,
+            "head": branch,
+            "base": manifest.ref_name,
+            "body": pr_body,
+        }),
+    )
+    .await?;
+    if !pr_status.is_success() {
+        return Err(AppError::Other(format!("open PR failed: HTTP {pr_status}")));
+    }
+    let pr_url = pr
+        .get("html_url")
+        .and_then(|u| u.as_str())
+        .unwrap_or("")
+        .to_owned();
+
+    Ok(ProposeResult { pr_url, branch })
+}
+
+// ---------------------------------------------------------------------------
 // Tests — offline: zips are built in-process, no network
 // ---------------------------------------------------------------------------
 
@@ -911,6 +1130,39 @@ mod tests {
         assert!(safe_vault_join(root, "../escape.md").is_err());
         assert!(safe_vault_join(root, "docs/../../escape.md").is_err());
         assert!(safe_vault_join(root, "/etc/passwd").is_err());
+    }
+
+    #[test]
+    fn branch_name_slugifies_titles() {
+        assert_eq!(
+            branch_name_for("Fix typo in README"),
+            "markup/fix-typo-in-readme"
+        );
+        assert_eq!(
+            branch_name_for("  Update: API docs!! "),
+            "markup/update-api-docs"
+        );
+        // No usable characters → stable fallback.
+        assert_eq!(branch_name_for("!!! ??? "), "markup/docs-update");
+        assert_eq!(branch_name_for(""), "markup/docs-update");
+        // Long titles are capped (slug ≤ 60 chars before the prefix).
+        let long = branch_name_for(&"word ".repeat(40));
+        assert!(long.len() <= "markup/".len() + 60, "got {long}");
+    }
+
+    #[test]
+    fn put_payload_encodes_content_and_includes_sha_only_when_updating() {
+        let new = put_contents_payload(b"hi there", "msg", "br", None);
+        assert_eq!(
+            new["content"],
+            base64::engine::general_purpose::STANDARD.encode("hi there")
+        );
+        assert_eq!(new["message"], "msg");
+        assert_eq!(new["branch"], "br");
+        assert!(new.get("sha").is_none());
+
+        let update = put_contents_payload(b"x", "m", "b", Some("abc123"));
+        assert_eq!(update["sha"], "abc123");
     }
 
     #[test]
