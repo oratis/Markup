@@ -5,6 +5,7 @@ mod commands_locale;
 mod commands_vault;
 mod commands_window;
 mod github;
+mod github_vault;
 mod menu;
 mod recent;
 mod token_store;
@@ -125,6 +126,7 @@ pub fn run() {
             token_store::github_token_load,
             token_store::github_token_save,
             token_store::github_token_delete,
+            github_vault::github_open_repo_vault,
         ])
         .build(tauri::generate_context!())
         .expect("error while building markup")

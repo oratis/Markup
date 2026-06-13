@@ -57,6 +57,10 @@ ammonia = "4"
 # Security-scoped bookmark persistence (base64-encode the bookmark blob)
 base64 = "0.22"
 
+# B301: extract GitHub repo zipballs into a local vault working copy.
+# Deflate-only — GitHub zipballs never use the other methods.
+zip = { version = "8", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+
 # Native "move to Trash" — replaces an osascript→Finder round-trip, so trashing
 # a file no longer needs an Automation-access prompt and there's no AppleScript
 # string to escape.
