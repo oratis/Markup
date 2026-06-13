@@ -433,6 +433,170 @@ pub async fn github_open_repo_vault(
 }
 
 // ---------------------------------------------------------------------------
+// B303 — refresh an already-materialized vault (manifest diff)
+// ---------------------------------------------------------------------------
+
+/// What changed between the pinned manifest and a freshly fetched tree.
+#[derive(Debug, Default, Clone, Serialize, PartialEq)]
+pub struct ManifestDiff {
+    pub added: Vec<String>,
+    pub changed: Vec<String>,
+    pub removed: Vec<String>,
+}
+
+impl ManifestDiff {
+    pub fn is_empty(&self) -> bool {
+        self.added.is_empty() && self.changed.is_empty() && self.removed.is_empty()
+    }
+}
+
+/// Diff an old manifest against a freshly fetched tree, comparing by path.
+/// A path in both with a different blob sha is "changed"; only in new is
+/// "added"; only in old is "removed". Results are sorted for stable output.
+pub fn diff_manifest(old: &[ManifestEntry], new: &[ManifestEntry]) -> ManifestDiff {
+    use std::collections::HashMap;
+    let old_by: HashMap<&str, &str> = old
+        .iter()
+        .map(|e| (e.path.as_str(), e.sha.as_str()))
+        .collect();
+    let new_paths: std::collections::HashSet<&str> = new.iter().map(|e| e.path.as_str()).collect();
+
+    let mut diff = ManifestDiff::default();
+    for e in new {
+        match old_by.get(e.path.as_str()) {
+            None => diff.added.push(e.path.clone()),
+            Some(&old_sha) if old_sha != e.sha => diff.changed.push(e.path.clone()),
+            _ => {}
+        }
+    }
+    for e in old {
+        if !new_paths.contains(e.path.as_str()) {
+            diff.removed.push(e.path.clone());
+        }
+    }
+    diff.added.sort();
+    diff.changed.sort();
+    diff.removed.sort();
+    diff
+}
+
+/// Join a repo-relative path onto the vault root, rejecting anything that
+/// would escape it (`..`, absolute, drive prefix). Tree paths are normally
+/// clean, but a hostile or malformed tree must never write outside the vault.
+pub fn safe_vault_join(root: &Path, rel: &str) -> AppResult<PathBuf> {
+    let p = Path::new(rel);
+    for c in p.components() {
+        match c {
+            Component::Normal(_) | Component::CurDir => {}
+            _ => return Err(AppError::Other(format!("unsafe path in tree: {rel}"))),
+        }
+    }
+    Ok(root.join(p))
+}
+
+/// Download one repo file (raw) at a pinned commit into the working copy.
+async fn download_file(
+    client: &reqwest::Client,
+    owner: &str,
+    repo: &str,
+    commit_sha: &str,
+    rel_path: &str,
+    vault_dir: &Path,
+    token: &Option<String>,
+) -> AppResult<()> {
+    let out = safe_vault_join(vault_dir, rel_path)?;
+    let url = format!("{API}/repos/{owner}/{repo}/contents/{rel_path}?ref={commit_sha}");
+    let mut req = client
+        .get(&url)
+        .header("Accept", "application/vnd.github.raw+json")
+        .header("X-GitHub-Api-Version", "2022-11-28");
+    if let Some(h) = auth_header(token) {
+        req = req.header("Authorization", h);
+    }
+    let resp = req
+        .send()
+        .await
+        .map_err(|e| AppError::Other(format!("file download failed: {e}")))?;
+    if !resp.status().is_success() {
+        return Err(AppError::Other(format!(
+            "download {rel_path}: HTTP {}",
+            resp.status()
+        )));
+    }
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| AppError::Other(format!("file read failed: {e}")))?;
+    if let Some(parent) = out.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&out, &bytes)?;
+    Ok(())
+}
+
+/// Refresh an already-materialized GitHub vault: refetch the tree at the
+/// (possibly moved) ref, diff against the stored manifest, download only the
+/// added + changed files, delete the removed ones, and rewrite the manifest.
+/// Returns the diff so the frontend can report "n files updated".
+///
+/// Local-edit awareness (skip a file that's both locally dirty and remotely
+/// changed) folds in with B304, which adds local-content hashing.
+#[tauri::command]
+pub async fn github_refresh_vault(
+    app: AppHandle,
+    vault_dir: String,
+    token: Option<String>,
+) -> AppResult<ManifestDiff> {
+    let dir = PathBuf::from(&vault_dir);
+    let manifest = read_manifest(&dir)?;
+    let client = http_client()?;
+
+    let (commit_sha, entries) = fetch_tree(
+        &client,
+        &manifest.owner,
+        &manifest.repo,
+        &manifest.ref_name,
+        &token,
+    )
+    .await?;
+    let diff = diff_manifest(&manifest.entries, &entries);
+
+    if diff.is_empty() {
+        return Ok(diff);
+    }
+
+    for path in &diff.removed {
+        if let Ok(p) = safe_vault_join(&dir, path) {
+            let _ = fs::remove_file(&p);
+        }
+    }
+
+    let to_fetch: Vec<&String> = diff.added.iter().chain(diff.changed.iter()).collect();
+    let total = to_fetch.len() as u64;
+    for (i, path) in to_fetch.iter().enumerate() {
+        download_file(
+            &client,
+            &manifest.owner,
+            &manifest.repo,
+            &commit_sha,
+            path,
+            &dir,
+            &token,
+        )
+        .await?;
+        emit_progress(&app, "download", (i + 1) as u64, total);
+    }
+
+    let updated = GitHubVaultManifest {
+        commit_sha,
+        entries,
+        ..manifest
+    };
+    write_manifest(&dir, &updated)?;
+    Ok(diff)
+}
+
+// ---------------------------------------------------------------------------
 // Tests — offline: zips are built in-process, no network
 // ---------------------------------------------------------------------------
 
@@ -560,5 +724,67 @@ mod tests {
         // The serialized key is `ref`, matching the iOS manifest shape.
         let raw = fs::read_to_string(tmp.path().join(MANIFEST_DIR).join(MANIFEST_FILE)).unwrap();
         assert!(raw.contains("\"ref\""));
+    }
+
+    fn entry(path: &str, sha: &str) -> ManifestEntry {
+        ManifestEntry {
+            path: path.into(),
+            sha: sha.into(),
+            size: 0,
+        }
+    }
+
+    #[test]
+    fn diff_classifies_added_changed_removed_unchanged() {
+        let old = vec![
+            entry("keep.md", "s1"),
+            entry("change.md", "s2"),
+            entry("gone.md", "s3"),
+        ];
+        let new = vec![
+            entry("keep.md", "s1"),       // unchanged
+            entry("change.md", "s2-new"), // changed (same path, new sha)
+            entry("docs/new.md", "s4"),   // added
+        ];
+        let d = diff_manifest(&old, &new);
+        assert_eq!(d.added, vec!["docs/new.md"]);
+        assert_eq!(d.changed, vec!["change.md"]);
+        assert_eq!(d.removed, vec!["gone.md"]);
+    }
+
+    #[test]
+    fn diff_of_identical_manifests_is_empty() {
+        let m = vec![entry("a.md", "x"), entry("b/c.md", "y")];
+        let d = diff_manifest(&m, &m);
+        assert!(d.is_empty());
+    }
+
+    #[test]
+    fn diff_results_are_sorted() {
+        let old: Vec<ManifestEntry> = vec![];
+        let new = vec![entry("z.md", "1"), entry("a.md", "2"), entry("m.md", "3")];
+        let d = diff_manifest(&old, &new);
+        assert_eq!(d.added, vec!["a.md", "m.md", "z.md"]);
+    }
+
+    #[test]
+    fn safe_join_accepts_normal_relative_paths() {
+        let root = Path::new("/vault");
+        assert_eq!(
+            safe_vault_join(root, "docs/sub/a.md").unwrap(),
+            PathBuf::from("/vault/docs/sub/a.md")
+        );
+        assert_eq!(
+            safe_vault_join(root, "./a.md").unwrap(),
+            PathBuf::from("/vault/a.md")
+        );
+    }
+
+    #[test]
+    fn safe_join_rejects_escapes() {
+        let root = Path::new("/vault");
+        assert!(safe_vault_join(root, "../escape.md").is_err());
+        assert!(safe_vault_join(root, "docs/../../escape.md").is_err());
+        assert!(safe_vault_join(root, "/etc/passwd").is_err());
     }
 }
