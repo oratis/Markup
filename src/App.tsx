@@ -994,32 +994,39 @@ export function App() {
     [openLoadedFile, tr],
   );
 
-  const handleOpenVault = useCallback(async () => {
-    try {
-      const root = await pickVault();
-      if (!root) return;
+  // Open + index a vault at a known path, then record it as recent. Shared by
+  // the folder picker, recent-vault reopen, and the GitHub "open as vault"
+  // flow (the repo is materialized to a local dir first, then opened here).
+  const openVaultAtPath = useCallback(
+    async (root: string) => {
       const opened = await openVault(root);
       const files = await listVaultFiles();
       setVault(opened.root, files.map(toVaultFileTs));
       useAppStore.getState().pushRecentVault(opened.root);
+    },
+    [setVault],
+  );
+
+  const handleOpenVault = useCallback(async () => {
+    try {
+      const root = await pickVault();
+      if (!root) return;
+      await openVaultAtPath(root);
     } catch (e) {
       console.error("open_vault failed", e);
     }
-  }, [setVault]);
+  }, [openVaultAtPath]);
 
   const openRecentVault = useCallback(
     async (root: string) => {
       try {
-        const opened = await openVault(root);
-        const files = await listVaultFiles();
-        setVault(opened.root, files.map(toVaultFileTs));
-        useAppStore.getState().pushRecentVault(opened.root);
+        await openVaultAtPath(root);
       } catch (e) {
         console.error("open_recent_vault failed", e);
         showToast(tr("toast.openFailed", root));
       }
     },
-    [setVault, tr],
+    [openVaultAtPath, tr],
   );
 
   // Restore the last vault on launch. On sandbox (MAS) builds the Rust
@@ -2977,6 +2984,7 @@ export function App() {
         <GitHubOpenDialog
           onClose={() => setShowGitHub(false)}
           onOpen={openScratchWithContent}
+          onOpenVault={openVaultAtPath}
         />
       )}
       {showOnboarding && (

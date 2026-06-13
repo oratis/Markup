@@ -150,6 +150,39 @@ export async function listenVaultIndexProgress(
   return await listen<IndexProgress>("vault-index-progress", (e) => cb(e.payload));
 }
 
+/** Download a GitHub repo and materialize it as a local vault working copy
+ * (B301). Returns the local directory path to then `openVault()`. Public
+ * repos need no token; pass one to raise rate limits / reach private repos. */
+export async function openGitHubRepoVault(
+  owner: string,
+  repo: string,
+  refName?: string,
+  token?: string,
+): Promise<string> {
+  return await invoke<string>("github_open_repo_vault", {
+    owner,
+    repo,
+    refName: refName ?? null,
+    token: token ?? null,
+  });
+}
+
+export interface GitHubVaultProgress {
+  /** "download" | "extract" | "manifest". */
+  phase: string;
+  done: number;
+  total: number;
+}
+
+/** Progress while a GitHub repo is being downloaded / extracted into a local
+ * vault. Fires before the vault is indexed (which then emits its own
+ * `vault-index-progress`). */
+export async function listenGitHubVaultProgress(
+  cb: (p: GitHubVaultProgress) => void,
+): Promise<UnlistenFn> {
+  return await listen<GitHubVaultProgress>("github-vault-progress", (e) => cb(e.payload));
+}
+
 /** Live "open these files" events from macOS (Finder double-click /
  * Open With) while the app is already running. */
 export async function listenOpenFiles(
