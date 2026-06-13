@@ -17,6 +17,7 @@ import { RightRail } from "./components/RightRail";
 import { SearchPanel } from "./components/SearchPanel";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { GitHubOpenDialog } from "./components/GitHubOpenDialog";
+import { ProposeChangesDialog } from "./components/ProposeChangesDialog";
 import { ShortcutsCheatsheet } from "./components/ShortcutsCheatsheet";
 import { StatusBar } from "./components/StatusBar";
 import { TabBar } from "./components/TabBar";
@@ -36,6 +37,7 @@ import { useSettingsPersistence } from "./hooks/useSettingsPersistence";
 import { useUiPrefPersistence } from "./hooks/useUiPrefPersistence";
 import { useWindowFileDrop } from "./hooks/useWindowFileDrop";
 import { getActiveSourceView } from "./lib/active-source-view";
+import { getGitHubToken } from "./lib/github-auth";
 import {
   onFileSaved as blockFileSaved,
   rebuildFromFiles as blockRebuild,
@@ -115,6 +117,8 @@ import {
   tagStats,
 } from "./lib/tag-index-store";
 import {
+  type GitHubVaultInfo,
+  githubVaultInfo,
   listRecentFilesNative,
   listVaultFiles,
   listenMenu,
@@ -122,6 +126,7 @@ import {
   listenVaultChanged,
   listenVaultIndexProgress,
   openFileDialog,
+  refreshGitHubVault,
   openNewWindow,
   openVault,
   pickSavePath,
@@ -198,6 +203,7 @@ export function App() {
   const [showCheatsheet, setShowCheatsheet] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showGitHub, setShowGitHub] = useState(false);
+  const [showPropose, setShowPropose] = useState(false);
   const openScratchWithContent = useAppStore((s) => s.openScratchWithContent);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWikilinkPicker, setShowWikilinkPicker] = useState(false);
@@ -215,6 +221,9 @@ export function App() {
     done: number;
     total: number;
   } | null>(null);
+  // Set when the open vault is a materialized GitHub repo (has a manifest) —
+  // gates the "Pull latest from GitHub" command. Null for ordinary vaults.
+  const [githubVault, setGithubVault] = useState<GitHubVaultInfo | null>(null);
 
   const editorScrollRef = useRef<HTMLElement | null>(null);
   // One debounced save timer PER tab id — editing/switching another tab no
@@ -994,32 +1003,69 @@ export function App() {
     [openLoadedFile, tr],
   );
 
-  const handleOpenVault = useCallback(async () => {
-    try {
-      const root = await pickVault();
-      if (!root) return;
+  // Open + index a vault at a known path, then record it as recent. Shared by
+  // the folder picker, recent-vault reopen, and the GitHub "open as vault"
+  // flow (the repo is materialized to a local dir first, then opened here).
+  const openVaultAtPath = useCallback(
+    async (root: string) => {
       const opened = await openVault(root);
       const files = await listVaultFiles();
       setVault(opened.root, files.map(toVaultFileTs));
       useAppStore.getState().pushRecentVault(opened.root);
+      // Detect a GitHub-materialized vault (has .markup/manifest.json) so the
+      // "Pull latest" command can light up; null for ordinary local vaults.
+      githubVaultInfo(opened.root)
+        .then(setGithubVault)
+        .catch(() => setGithubVault(null));
+    },
+    [setVault],
+  );
+
+  // "Pull latest from GitHub" — refresh the open GitHub vault to its newest
+  // commit (download changed/added, drop removed), then reopen so the file
+  // tree + Tantivy index pick up the changes.
+  const pullLatestGitHub = useCallback(async () => {
+    const root = useAppStore.getState().vaultRoot;
+    if (!root) return;
+    try {
+      showToast(tr("toast.githubPulling"));
+      const diff = await refreshGitHubVault(root, getGitHubToken() ?? undefined);
+      await openVaultAtPath(root);
+      const total = diff.added.length + diff.changed.length + diff.removed.length;
+      showToast(
+        total === 0
+          ? tr("toast.githubUpToDate")
+          : tr(
+              "toast.githubUpdated",
+              `+${diff.added.length} ~${diff.changed.length} -${diff.removed.length}`,
+            ),
+      );
+    } catch (e) {
+      console.error("github refresh failed", e);
+      showToast(tr("toast.githubPullFailed"));
+    }
+  }, [openVaultAtPath, tr]);
+
+  const handleOpenVault = useCallback(async () => {
+    try {
+      const root = await pickVault();
+      if (!root) return;
+      await openVaultAtPath(root);
     } catch (e) {
       console.error("open_vault failed", e);
     }
-  }, [setVault]);
+  }, [openVaultAtPath]);
 
   const openRecentVault = useCallback(
     async (root: string) => {
       try {
-        const opened = await openVault(root);
-        const files = await listVaultFiles();
-        setVault(opened.root, files.map(toVaultFileTs));
-        useAppStore.getState().pushRecentVault(opened.root);
+        await openVaultAtPath(root);
       } catch (e) {
         console.error("open_recent_vault failed", e);
         showToast(tr("toast.openFailed", root));
       }
     },
-    [setVault, tr],
+    [openVaultAtPath, tr],
   );
 
   // Restore the last vault on launch. On sandbox (MAS) builds the Rust
@@ -2835,9 +2881,34 @@ export function App() {
       hint: tx.path ?? `(unsaved · index ${i + 1})`,
       run: () => useAppStore.getState().setActiveTab(tx.id),
     }));
-    return [...base, ...switchTabCmds, ...recents, ...recentVaultCmds];
+    // Only offered while a GitHub-materialized vault is open.
+    const githubCmds: Command[] = githubVault
+      ? [
+          {
+            id: "github_pull_latest",
+            label: "Pull latest from GitHub",
+            hint: `${githubVault.owner}/${githubVault.repo}@${githubVault.ref}`,
+            run: pullLatestGitHub,
+          },
+          {
+            id: "github_propose_changes",
+            label: "Propose changes to GitHub…",
+            hint: `${githubVault.owner}/${githubVault.repo}@${githubVault.ref}`,
+            run: () => setShowPropose(true),
+          },
+        ]
+      : [];
+    return [...base, ...githubCmds, ...switchTabCmds, ...recents, ...recentVaultCmds];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab?.path, tab?.content, recentFiles, recentVaults, tabs]);
+  }, [
+    tab?.path,
+    tab?.content,
+    recentFiles,
+    recentVaults,
+    tabs,
+    githubVault,
+    pullLatestGitHub,
+  ]);
 
   // Recent-file picker uses CommandPalette wrapped with file commands
   const recentCommands: Command[] = useMemo(() => {
@@ -2977,6 +3048,14 @@ export function App() {
         <GitHubOpenDialog
           onClose={() => setShowGitHub(false)}
           onOpen={openScratchWithContent}
+          onOpenVault={openVaultAtPath}
+        />
+      )}
+      {showPropose && githubVault && vaultRoot && (
+        <ProposeChangesDialog
+          vaultDir={vaultRoot}
+          label={`${githubVault.owner}/${githubVault.repo}@${githubVault.ref}`}
+          onClose={() => setShowPropose(false)}
         />
       )}
       {showOnboarding && (

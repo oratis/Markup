@@ -150,6 +150,107 @@ export async function listenVaultIndexProgress(
   return await listen<IndexProgress>("vault-index-progress", (e) => cb(e.payload));
 }
 
+/** Download a GitHub repo and materialize it as a local vault working copy
+ * (B301). Returns the local directory path to then `openVault()`. Public
+ * repos need no token; pass one to raise rate limits / reach private repos. */
+export async function openGitHubRepoVault(
+  owner: string,
+  repo: string,
+  refName?: string,
+  token?: string,
+): Promise<string> {
+  return await invoke<string>("github_open_repo_vault", {
+    owner,
+    repo,
+    refName: refName ?? null,
+    token: token ?? null,
+  });
+}
+
+export interface GitHubVaultInfo {
+  owner: string;
+  repo: string;
+  ref: string;
+  commitSha: string;
+}
+
+/** GitHub-vault summary for a directory, or null for an ordinary local vault.
+ * Drives the "Pull latest" affordance + a source label. */
+export async function githubVaultInfo(vaultDir: string): Promise<GitHubVaultInfo | null> {
+  return await invoke<GitHubVaultInfo | null>("github_vault_info", { vaultDir });
+}
+
+export interface GitHubVaultDiff {
+  added: string[];
+  changed: string[];
+  removed: string[];
+}
+
+/** Refresh a materialized GitHub vault to its latest commit (B303): download
+ * only changed/added files, delete removed ones. Returns what changed. */
+export async function refreshGitHubVault(
+  vaultDir: string,
+  token?: string,
+): Promise<GitHubVaultDiff> {
+  return await invoke<GitHubVaultDiff>("github_refresh_vault", {
+    vaultDir,
+    token: token ?? null,
+  });
+}
+
+export interface VaultFileStatus {
+  path: string;
+  /** "added" | "modified" | "deleted". */
+  state: string;
+}
+
+/** Files in a GitHub vault that differ from its manifest — the candidate set
+ * for "propose changes". Empty for a clean or non-GitHub vault. */
+export async function githubVaultStatus(vaultDir: string): Promise<VaultFileStatus[]> {
+  return await invoke<VaultFileStatus[]>("github_vault_status", { vaultDir });
+}
+
+export interface ProposeResult {
+  prUrl: string;
+  branch: string;
+}
+
+/** Commit the selected files to a new branch and open a PR back to the
+ * vault's ref. Requires push access to the repo. */
+export async function githubProposeChanges(args: {
+  vaultDir: string;
+  paths: string[];
+  message: string;
+  prTitle: string;
+  prBody: string;
+  token?: string;
+}): Promise<ProposeResult> {
+  return await invoke<ProposeResult>("github_propose_changes", {
+    vaultDir: args.vaultDir,
+    paths: args.paths,
+    message: args.message,
+    prTitle: args.prTitle,
+    prBody: args.prBody,
+    token: args.token ?? null,
+  });
+}
+
+export interface GitHubVaultProgress {
+  /** "download" | "extract" | "manifest". */
+  phase: string;
+  done: number;
+  total: number;
+}
+
+/** Progress while a GitHub repo is being downloaded / extracted into a local
+ * vault. Fires before the vault is indexed (which then emits its own
+ * `vault-index-progress`). */
+export async function listenGitHubVaultProgress(
+  cb: (p: GitHubVaultProgress) => void,
+): Promise<UnlistenFn> {
+  return await listen<GitHubVaultProgress>("github-vault-progress", (e) => cb(e.payload));
+}
+
 /** Live "open these files" events from macOS (Finder double-click /
  * Open With) while the app is already running. */
 export async function listenOpenFiles(

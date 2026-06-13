@@ -82,4 +82,4 @@
 | Files | Drag-and-drop; new **folder** + templated frontmatter | — |
 | Editor | Accessory-bar customization; focus/typewriter mode | — |
 | v2 (design §18) | Graph, Canvas render, full WYSIWYG, Share Extension, Apple Pencil, Shortcuts/App Intents, Widgets, Spotlight | Deliberately deferred |
-| Release | App Store submission (metadata, screenshots, privacy label); iOS-specific icon | Needs human / design assets |
+| Release | App Store submission — runbook + listing copy + privacy answers + reviewer sample vault are now in [`docs/app-store/`](../../app-store/); remaining = screenshots + Submit (human) | Needs human / design assets |

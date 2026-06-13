@@ -1,10 +1,19 @@
 # Desktop — GitHub round-trip (read a repo as a vault, propose changes as a PR)
 
-> Status: **design approved for build** (B-layer track 1 from
-> [PRODUCT-DIRECTION.md](../PRODUCT-DIRECTION.md) — "桌面端 GitHub 双向化").
-> Batches **B301–B307**. Companion to the shipped iOS design
-> ([ios/03-github-primary-vault.md](ios/03-github-primary-vault.md)); reuse its
-> decisions wherever the platform allows.
+> Status: **B301–B307 shipped** (2026-06, PRs #136–#142) — open a repo as a
+> vault, pull latest, detect local edits, propose a PR. B-layer track 1 from
+> [PRODUCT-DIRECTION.md](../PRODUCT-DIRECTION.md) — "桌面端 GitHub 双向化".
+> Companion to the shipped iOS design
+> ([ios/03-github-primary-vault.md](ios/03-github-primary-vault.md)).
+>
+> **B308** (next) adds **fork-based PRs**: when you lack push access, Markup
+> forks the repo, commits to the fork, and opens a cross-repo PR — no UI
+> change, the propose dialog just works either way.
+>
+> **Deferred**: the site-style reading track (global TOC / breadcrumbs /
+> cross-doc `#fragment` anchors, §B31x). **Needs manual verification** against
+> real repos (one you can push to, and one you can't → fork) before the write
+> path is trusted — the live commit/PR/fork orchestration can't run in CI.
 
 ## 0. The ask, restated
 
