@@ -742,6 +742,20 @@ body,
   max-width: 200px;
 }
 
+.mk-crumb {
+  color: var(--mk-fg-muted);
+  font-weight: 500;
+  max-width: 160px;
+  background: none;
+  border: 0;
+  padding: 0 1px;
+  cursor: pointer;
+}
+.mk-crumb:hover {
+  color: var(--mk-fg-strong);
+  text-decoration: underline;
+}
+
 .mk-file-name {
   color: var(--mk-fg-strong);
   font-weight: 600;
