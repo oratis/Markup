@@ -1060,3 +1060,36 @@ div.flex.items-stretch.border-b > .titlebar-no-drag.relative {
 div.flex.items-stretch.border-b > .titlebar-no-drag.relative:hover {
   background: var(--mk-bg-hover);
 }
+
+/* Reader prev/next document pager (B314) — aligned to the prose column. */
+.mk-doc-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 40px;
+  padding: 20px max(24px, calc((100% - var(--markup-prose-max-width)) / 2)) 64px;
+  border-top: 1px solid var(--mk-border);
+}
+.mk-pager-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 48%;
+  padding: 8px 12px;
+  border: 1px solid var(--mk-border);
+  border-radius: 8px;
+  background: none;
+  color: var(--mk-fg-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.mk-pager-next {
+  margin-left: auto;
+}
+.mk-pager-btn:hover {
+  color: var(--mk-fg-strong);
+  border-color: var(--mk-border-strong);
+}
+.mk-pager-arrow {
+  opacity: 0.6;
+}
