@@ -49,11 +49,9 @@ export function useEditorInteractions({
   openLoadedFile,
   tr,
 }: EditorInteractionArgs) {
-  // Resolve a `[[name]]` / `![[name]]` target (with an optional `#heading`),
-  // open the file, and scroll to the heading when present. Shared by the
-  // source-mode follow, the WYSIWYG wikilink click, and the embed click so
-  // all three navigate `file#heading` identically.
-  // Open a resolved vault file and, when given, scroll to a heading.
+  // Open a resolved vault file and, when given, scroll to a heading. Shared
+  // by the source follow, the WYSIWYG wikilink click, the embed click, and
+  // the relative-markdown-link handler so all navigate `file#heading` alike.
   const openResolved = useCallback(
     async (hit: VaultFile, heading: string | null) => {
       try {
@@ -257,7 +255,9 @@ export function useEditorInteractions({
     const host = editorScrollRef.current;
     if (!host) return;
     const onLinkClick = (e: MouseEvent) => {
-      const a = (e.target as HTMLElement | null)?.closest?.("a") as HTMLAnchorElement | null;
+      const a = (e.target as HTMLElement | null)?.closest?.(
+        "a",
+      ) as HTMLAnchorElement | null;
       if (!a) return;
       const href = a.getAttribute("href");
       if (!href) return;
