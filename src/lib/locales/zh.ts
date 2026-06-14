@@ -113,6 +113,8 @@ export const zh: Strings = {
   "toast.githubUpdated": "GitHub 仓库已更新（{0}）",
   "toast.githubUpToDate": "已是最新",
   "toast.githubPullFailed": "无法从 GitHub 拉取",
+  "github.confirmPullDirty":
+    "有 {0} 个文件在上次同步后被本地修改过。从 GitHub 拉取会覆盖这些改动。是否继续？",
   "toast.renameNoFile": "没有可重命名的文件",
   "toast.renameBadName": "文件名不能包含 '/'",
   "toast.renameFailed": "重命名失败",

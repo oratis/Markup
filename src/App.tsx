@@ -120,6 +120,7 @@ import {
 import {
   type GitHubVaultInfo,
   githubVaultInfo,
+  githubVaultStatus,
   listRecentFilesNative,
   listVaultFiles,
   listenMenu,
@@ -1029,6 +1030,17 @@ export function App() {
     const root = useAppStore.getState().vaultRoot;
     if (!root) return;
     try {
+      // Guard local edits: a refresh re-downloads changed files and overwrites
+      // them, so warn before discarding edits made since the last sync. "added"
+      // (new local files) and "deleted" aren't at risk — only "modified".
+      const status = await githubVaultStatus(root).catch(() => []);
+      const editedCount = status.filter((s) => s.state === "modified").length;
+      if (
+        editedCount > 0 &&
+        !window.confirm(tr("github.confirmPullDirty", String(editedCount)))
+      ) {
+        return;
+      }
       showToast(tr("toast.githubPulling"));
       const diff = await refreshGitHubVault(root, getGitHubToken() ?? undefined);
       await openVaultAtPath(root);

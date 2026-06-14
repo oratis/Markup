@@ -112,6 +112,8 @@ export const en = {
   "toast.githubUpdated": "GitHub vault updated ({0})",
   "toast.githubUpToDate": "Already up to date",
   "toast.githubPullFailed": "Couldn't pull from GitHub",
+  "github.confirmPullDirty":
+    "{0} file(s) have local changes since the last sync. Pulling from GitHub will overwrite them. Continue?",
   "toast.renameNoFile": "No file to rename",
   "toast.renameBadName": "Name can't contain '/'",
   "toast.renameFailed": "Rename failed",
