@@ -67,6 +67,7 @@ enum L {
     case closeTab, livePreview
     case openAsVault, ok, browseFiles
     case refreshFromGitHub, refreshing, refreshUpToDate, refreshUpdatedSuffix, refreshedFull
+    case ghPreparing, ghDownloading, ghExtracting
 
     var en: String {
         switch self {
@@ -176,6 +177,9 @@ enum L {
         case .browseFiles: return "Browse files"
         case .ok: return "OK"
         case .refreshFromGitHub: return "Refresh from GitHub"
+        case .ghPreparing: return "Preparing…"
+        case .ghDownloading: return "Downloading…"
+        case .ghExtracting: return "Extracting…"
         case .refreshing: return "Refreshing…"
         case .refreshUpToDate: return "Already up to date"
         case .refreshUpdatedSuffix: return "updated"
@@ -287,6 +291,9 @@ enum L {
         case .browseFiles: return "浏览文件"
         case .ok: return "好"
         case .refreshFromGitHub: return "从 GitHub 刷新"
+        case .ghPreparing: return "准备中…"
+        case .ghDownloading: return "下载中…"
+        case .ghExtracting: return "解压中…"
         case .refreshing: return "刷新中…"
         case .refreshUpToDate: return "已是最新"
         case .refreshUpdatedSuffix: return "项已更新"
