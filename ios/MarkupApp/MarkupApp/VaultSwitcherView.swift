@@ -20,12 +20,21 @@ struct VaultSwitcherView: View {
                                 HStack {
                                     Label {
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(v.name)
-                                            Text(v.path)
-                                                .font(.caption2).foregroundStyle(.secondary)
-                                                .lineLimit(1).truncationMode(.head)
+                                            Text(v.githubSlug ?? v.name)
+                                            // GitHub vaults: show the repo slug as
+                                            // the title and skip the opaque
+                                            // app-container path subtitle.
+                                            if v.githubSlug == nil {
+                                                Text(v.path)
+                                                    .font(.caption2).foregroundStyle(.secondary)
+                                                    .lineLimit(1).truncationMode(.head)
+                                            }
                                         }
-                                    } icon: { Image(systemName: "folder") }
+                                    } icon: {
+                                        Image(systemName: v.githubSlug != nil
+                                            ? "chevron.left.forwardslash.chevron.right"
+                                            : "folder")
+                                    }
                                     Spacer()
                                     if v.path == vault.rootURL?.path {
                                         Image(systemName: "checkmark").foregroundStyle(.tint)
