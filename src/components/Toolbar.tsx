@@ -9,6 +9,9 @@ interface ToolbarProps {
   /** Optional handler invoked when the user clicks the link icon. The
    * App owns the prompt-based fallback so the toolbar stays UI-only. */
   onInsertLink?: () => void;
+  /** Set when the open vault is a materialized GitHub repo, so the breadcrumb
+   * shows `owner/repo@ref` with a branch marker instead of a bare folder name. */
+  githubVault?: { owner: string; repo: string; ref: string } | null;
 }
 
 interface FormatButton {
@@ -23,7 +26,7 @@ function vaultBasename(path: string | null): string | null {
   return parts[parts.length - 1] || path;
 }
 
-export function Toolbar({ onInsertLink }: ToolbarProps) {
+export function Toolbar({ onInsertLink, githubVault }: ToolbarProps) {
   const tab = useAppStore(getActiveTab);
   const vaultRoot = useAppStore((s) => s.vaultRoot);
   const sourceMode = useAppStore((s) => s.sourceMode);
@@ -92,9 +95,22 @@ export function Toolbar({ onInsertLink }: ToolbarProps) {
           {vaultName && (
             <>
               <span className="mk-sep">/</span>
-              <span className="mk-vault-name truncate" title={vaultRoot ?? undefined}>
-                {vaultName}
-              </span>
+              {githubVault ? (
+                <span
+                  className="mk-vault-name truncate inline-flex items-center gap-1"
+                  title={`GitHub vault · ${githubVault.owner}/${githubVault.repo}@${githubVault.ref}`}
+                >
+                  <span aria-hidden className="opacity-60">
+                    ⎇
+                  </span>
+                  {githubVault.owner}/{githubVault.repo}
+                  <span className="opacity-55 text-[0.85em]">@{githubVault.ref}</span>
+                </span>
+              ) : (
+                <span className="mk-vault-name truncate" title={vaultRoot ?? undefined}>
+                  {vaultName}
+                </span>
+              )}
             </>
           )}
           {crumbs.map((c) => (
