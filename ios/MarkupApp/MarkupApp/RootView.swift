@@ -42,6 +42,8 @@ struct RootView: View {
     @State private var refreshingVault = false
     /// Transient "↻ N updated" / "Up to date" confirmation after a refresh.
     @State private var refreshToast: String?
+    /// Non-nil → show the "refresh will overwrite N local edits?" guard alert.
+    @State private var dirtyRefreshCount: Int?
     /// relPath of a just-created note that should open straight into edit mode.
     @State private var pendingEditFileId: String?
     @State private var renameTarget: VaultFile?
@@ -120,11 +122,29 @@ struct RootView: View {
         }
     }
 
-    /// Pull the latest commit into the current GitHub vault incrementally
-    /// (download only changed/added files, drop removed), then rescan so the
-    /// sidebar + index reflect it. Shows a brief result toast.
+    /// Pull the latest commit into the current GitHub vault. First checks for
+    /// files edited locally since the last sync (off the main actor) and, if
+    /// any, asks before overwriting them — a refresh re-downloads changed blobs,
+    /// so unguarded it would silently discard local edits.
     private func refreshGitHubVault() {
         guard let root = vault.rootURL, vault.isGitHubVault, !refreshingVault else { return }
+        Task {
+            let dirty = await Task.detached(priority: .userInitiated) {
+                GitHubService.locallyModifiedPaths(at: root)
+            }.value
+            if dirty.isEmpty {
+                performRefresh(root)
+            } else {
+                dirtyRefreshCount = dirty.count // → confirmation alert
+            }
+        }
+    }
+
+    /// Run the actual incremental refresh (download changed/added, drop removed),
+    /// rescan, and show a brief result toast. Called once any local-edit guard
+    /// has been cleared.
+    private func performRefresh(_ root: URL) {
+        guard !refreshingVault else { return }
         refreshingVault = true
         Task {
             let text: String
@@ -219,6 +239,17 @@ struct RootView: View {
             Button(t(.ok), role: .cancel) { openVaultError = nil }
         } message: {
             Text(openVaultError ?? "")
+        }
+        .alert(t(.refreshOverwriteTitle), isPresented: Binding(
+            get: { dirtyRefreshCount != nil }, set: { if !$0 { dirtyRefreshCount = nil } })) {
+            Button(t(.cancel), role: .cancel) { dirtyRefreshCount = nil }
+            Button(t(.refreshOverwrite), role: .destructive) {
+                let root = vault.rootURL
+                dirtyRefreshCount = nil
+                if let root { performRefresh(root) }
+            }
+        } message: {
+            Text(String(format: t(.refreshOverwriteBody), dirtyRefreshCount ?? 0))
         }
         .sheet(isPresented: $showPicker) {
             FolderPicker { url in
