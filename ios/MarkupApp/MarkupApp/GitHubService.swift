@@ -438,6 +438,29 @@ final class GitHubService {
         return try? JSONDecoder().decode(GitHubVaultMeta.self, from: data)
     }
 
+    /// Repo-relative paths whose on-disk content no longer matches the synced
+    /// manifest — i.e. files edited locally since the last sync, which a refresh
+    /// would overwrite. Compares each tracked file's git-blob SHA against the
+    /// manifest. Returns `[]` for a clean vault or a non-GitHub folder. A
+    /// missing tracked file isn't "modified" (refresh re-adds it), and an
+    /// untracked new local file isn't reported (refresh leaves it alone). Pure
+    /// file I/O — `nonisolated` so the caller can run it off the main actor.
+    nonisolated static func locallyModifiedPaths(at root: URL) -> [String] {
+        guard let meta = readMeta(vaultRoot: root) else { return [] }
+        var dirty: [String] = []
+        for (path, blob) in meta.manifest.blobs {
+            let fileURL = root.appendingPathComponent(path)
+            guard let data = try? Data(contentsOf: fileURL) else { continue }
+            // Known size differs → certainly edited; skip the hash. Otherwise
+            // (size matches or the API omitted it) compare blob SHAs.
+            let sizeMismatch = blob.size > 0 && data.count != blob.size
+            if sizeMismatch || GitBlob.sha(data) != blob.sha {
+                dirty.append(path)
+            }
+        }
+        return dirty.sorted()
+    }
+
     /// Write a vault's GitHub metadata sidecar atomically (creating `.markup/`).
     nonisolated static func writeMeta(_ meta: GitHubVaultMeta, vaultRoot root: URL) throws {
         let url = metaURL(forVaultRoot: root)

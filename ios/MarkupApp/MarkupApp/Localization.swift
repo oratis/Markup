@@ -68,6 +68,7 @@ enum L {
     case openAsVault, ok, browseFiles
     case refreshFromGitHub, refreshing, refreshUpToDate, refreshUpdatedSuffix, refreshedFull
     case ghPreparing, ghDownloading, ghExtracting
+    case refreshOverwriteTitle, refreshOverwriteBody, refreshOverwrite
 
     var en: String {
         switch self {
@@ -180,6 +181,10 @@ enum L {
         case .ghPreparing: return "Preparing…"
         case .ghDownloading: return "Downloading…"
         case .ghExtracting: return "Extracting…"
+        case .refreshOverwriteTitle: return "Discard local changes?"
+        case .refreshOverwriteBody:
+            return "%d file(s) have changes you made since the last sync. Refreshing from GitHub will overwrite them."
+        case .refreshOverwrite: return "Refresh & Overwrite"
         case .refreshing: return "Refreshing…"
         case .refreshUpToDate: return "Already up to date"
         case .refreshUpdatedSuffix: return "updated"
@@ -294,6 +299,10 @@ enum L {
         case .ghPreparing: return "准备中…"
         case .ghDownloading: return "下载中…"
         case .ghExtracting: return "解压中…"
+        case .refreshOverwriteTitle: return "放弃本地修改？"
+        case .refreshOverwriteBody:
+            return "有 %d 个文件在上次同步后被你修改过。从 GitHub 刷新会覆盖这些改动。"
+        case .refreshOverwrite: return "刷新并覆盖"
         case .refreshing: return "刷新中…"
         case .refreshUpToDate: return "已是最新"
         case .refreshUpdatedSuffix: return "项已更新"
