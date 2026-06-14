@@ -5,6 +5,7 @@ import { type Heading, parseHeadings } from "../lib/headings";
 import { useT } from "../lib/i18n";
 import { parseHeadingsAsync } from "../lib/outline-client";
 import { buildParagraphLink } from "../lib/paragraph-link";
+import { scrollToHeading } from "../lib/scroll-to-heading";
 import { getActiveTab, useAppStore } from "../store";
 import { showToast } from "./Toast";
 
@@ -324,37 +325,3 @@ function OutlineCtxMenu({
  *    own dispatch + scrollIntoView API. We use the `line` index parsed
  *    earlier to compute a doc position and dispatch a selection there.
  */
-function scrollToHeading(text: string, level: number, line: number) {
-  // Source-mode path
-  const view = getActiveSourceView();
-  if (view) {
-    const lineIdx = Math.max(1, line + 1); // CM6 lines are 1-based
-    const doc = view.state.doc;
-    if (lineIdx <= doc.lines) {
-      const lineObj = doc.line(lineIdx);
-      view.dispatch({
-        selection: { anchor: lineObj.from, head: lineObj.from },
-        effects: view.scrollSnapshot(),
-      });
-      view.dispatch({
-        effects: [],
-        scrollIntoView: true,
-        selection: { anchor: lineObj.from, head: lineObj.from },
-      } as Parameters<typeof view.dispatch>[0]);
-      view.focus();
-      return;
-    }
-  }
-  // WYSIWYG / fallback path
-  const tag = `H${level}`;
-  const candidates = document.querySelectorAll(`.milkdown ${tag}`);
-  for (const node of Array.from(candidates)) {
-    if ((node.textContent ?? "").trim() === text) {
-      (node as HTMLElement).scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-      return;
-    }
-  }
-}
