@@ -35,6 +35,8 @@ struct RootView: View {
     @State private var githubBrowse: BrowseLink?
     /// "owner/repo" while a repo is being downloaded + opened as a vault.
     @State private var openingVault: String?
+    /// Phase label ("Downloading… 42%") shown under the repo name while opening.
+    @State private var openingStatus: String?
     @State private var openVaultError: String?
     /// True while an incremental refresh of the current GitHub vault runs.
     @State private var refreshingVault = false
@@ -85,10 +87,32 @@ struct RootView: View {
         showGitHub = false
         githubBrowse = nil
         openingVault = "\(link.owner)/\(link.repo)"
+        openingStatus = nil
         Task {
-            defer { openingVault = nil }
+            // Stream coarse progress (resolve → download % → extract) into the
+            // overlay so a large repo never looks frozen.
+            let (stream, cont) = AsyncStream<GitHubService.OpenVaultPhase>.makeStream()
+            let consumer = Task { @MainActor in
+                for await phase in stream {
+                    switch phase {
+                    case .resolving:
+                        openingStatus = t(.ghPreparing)
+                    case .downloading(let f):
+                        openingStatus = f.map { "\(t(.ghDownloading)) \(Int($0 * 100))%" }
+                            ?? t(.ghDownloading)
+                    case .extracting:
+                        openingStatus = t(.ghExtracting)
+                    }
+                }
+            }
+            defer {
+                cont.finish()
+                consumer.cancel()
+                openingVault = nil
+                openingStatus = nil
+            }
             do {
-                let dir = try await GitHubService.shared.openAsVault(link)
+                let dir = try await GitHubService.shared.openAsVault(link, progress: cont)
                 vault.openLocalVault(dir)
             } catch {
                 openVaultError = error.localizedDescription
@@ -125,10 +149,10 @@ struct RootView: View {
 
     /// A centered material card with a spinner and a label — shared by the
     /// "Downloading…" and "Refreshing…" overlays.
-    private func progressCard(_ label: Text) -> some View {
+    private func progressCard(_ label: some View) -> some View {
         VStack(spacing: 12) {
             ProgressView()
-            label.font(.callout).foregroundStyle(.secondary)
+            label
         }
         .padding(28)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -167,9 +191,15 @@ struct RootView: View {
         .onOpenURL { url in handleOpenURL(url) }
         .overlay {
             if let repo = openingVault {
-                progressCard(Text("Downloading \(repo)…"))
+                progressCard(
+                    VStack(spacing: 3) {
+                        Text(repo).font(.callout)
+                        if let s = openingStatus {
+                            Text(s).font(.caption).foregroundStyle(.secondary)
+                        }
+                    })
             } else if refreshingVault {
-                progressCard(Text(t(.refreshing)))
+                progressCard(Text(t(.refreshing)).font(.callout).foregroundStyle(.secondary))
             }
         }
         .overlay(alignment: .bottom) {

@@ -23,6 +23,14 @@ final class GitHubService {
         }
     }
 
+    /// Coarse progress while materializing a repo into a vault, surfaced in the
+    /// "Opening…" overlay so a large repo never looks frozen.
+    enum OpenVaultPhase: Sendable {
+        case resolving
+        case downloading(fraction: Double?)  // nil when the server sends no length
+        case extracting
+    }
+
     /// Map a non-2xx GitHub response to a `GitHubError`, distinguishing a real
     /// rate-limit (403/429 with `x-ratelimit-remaining: 0`) from an
     /// authorization failure (403/401), which would otherwise both read as
@@ -142,14 +150,23 @@ final class GitHubService {
     /// the manifest consistent we first resolve `link` to an exact commit SHA and
     /// pin both to it; if that resolution fails (e.g. rate limit) we fall back to
     /// the bare-ref zipball with no manifest, and the next refresh re-downloads.
-    func openAsVault(_ link: GitHubLink) async throws -> URL {
+    func openAsVault(
+        _ link: GitHubLink,
+        progress: AsyncStream<OpenVaultPhase>.Continuation? = nil
+    ) async throws -> URL {
+        progress?.yield(.resolving)
         // Pin to an immutable commit when we can, so the extracted tree exactly
         // matches the manifest we snapshot (and refreshes can diff cleanly).
         let resolved = try? await resolveCommit(link)
+        progress?.yield(.downloading(fraction: nil))
         let data = try await downloadZipball(
             owner: link.owner, repo: link.repo,
-            ref: resolved?.sha ?? (link.ref?.isEmpty == false ? link.ref : nil))
+            ref: resolved?.sha ?? (link.ref?.isEmpty == false ? link.ref : nil),
+            onFraction: progress.map { cont in
+                { @Sendable (frac: Double?) in cont.yield(.downloading(fraction: frac)) }
+            })
 
+        progress?.yield(.extracting)
         let root = Self.vaultRoot(for: link)
         // Decompress + write off the main thread (a whole repo is heavy work);
         // extractZipball is nonisolated so this runs on a background executor.
@@ -296,7 +313,10 @@ final class GitHubService {
     /// Download a repo's zipball bytes (optionally pinned to `ref`, which may be
     /// a branch, tag, or commit SHA). Shared by the first-time open and the
     /// refresh fallback.
-    private func downloadZipball(owner: String, repo: String, ref: String?) async throws -> Data {
+    private func downloadZipball(
+        owner: String, repo: String, ref: String?,
+        onFraction: (@Sendable (Double?) -> Void)? = nil
+    ) async throws -> Data {
         var s = "https://api.github.com/repos/\(owner)/\(repo)/zipball"
         if let ref, !ref.isEmpty { s += "/\(ref)" }
         guard let url = URL(string: s) else { throw GitHubError.badURL }
@@ -304,10 +324,20 @@ final class GitHubService {
         req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         req.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
         if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        // Download to a temp file so a per-task delegate can report byte
+        // progress (the in-memory `data(for:)` variant offers none). The whole
+        // archive is read back into memory afterwards for extraction, as before.
+        let tempURL: URL
+        let resp: URLResponse
+        if let onFraction {
+            let delegate = ZipballDownloadDelegate(onFraction: onFraction)
+            (tempURL, resp) = try await URLSession.shared.download(for: req, delegate: delegate)
+        } else {
+            (tempURL, resp) = try await URLSession.shared.download(for: req)
+        }
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
         guard code == 200 else { throw Self.httpError(resp, code) }
-        return data
+        return try Data(contentsOf: tempURL)
     }
 
     /// Resolve `link`'s ref (or the repo's default branch when it has none) to
@@ -463,5 +493,36 @@ final class GitHubService {
         GitHubLink(owner: parent.owner, repo: parent.repo, ref: parent.ref,
                    path: entry.path, isDirectory: entry.isDir)
     }
+}
+
+/// Bridges `URLSession.download(for:delegate:)` byte progress to a fraction
+/// callback (0…1, or nil when the server sends no Content-Length), throttled to
+/// whole-percent changes. Callbacks arrive on a background queue.
+private final class ZipballDownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    private let onFraction: @Sendable (Double?) -> Void
+    private var lastPct = -1
+
+    init(onFraction: @escaping @Sendable (Double?) -> Void) { self.onFraction = onFraction }
+
+    func urlSession(
+        _ session: URLSession, downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
+        totalBytesExpectedToWrite expected: Int64
+    ) {
+        guard expected > 0 else { onFraction(nil); return }
+        let frac = Double(totalBytesWritten) / Double(expected)
+        let pct = Int(frac * 100)
+        if pct != lastPct {
+            lastPct = pct
+            onFraction(frac)
+        }
+    }
+
+    // Required by URLSessionDownloadDelegate; the async download(for:delegate:)
+    // returns the file URL itself, so there's nothing to do on completion.
+    func urlSession(
+        _ session: URLSession, downloadTask: URLSessionDownloadTask,
+        didFinishDownloadingTo location: URL
+    ) {}
 }
 
