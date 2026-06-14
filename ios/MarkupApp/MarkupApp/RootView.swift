@@ -259,7 +259,9 @@ struct RootView: View {
     private var sidebar: some View {
         Group {
             if vault.rootURL == nil {
-                OnboardingView(onOpenFolder: { showPicker = true })
+                OnboardingView(
+                    onOpenFolder: { showPicker = true },
+                    onOpenGitHub: { showGitHub = true })
             } else if vault.files.isEmpty {
                 ContentUnavailableView(
                     t(.noMarkdownTitle),
