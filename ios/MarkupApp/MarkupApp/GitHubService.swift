@@ -9,7 +9,7 @@ final class GitHubService {
     static let shared = GitHubService()
 
     enum GitHubError: LocalizedError {
-        case notAFile, rateLimited, forbidden, notFound, http(Int), badURL, badArchive
+        case notAFile, rateLimited, forbidden, notFound, http(Int), badURL, badArchive, repoTooLarge
         var errorDescription: String? {
             switch self {
             case .notAFile: return "That link points to a folder, not a file."
@@ -19,6 +19,8 @@ final class GitHubService {
             case .http(let c): return "GitHub request failed (HTTP \(c))."
             case .badURL: return "Couldn't build the request URL."
             case .badArchive: return "Couldn't read the repository archive."
+            case .repoTooLarge:
+                return "This repository is too large to open as a vault (over 4 GB). Try opening a sub-folder instead."
             }
         }
     }
@@ -337,7 +339,9 @@ final class GitHubService {
     nonisolated static func extractZipball(_ data: Data, to root: URL) throws {
         // Fail loudly on zip64 rather than open a silently-incomplete vault:
         // ZipArchive can't parse it and would drop entries with no error.
-        if ZipArchive.isLikelyZip64(data) { throw GitHubError.badArchive }
+        // Zip64 (> 4 GB) — ZipArchive can't parse it and would silently drop
+        // entries; surface a clear "too large" message rather than a generic one.
+        if ZipArchive.isLikelyZip64(data) { throw GitHubError.repoTooLarge }
         let entries = ZipArchive.extract(data)
         guard let top = GitHubZipball.topLevelDir(entries.map(\.path)) else {
             throw GitHubError.badArchive
