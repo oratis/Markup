@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { isCanvasPath, isHtmlPath } from "../lib/canvas-path";
 import { useT } from "../lib/i18n";
 import { listVaultFiles, readFile, renameFile, trashFile } from "../lib/tauri";
+import { sortVaultFiles } from "../lib/vault-order";
 import { type VaultFile, useAppStore } from "../store";
 
 interface ContextState {
@@ -27,15 +28,7 @@ export function FileTree() {
 
   const vaultSort = useAppStore((s) => s.vaultSort);
   const setSettings = useAppStore((s) => s.setSettings);
-  const sorted = useMemo(() => {
-    const copy = [...files];
-    if (vaultSort === "mtime") {
-      copy.sort((a, b) => b.mtimeMs - a.mtimeMs);
-    } else {
-      copy.sort((a, b) => a.relPath.localeCompare(b.relPath));
-    }
-    return copy;
-  }, [files, vaultSort]);
+  const sorted = useMemo(() => sortVaultFiles(files, vaultSort), [files, vaultSort]);
 
   const parentRef = useRef<HTMLDivElement | null>(null);
   const rowVirtualizer = useVirtualizer({

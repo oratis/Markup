@@ -1,3 +1,4 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { type RefObject, useCallback, useEffect } from "react";
 import { showToast } from "../components/Toast";
 import { splitEmbedTarget } from "../lib/embed-slice";
@@ -6,10 +7,11 @@ import { headingLineIndex, jumpToSourceLine } from "../lib/headings";
 import { installHoverPreview } from "../lib/hover-preview";
 import type { useT } from "../lib/i18n";
 import { subscribe as subscribeIndex } from "../lib/link-index-store";
+import { isExternalHref, resolveDocHref } from "../lib/relative-link";
 import { readFile } from "../lib/tauri";
 import type { LoadedFile } from "../lib/types";
 import { findVaultFile, wikilinkAtClick } from "../lib/wikilink";
-import { useAppStore } from "../store";
+import { getActiveTab, useAppStore, type VaultFile } from "../store";
 
 interface EditorInteractionArgs {
   /** Scroll container hosting the WYSIWYG / CM6 editor DOM. */
@@ -47,18 +49,11 @@ export function useEditorInteractions({
   openLoadedFile,
   tr,
 }: EditorInteractionArgs) {
-  // Resolve a `[[name]]` / `![[name]]` target (with an optional `#heading`),
-  // open the file, and scroll to the heading when present. Shared by the
-  // source-mode follow, the WYSIWYG wikilink click, and the embed click so
-  // all three navigate `file#heading` identically.
-  const openTargetByName = useCallback(
-    async (raw: string) => {
-      const { file, heading } = splitEmbedTarget(raw);
-      const hit = findVaultFile(useAppStore.getState().vaultFiles, file);
-      if (!hit) {
-        showToast(tr("toast.wikilinkMiss", file || raw));
-        return;
-      }
+  // Open a resolved vault file and, when given, scroll to a heading. Shared
+  // by the source follow, the WYSIWYG wikilink click, the embed click, and
+  // the relative-markdown-link handler so all navigate `file#heading` alike.
+  const openResolved = useCallback(
+    async (hit: VaultFile, heading: string | null) => {
       try {
         const loaded = await readFile(hit.path);
         openLoadedFile(loaded);
@@ -73,11 +68,26 @@ export function useEditorInteractions({
           }
         }
       } catch (err) {
-        console.error("open wikilink/embed target failed", err);
+        console.error("open target failed", err);
         showToast(tr("toast.openFailed", hit.name));
       }
     },
     [openLoadedFile, tr],
+  );
+
+  // Resolve a `[[name]]` / `![[name]]` target (basename match, optional
+  // `#heading`) and open it.
+  const openTargetByName = useCallback(
+    async (raw: string) => {
+      const { file, heading } = splitEmbedTarget(raw);
+      const hit = findVaultFile(useAppStore.getState().vaultFiles, file);
+      if (!hit) {
+        showToast(tr("toast.wikilinkMiss", file || raw));
+        return;
+      }
+      await openResolved(hit, heading);
+    },
+    [openResolved, tr],
   );
 
   // Cmd+click on a `[[wikilink]]` in source mode — SourceEditor dispatches
@@ -236,6 +246,43 @@ export function useEditorInteractions({
     host.addEventListener("click", onTagClick);
     return () => host.removeEventListener("click", onTagClick);
   }, []);
+
+  // Standard Markdown links in the reader — `[text](./other.md)`,
+  // `[x](../api/y.md#sec)`, `[home](https://…)`. Relative doc links resolve
+  // against the current file and open in-app (with a #heading jump); external
+  // links open in the browser instead of navigating the webview away.
+  useEffect(() => {
+    const host = editorScrollRef.current;
+    if (!host) return;
+    const onLinkClick = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement | null)?.closest?.(
+        "a",
+      ) as HTMLAnchorElement | null;
+      if (!a) return;
+      const href = a.getAttribute("href");
+      if (!href) return;
+      if (isExternalHref(href)) {
+        e.preventDefault();
+        e.stopPropagation();
+        void openUrl(href);
+        return;
+      }
+      const current = getActiveTab(useAppStore.getState());
+      if (!current?.path) return;
+      const resolved = resolveDocHref(href, current.path);
+      if (!resolved) return; // in-page anchor / asset / unknown — leave default
+      e.preventDefault();
+      e.stopPropagation();
+      const hit = useAppStore.getState().vaultFiles.find((f) => f.path === resolved.path);
+      if (!hit) {
+        showToast(tr("toast.wikilinkMiss", href));
+        return;
+      }
+      void openResolved(hit, resolved.heading);
+    };
+    host.addEventListener("click", onLinkClick);
+    return () => host.removeEventListener("click", onLinkClick);
+  }, [openResolved, tr]);
 
   // Hover preview on `.wikilink` / `.embed` decorations — fetches the
   // target file's first N chars (or slice for #/^ anchors) after a
