@@ -11,24 +11,29 @@ struct StoredVault: Codable, Identifiable, Equatable {
     /// on-disk siblings so relative assets resolve. Persisted so a remembered or
     /// restored vault keeps the behavior; absent in older data → false.
     var isAppOwned: Bool
+    /// "owner/repo" (+ "@ref") for a GitHub vault, so the switcher can show the
+    /// repo instead of a cryptic container path. `nil` for Files/iCloud vaults.
+    var githubSlug: String?
     var id: String { path }
 
-    init(name: String, path: String, bookmark: Data, isAppOwned: Bool) {
+    init(name: String, path: String, bookmark: Data, isAppOwned: Bool, githubSlug: String? = nil) {
         self.name = name
         self.path = path
         self.bookmark = bookmark
         self.isAppOwned = isAppOwned
+        self.githubSlug = githubSlug
     }
 
-    // Custom decode so vaults persisted before `isAppOwned` existed still load
-    // (a missing key defaults to false) instead of dropping the whole list.
-    enum CodingKeys: String, CodingKey { case name, path, bookmark, isAppOwned }
+    // Custom decode so vaults persisted before these keys existed still load
+    // (missing keys default) instead of dropping the whole list.
+    enum CodingKeys: String, CodingKey { case name, path, bookmark, isAppOwned, githubSlug }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         name = try c.decode(String.self, forKey: .name)
         path = try c.decode(String.self, forKey: .path)
         bookmark = try c.decode(Data.self, forKey: .bookmark)
         isAppOwned = try c.decodeIfPresent(Bool.self, forKey: .isAppOwned) ?? false
+        githubSlug = try c.decodeIfPresent(String.self, forKey: .githubSlug)
     }
 }
 
@@ -55,6 +60,16 @@ final class VaultStore {
     var githubMeta: GitHubVaultMeta?
     /// Whether the active vault is a GitHub-backed (refreshable) vault.
     var isGitHubVault: Bool { githubMeta != nil }
+
+    /// "owner/repo" (+ "@ref" for a non-default branch) for the active GitHub
+    /// vault, else nil. Used in place of the raw container path.
+    var githubSlug: String? { githubMeta.map { Self.slug(for: $0.link) } }
+
+    /// Build a "owner/repo[@ref]" label from a repo link.
+    static func slug(for link: GitHubLink) -> String {
+        let ref = (link.ref?.isEmpty == false) ? "@\(link.ref!)" : ""
+        return "\(link.owner)/\(link.repo)\(ref)"
+    }
 
     /// Search/links/tags/outline index. Built off the scan; nil until ready.
     var index: IndexService?
@@ -93,7 +108,8 @@ final class VaultStore {
     /// Upsert the current root into the known-vaults list (most-recent first).
     private func rememberVault(_ url: URL, bookmark: Data, appOwned: Bool) {
         let entry = StoredVault(
-            name: url.lastPathComponent, path: url.path, bookmark: bookmark, isAppOwned: appOwned)
+            name: url.lastPathComponent, path: url.path, bookmark: bookmark,
+            isAppOwned: appOwned, githubSlug: appOwned ? githubSlug : nil)
         knownVaults.removeAll { $0.path == entry.path }
         knownVaults.insert(entry, at: 0)
         saveKnownVaults()
@@ -123,6 +139,8 @@ final class VaultStore {
     /// A readable, `/`-joined path for the open vault, cleaning the iCloud
     /// container prefix (e.g. "iCloud Drive/Workspace/Notes").
     var rootDisplayPath: String {
+        // GitHub vaults live in an opaque app-container path; show the repo.
+        if let slug = githubSlug { return slug }
         guard let url = rootURL else { return "" }
         let p = url.path
         if let r = p.range(of: "com~apple~CloudDocs/") {
