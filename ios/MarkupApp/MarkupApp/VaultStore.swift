@@ -134,6 +134,14 @@ final class VaultStore {
         saveKnownVaults()
     }
 
+    /// Drop remembered vaults whose folder no longer exists on disk (e.g. after
+    /// clearing the GitHub cache), so the switcher doesn't list dead entries.
+    func forgetMissingVaults() {
+        let fm = FileManager.default
+        knownVaults.removeAll { !fm.fileExists(atPath: $0.path) }
+        saveKnownVaults()
+    }
+
     var rootName: String { rootURL?.lastPathComponent ?? "No folder" }
 
     /// A readable, `/`-joined path for the open vault, cleaning the iCloud

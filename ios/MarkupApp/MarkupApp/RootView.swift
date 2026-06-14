@@ -88,6 +88,14 @@ struct RootView: View {
         guard openingVault == nil else { return }
         showGitHub = false
         githubBrowse = nil
+        // Already downloaded? Open the local copy instantly instead of
+        // re-downloading the whole repo — "Refresh from GitHub" pulls the latest.
+        // Mirrors the desktop, which also reuses a materialized vault.
+        let existing = GitHubService.vaultRoot(for: link)
+        if GitHubService.readMeta(vaultRoot: existing) != nil {
+            vault.openLocalVault(existing)
+            return
+        }
         openingVault = "\(link.owner)/\(link.repo)"
         openingStatus = nil
         Task {

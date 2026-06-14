@@ -272,6 +272,57 @@ final class GitHubService {
         return url
     }
 
+    /// The base directory holding all downloaded GitHub vaults.
+    nonisolated static var vaultsBase: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("GitHubVaults", isDirectory: true)
+    }
+
+    /// All materialized GitHub vault directories on disk (those carrying a
+    /// `.markup` manifest sidecar), with their byte sizes.
+    nonisolated static func downloadedVaults() -> [(url: URL, bytes: Int64)] {
+        let fm = FileManager.default
+        guard let en = fm.enumerator(at: vaultsBase, includingPropertiesForKeys: [.isDirectoryKey])
+        else { return [] }
+        var out: [(URL, Int64)] = []
+        for case let url as URL in en {
+            let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+            if isDir, readMeta(vaultRoot: url) != nil {
+                out.append((url, directorySize(url)))
+                en.skipDescendants() // don't recurse into a vault we already counted
+            }
+        }
+        return out
+    }
+
+    /// Delete every downloaded GitHub vault except `keeping` (the active one),
+    /// plus the transient asset cache. Returns the number of vaults removed.
+    /// Safe: never touches the open vault or anything outside our containers.
+    @discardableResult
+    nonisolated static func clearCaches(keeping active: URL?) -> Int {
+        let fm = FileManager.default
+        try? fm.removeItem(at: cacheRoot) // transient per-doc asset cache
+        let keepPath = active?.standardizedFileURL.path
+        var removed = 0
+        for vault in downloadedVaults() where vault.url.standardizedFileURL.path != keepPath {
+            if (try? fm.removeItem(at: vault.url)) != nil { removed += 1 }
+        }
+        return removed
+    }
+
+    /// Recursive byte size of a directory (best-effort; 0 on error).
+    nonisolated static func directorySize(_ url: URL) -> Int64 {
+        let fm = FileManager.default
+        guard let en = fm.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey]) else {
+            return 0
+        }
+        var total: Int64 = 0
+        for case let f as URL in en {
+            total += Int64((try? f.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+        }
+        return total
+    }
+
     /// Extract a GitHub zipball (one `owner-repo-sha/` wrapper dir) into `root`,
     /// stripping the wrapper so paths are repo-root-relative. Builds the tree in
     /// a sibling temp dir and **atomically** swaps it into place, so a re-open of

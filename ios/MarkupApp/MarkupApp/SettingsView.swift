@@ -11,6 +11,14 @@ struct SettingsView: View {
     @AppStorage("reader.fontScale") private var fontScale = 1.0
     @AppStorage("reader.maxWidth") private var maxWidth = 720
     @AppStorage("reader.lineHeight") private var lineHeight = 1.65
+    /// Total bytes used by downloaded GitHub vaults (computed off-main).
+    @State private var cacheBytes: Int64 = 0
+
+    private func refreshCacheSize() async {
+        cacheBytes = await Task.detached(priority: .utility) {
+            GitHubService.downloadedVaults().reduce(0) { $0 + $1.bytes }
+        }.value
+    }
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -60,6 +68,24 @@ struct SettingsView: View {
                     Button(t(.reindex)) { vault.scan() }
                 }
 
+                if cacheBytes > 0 {
+                    Section("GitHub") {
+                        LabeledContent(
+                            t(.githubDownloaded),
+                            value: ByteCountFormatter.string(fromByteCount: cacheBytes, countStyle: .file))
+                        Button(t(.clearGithubCache), role: .destructive) {
+                            Task {
+                                let active = vault.rootURL
+                                await Task.detached(priority: .utility) {
+                                    GitHubService.clearCaches(keeping: active)
+                                }.value
+                                vault.forgetMissingVaults()
+                                await refreshCacheSize()
+                            }
+                        }
+                    }
+                }
+
                 Section(t(.about)) {
                     LabeledContent(t(.version), value: appVersion)
                     Link(t(.onGitHub), destination: URL(string: "https://github.com/oratis/Markup")!)
@@ -70,6 +96,7 @@ struct SettingsView: View {
             }
             .navigationTitle(t(.settings))
             .navigationBarTitleDisplayMode(.inline)
+            .task { await refreshCacheSize() }
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t(.done)) { dismiss() } } }
         }
     }

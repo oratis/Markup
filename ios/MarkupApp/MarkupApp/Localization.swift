@@ -69,6 +69,7 @@ enum L {
     case refreshFromGitHub, refreshing, refreshUpToDate, refreshUpdatedSuffix, refreshedFull
     case ghPreparing, ghDownloading, ghExtracting
     case refreshOverwriteTitle, refreshOverwriteBody, refreshOverwrite
+    case githubDownloaded, clearGithubCache
 
     var en: String {
         switch self {
@@ -185,6 +186,8 @@ enum L {
         case .refreshOverwriteBody:
             return "%d file(s) have changes you made since the last sync. Refreshing from GitHub will overwrite them."
         case .refreshOverwrite: return "Refresh & Overwrite"
+        case .githubDownloaded: return "Downloaded repos"
+        case .clearGithubCache: return "Clear GitHub cache"
         case .refreshing: return "Refreshing…"
         case .refreshUpToDate: return "Already up to date"
         case .refreshUpdatedSuffix: return "updated"
@@ -303,6 +306,8 @@ enum L {
         case .refreshOverwriteBody:
             return "有 %d 个文件在上次同步后被你修改过。从 GitHub 刷新会覆盖这些改动。"
         case .refreshOverwrite: return "刷新并覆盖"
+        case .githubDownloaded: return "已下载仓库"
+        case .clearGithubCache: return "清理 GitHub 缓存"
         case .refreshing: return "刷新中…"
         case .refreshUpToDate: return "已是最新"
         case .refreshUpdatedSuffix: return "项已更新"
