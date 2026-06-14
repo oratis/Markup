@@ -175,12 +175,18 @@ final class GitHubService {
         }.value
 
         // Snapshot the manifest (best-effort): a failure here just means the next
-        // refresh falls back to a full re-download. Store the original `link`
-        // (ref preserved, incl. nil) so a refresh resolves the same ref and the
-        // vault path stays stable.
-        if let sha = resolved?.sha,
-           let manifest = try? await fetchTree(owner: link.owner, repo: link.repo, treeish: sha) {
-            try? Self.writeMeta(GitHubVaultMeta(link: link, manifest: manifest), vaultRoot: root)
+        // refresh falls back to a full re-download. Pin the manifest to the
+        // *resolved* branch name (not the original ref, which may be empty/nil)
+        // so a later refresh always follows the branch we actually opened — even
+        // if the repo's default branch later changes. The vault directory stays
+        // keyed by the original link, so dedupe/open still find the same folder.
+        if let resolved,
+           let manifest = try? await fetchTree(
+               owner: link.owner, repo: link.repo, treeish: resolved.sha) {
+            let pinned = GitHubLink(
+                owner: link.owner, repo: link.repo, ref: resolved.ref,
+                path: link.path, isDirectory: link.isDirectory)
+            try? Self.writeMeta(GitHubVaultMeta(link: pinned, manifest: manifest), vaultRoot: root)
         }
         return root
     }
