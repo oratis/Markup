@@ -2945,7 +2945,9 @@ export function App() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {showToolbar && <Toolbar onInsertLink={promptInsertLink} />}
+      {showToolbar && (
+        <Toolbar onInsertLink={promptInsertLink} githubVault={githubVault} />
+      )}
       {showTabBar && <TabBar />}
       {showReload && (
         <ReloadPrompt

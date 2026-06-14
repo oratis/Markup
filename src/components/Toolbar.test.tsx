@@ -116,6 +116,17 @@ describe("Toolbar", () => {
     expect(screen.getByLabelText(/horizontal rule/i)).toBeInTheDocument();
   });
 
+  it("shows owner/repo@ref for a GitHub vault instead of the folder name", () => {
+    useAppStore.setState({
+      vaultRoot: "/Users/me/Library/Caches/markup/github/octocat/main/hello",
+    });
+    render(<Toolbar githubVault={{ owner: "octocat", repo: "hello", ref: "main" }} />);
+    expect(screen.getByText("octocat/hello")).toBeInTheDocument();
+    expect(screen.getByText("@main")).toBeInTheDocument();
+    // The bare container basename is not shown as the vault label.
+    expect(screen.queryByText("hello", { selector: ".mk-vault-name" })).toBeNull();
+  });
+
   it("link button calls the supplied onInsertLink prop", () => {
     useAppStore.setState({ readMode: false, sourceMode: false });
     const onInsertLink = vi.fn();
