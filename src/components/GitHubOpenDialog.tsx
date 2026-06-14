@@ -81,6 +81,8 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
   // Browse stack: empty = the URL input; non-empty = browsing the last dir.
   const [stack, setStack] = useState<GitHubLink[]>([]);
   const [entries, setEntries] = useState<GitHubEntry[]>([]);
+  // Free-text filter over "Your repositories" (shown once the list is long).
+  const [repoFilter, setRepoFilter] = useState("");
 
   // Auth + repos list.
   const [signedIn, setSignedIn] = useState(isGitHubSignedIn());
@@ -278,6 +280,10 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
   // action (the headline use), with "Browse" as the secondary.
   const parsedUrl = url.trim() ? parseGitHubLink(url) : null;
   const urlIsRepoRoot = !!parsedUrl && parsedUrl.isDirectory && parsedUrl.path === "";
+  const repoQuery = repoFilter.trim().toLowerCase();
+  const visibleRepos = repoQuery
+    ? repos.filter((r) => r.fullName.toLowerCase().includes(repoQuery))
+    : repos;
 
   return (
     <div
@@ -367,7 +373,7 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
               if (urlIsRepoRoot && parsedUrl) openAsVault(parsedUrl);
               else submit();
             }}
-            placeholder="owner/repo  or  github.com/owner/repo/blob/main/README.md"
+            placeholder="owner/repo  ·  github.com/owner/repo  ·  …/blob/main/README.md"
             className="w-full px-2 py-1.5 rounded border border-black/10 dark:border-white/20 bg-transparent outline-none focus:border-blue-500 text-[13px]"
           />
         )}
@@ -378,6 +384,15 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
             <div className="text-[12px] uppercase tracking-wide opacity-50 mb-1">
               Your repositories
             </div>
+            {repos.length > 6 && (
+              <input
+                type="text"
+                value={repoFilter}
+                onChange={(e) => setRepoFilter(e.target.value)}
+                placeholder="Filter repositories…"
+                className="w-full mb-1 px-2 py-1 rounded border border-black/10 dark:border-white/20 bg-transparent outline-none focus:border-blue-500 text-[12px]"
+              />
+            )}
             <div className="max-h-[260px] overflow-auto rounded border border-black/10 dark:border-white/15">
               {reposLoading && (
                 <div className="px-3 py-4 text-[12px] opacity-60">Loading…</div>
@@ -385,7 +400,12 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
               {!reposLoading && repos.length === 0 && (
                 <div className="px-3 py-4 text-[12px] opacity-60">No repositories.</div>
               )}
-              {repos.map((r) => (
+              {!reposLoading && repos.length > 0 && visibleRepos.length === 0 && (
+                <div className="px-3 py-4 text-[12px] opacity-60">
+                  No matching repositories.
+                </div>
+              )}
+              {visibleRepos.map((r) => (
                 <div
                   key={r.fullName}
                   className="w-full flex items-center text-[13px] hover:bg-black/5 dark:hover:bg-white/10 border-b border-black/5 dark:border-white/10 last:border-0"
