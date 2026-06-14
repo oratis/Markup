@@ -41,6 +41,23 @@ const RAW_HEADERS = {
   "X-GitHub-Api-Version": "2022-11-28",
 };
 
+/** fetch() with one automatic retry on GitHub's *secondary* (abuse) rate limit,
+ *  which returns 403/429 with a short `Retry-After`. We only wait when that
+ *  header is present and small (≤ 8s) — a *primary* rate limit resets far in the
+ *  future, so we surface it as an error (with the sign-in hint) instead of
+ *  hanging. An aborted signal makes the retry reject immediately, as intended. */
+async function ghFetch(input: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(input, init);
+  if (res.status === 403 || res.status === 429) {
+    const ra = Number(res.headers.get("retry-after"));
+    if (Number.isFinite(ra) && ra > 0 && ra <= 8) {
+      await new Promise((r) => setTimeout(r, ra * 1000));
+      return fetch(input, init);
+    }
+  }
+  return res;
+}
+
 /** Map an HTTP status to a message and whether signing in would likely help
  *  (so the dialog can offer a "Sign in" shortcut). `signedIn` tailors the copy:
  *  a signed-out 404 is probably a private repo; a 403 is probably a rate limit. */
@@ -92,25 +109,31 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
   const [reposLoading, setReposLoading] = useState(false);
   const [signInCode, setSignInCode] = useState<GitHubDeviceCode | null>(null);
   const signInAbort = useRef<AbortController | null>(null);
+  const reposAbort = useRef<AbortController | null>(null);
 
   const browsing = stack.length > 0;
   const current = stack[stack.length - 1];
 
   const loadRepos = useCallback(async () => {
     if (!isGitHubSignedIn()) return;
+    reposAbort.current?.abort();
+    const controller = new AbortController();
+    reposAbort.current = controller;
     setReposLoading(true);
     try {
-      const res = await fetch(
+      const res = await ghFetch(
         "https://api.github.com/user/repos?per_page=100&sort=updated",
         {
           headers: { ...JSON_HEADERS, ...githubAuthHeaders() },
+          signal: controller.signal,
         },
       );
       if (res.ok) setRepos(parseRepos(await res.json()));
     } catch {
-      /* leave repos empty; URL entry still works */
+      /* aborted, or network error — leave repos empty; URL entry still works */
     } finally {
-      setReposLoading(false);
+      // Only the latest request owns the spinner (an aborted one already moved on).
+      if (reposAbort.current === controller) setReposLoading(false);
     }
   }, []);
 
@@ -118,8 +141,14 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
     if (signedIn) loadRepos();
   }, [signedIn, loadRepos]);
 
-  // Stop any in-flight poll when the dialog unmounts.
-  useEffect(() => () => signInAbort.current?.abort(), []);
+  // Stop any in-flight sign-in poll / repos fetch when the dialog unmounts.
+  useEffect(
+    () => () => {
+      signInAbort.current?.abort();
+      reposAbort.current?.abort();
+    },
+    [],
+  );
 
   // Hydrate the token from the Keychain on first open (migrating any token a
   // pre-Keychain build left in localStorage), then refresh the signed-in state.
@@ -189,7 +218,7 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
     setLoading(true);
     clearError();
     try {
-      const res = await fetch(contentsApiUrl(link), {
+      const res = await ghFetch(contentsApiUrl(link), {
         headers: { ...RAW_HEADERS, ...githubAuthHeaders() },
       });
       if (!res.ok) {
@@ -245,7 +274,7 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
     setLoading(true);
     clearError();
     try {
-      const res = await fetch(contentsApiUrl(link), {
+      const res = await ghFetch(contentsApiUrl(link), {
         headers: { ...JSON_HEADERS, ...githubAuthHeaders() },
       });
       if (!res.ok) {
