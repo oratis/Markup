@@ -27,28 +27,32 @@ afterEach(() => {
 });
 
 describe("GitHubOpenDialog — open repo as vault", () => {
-  it("doesn't offer 'Open as vault' until you're browsing a repo", () => {
+  it("surfaces 'Open as vault' as the primary action once a repo URL is entered", () => {
     render(
       <GitHubOpenDialog onClose={() => {}} onOpen={() => {}} onOpenVault={() => {}} />,
     );
+    // Nothing typed yet → no vault action.
     expect(screen.queryByText("Open as vault")).toBeNull();
+
+    const input = screen.getByPlaceholderText(/owner\/repo/i);
+    fireEvent.change(input, { target: { value: "octocat/hello" } });
+
+    // A bare repo root makes "Open as vault" the primary action, with a
+    // secondary "Browse" — no need to drill in first.
+    expect(screen.getByText("Open as vault")).toBeTruthy();
+    expect(screen.getByText("Browse")).toBeTruthy();
   });
 
-  it("materializes the browsed repo and hands the local dir to onOpenVault", async () => {
+  it("materializes the repo and hands the local dir to onOpenVault", async () => {
     const onOpenVault = vi.fn();
     const onClose = vi.fn();
     render(
       <GitHubOpenDialog onClose={onClose} onOpen={() => {}} onOpenVault={onOpenVault} />,
     );
 
-    // Type a bare owner/repo and submit → enters browse mode.
     const input = screen.getByPlaceholderText(/owner\/repo/i);
     fireEvent.change(input, { target: { value: "octocat/hello" } });
-    fireEvent.keyDown(input, { key: "Enter" });
-
-    // The action surfaces once the (mocked) directory listing resolves.
-    const vaultBtn = await screen.findByText("Open as vault");
-    fireEvent.click(vaultBtn);
+    fireEvent.click(screen.getByText("Open as vault"));
 
     await waitFor(() => expect(onOpenVault).toHaveBeenCalledTimes(1));
     // ref + token are absent for a bare owner/repo and a signed-out session.
@@ -62,5 +66,18 @@ describe("GitHubOpenDialog — open repo as vault", () => {
       "/Users/test/Library/Caches/markup/github/octocat/main/hello",
     );
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Enter on a repo URL opens it as a vault directly (no extra browse step)", async () => {
+    const onOpenVault = vi.fn();
+    render(
+      <GitHubOpenDialog onClose={() => {}} onOpen={() => {}} onOpenVault={onOpenVault} />,
+    );
+
+    const input = screen.getByPlaceholderText(/owner\/repo/i);
+    fireEvent.change(input, { target: { value: "octocat/hello" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => expect(onOpenVault).toHaveBeenCalledTimes(1));
   });
 });

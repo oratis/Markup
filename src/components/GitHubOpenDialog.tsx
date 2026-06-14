@@ -104,6 +104,21 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
     loadGitHubToken().then(() => setSignedIn(isGitHubSignedIn()));
   }, []);
 
+  // Esc closes the dialog (cancelling an in-flight sign-in poll first).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (signInCode) {
+        signInAbort.current?.abort();
+        setSignInCode(null);
+      } else {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [signInCode, onClose]);
+
   async function signIn() {
     setError(null);
     try {
@@ -227,6 +242,10 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
   }
 
   const haveToken = getGitHubToken() !== null;
+  // A bare repo root in the URL bar → offer "Open as vault" as the primary
+  // action (the headline use), with "Browse" as the secondary.
+  const parsedUrl = url.trim() ? parseGitHubLink(url) : null;
+  const urlIsRepoRoot = !!parsedUrl && parsedUrl.isDirectory && parsedUrl.path === "";
 
   return (
     <div
@@ -310,7 +329,11 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !loading) submit();
+              if (e.key !== "Enter" || loading) return;
+              // Enter triggers the primary action: open-as-vault for a repo
+              // root, else browse/open the file.
+              if (urlIsRepoRoot && parsedUrl) openAsVault(parsedUrl);
+              else submit();
             }}
             placeholder="owner/repo  or  github.com/owner/repo/blob/main/README.md"
             className="w-full px-2 py-1.5 rounded border border-black/10 dark:border-white/20 bg-transparent outline-none focus:border-blue-500 text-[13px]"
@@ -331,14 +354,28 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
                 <div className="px-3 py-4 text-[12px] opacity-60">No repositories.</div>
               )}
               {repos.map((r) => (
-                <button
+                <div
                   key={r.fullName}
-                  onClick={() => enterDir(repoLink(r), true)}
-                  className="w-full text-left px-3 py-1.5 text-[13px] flex items-center gap-2 hover:bg-black/5 dark:hover:bg-white/10 border-b border-black/5 dark:border-white/10 last:border-0"
+                  className="w-full flex items-center text-[13px] hover:bg-black/5 dark:hover:bg-white/10 border-b border-black/5 dark:border-white/10 last:border-0"
                 >
-                  <span className="opacity-60">{r.isPrivate ? "🔒" : "📦"}</span>
-                  <span className="flex-1 truncate">{r.fullName}</span>
-                </button>
+                  <button
+                    onClick={() => openAsVault(repoLink(r))}
+                    disabled={loading}
+                    title="Download the whole repo and open it as a vault"
+                    className="flex-1 min-w-0 text-left px-3 py-1.5 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <span className="opacity-60">{r.isPrivate ? "🔒" : "📦"}</span>
+                    <span className="flex-1 truncate">{r.fullName}</span>
+                  </button>
+                  <button
+                    onClick={() => enterDir(repoLink(r), true)}
+                    disabled={loading}
+                    title="Browse files in this repo"
+                    className="px-3 py-1.5 text-[12px] opacity-55 hover:opacity-100 disabled:opacity-40 shrink-0"
+                  >
+                    Browse ›
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -376,13 +413,26 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
           >
             {browsing ? "Done" : "Cancel"}
           </button>
+          {!browsing && !signInCode && urlIsRepoRoot && (
+            <button
+              onClick={() => parsedUrl && openAsVault(parsedUrl)}
+              disabled={loading}
+              className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+            >
+              {loading ? "Opening…" : "Open as vault"}
+            </button>
+          )}
           {!browsing && !signInCode && (
             <button
               onClick={submit}
               disabled={loading || url.trim() === ""}
-              className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+              className={
+                urlIsRepoRoot
+                  ? "px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
+                  : "px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+              }
             >
-              {loading ? "Opening…" : "Open"}
+              {loading ? "Opening…" : urlIsRepoRoot ? "Browse" : "Open"}
             </button>
           )}
         </div>
