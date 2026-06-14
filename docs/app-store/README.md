@@ -5,6 +5,11 @@ Store**. The engineering is done on both platforms; what remains is account
 setup, listing assets, and the submit flow. These docs cover the parts that live
 in the repo; the account-gated steps are called out as "you".
 
+> **1.0 launch (2026-06):** ship **1.0.0** to both stores **in parallel** — see
+> [ADR-004](../decisions/ADR-004-app-store-1.0.md) (supersedes ADR-003's MAS
+> deferral). Versions are bumped in-repo. **Start here:**
+> [launch-1.0-checklist.md](./launch-1.0-checklist.md).
+
 ## Status at a glance
 
 | | iOS App Store | Mac App Store |
@@ -16,6 +21,7 @@ in the repo; the account-gated steps are called out as "you".
 
 ## Documents
 
+- **[launch-1.0-checklist.md](./launch-1.0-checklist.md)** — ⭐ the actionable 1.0 launch checklist for both stores (start here).
 - **[ios-submission.md](./ios-submission.md)** — iOS App Store runbook (TestFlight → App Store).
 - **[MAS-publishing-plan.md](./MAS-publishing-plan.md)** — Mac App Store plan (sandbox, certs, build flavor, review gotchas, phased plan).
 - **[signing-setup.md](./signing-setup.md)** — Developer ID signing for the **direct-download** macOS DMG (separate from MAS).
