@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   getGitHubToken,
   githubAuthHeaders,
@@ -83,6 +83,8 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
   const [entries, setEntries] = useState<GitHubEntry[]>([]);
   // Free-text filter over "Your repositories" (shown once the list is long).
   const [repoFilter, setRepoFilter] = useState("");
+  // When browsing, hide non-text files (a code repo is mostly noise here).
+  const [mdOnly, setMdOnly] = useState(false);
 
   // Auth + repos list.
   const [signedIn, setSignedIn] = useState(isGitHubSignedIn());
@@ -275,6 +277,16 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
     if (next.length > 0) enterDir(next[next.length - 1], false);
   }
 
+  // Jump to a breadcrumb level (0 = repo root) — truncate the stack and reload.
+  function jumpTo(index: number) {
+    if (index >= stack.length - 1) return; // already here
+    const target = stack[index];
+    setStack(stack.slice(0, index + 1));
+    enterDir(target, false);
+  }
+
+  const isTextFile = (name: string) => /\.(md|markdown|mdx|mkd|txt)$/i.test(name);
+
   const haveToken = getGitHubToken() !== null;
   // A bare repo root in the URL bar → offer "Open as vault" as the primary
   // action (the headline use), with "Browse" as the secondary.
@@ -304,9 +316,31 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
               ‹
             </button>
           )}
-          <span className="flex-1">
-            {browsing ? `${current.repo}/${current.path}` : "Open from GitHub"}
-          </span>
+          {browsing ? (
+            <span className="flex-1 flex items-center gap-0.5 min-w-0 overflow-hidden text-[13px]">
+              {stack.map((lnk, i) => {
+                const isLast = i === stack.length - 1;
+                const label = i === 0 ? lnk.repo : lnk.path.split("/").pop() || lnk.repo;
+                return (
+                  <Fragment key={`${lnk.path}#${i}`}>
+                    {i > 0 && <span className="opacity-40 shrink-0">/</span>}
+                    {isLast ? (
+                      <span className="font-semibold truncate">{label}</span>
+                    ) : (
+                      <button
+                        onClick={() => jumpTo(i)}
+                        className="opacity-70 hover:opacity-100 hover:underline truncate shrink-0"
+                      >
+                        {label}
+                      </button>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </span>
+          ) : (
+            <span className="flex-1">Open from GitHub</span>
+          )}
           {browsing && (
             <button
               onClick={() => openAsVault(current)}
@@ -433,27 +467,45 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
           </div>
         )}
 
-        {browsing && (
-          <div className="max-h-[320px] overflow-auto rounded border border-black/10 dark:border-white/15">
-            {entries.length === 0 && !loading && (
-              <div className="px-3 py-4 text-[12px] opacity-60">Empty folder</div>
-            )}
-            {entries.map((e) => (
-              <button
-                key={e.path}
-                onClick={() =>
-                  e.isDir
-                    ? enterDir(childLink(current, e), true)
-                    : openFile(childLink(current, e))
-                }
-                className="w-full text-left px-3 py-1.5 text-[13px] flex items-center gap-2 hover:bg-black/5 dark:hover:bg-white/10 border-b border-black/5 dark:border-white/10 last:border-0"
-              >
-                <span className="opacity-60">{e.isDir ? "📁" : "📄"}</span>
-                {e.name}
-              </button>
-            ))}
-          </div>
-        )}
+        {browsing &&
+          (() => {
+            const visibleEntries = mdOnly
+              ? entries.filter((e) => e.isDir || isTextFile(e.name))
+              : entries;
+            return (
+              <>
+                <label className="mt-2 mb-1 flex items-center gap-1.5 text-[12px] opacity-70 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={mdOnly}
+                    onChange={(e) => setMdOnly(e.target.checked)}
+                  />
+                  Markdown only
+                </label>
+                <div className="max-h-[320px] overflow-auto rounded border border-black/10 dark:border-white/15">
+                  {visibleEntries.length === 0 && !loading && (
+                    <div className="px-3 py-4 text-[12px] opacity-60">
+                      {entries.length === 0 ? "Empty folder" : "No Markdown files here"}
+                    </div>
+                  )}
+                  {visibleEntries.map((e) => (
+                    <button
+                      key={e.path}
+                      onClick={() =>
+                        e.isDir
+                          ? enterDir(childLink(current, e), true)
+                          : openFile(childLink(current, e))
+                      }
+                      className="w-full text-left px-3 py-1.5 text-[13px] flex items-center gap-2 hover:bg-black/5 dark:hover:bg-white/10 border-b border-black/5 dark:border-white/10 last:border-0"
+                    >
+                      <span className="opacity-60">{e.isDir ? "📁" : "📄"}</span>
+                      {e.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
 
         {vaultStatus && <div className="mt-2 text-[12px] opacity-70">{vaultStatus}</div>}
         {error && (
