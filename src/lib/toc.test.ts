@@ -1,6 +1,40 @@
 import { describe, expect, it } from "vitest";
 import type { Heading } from "./headings";
-import { buildToc, ghSlug } from "./toc";
+import { buildToc, ghSlug, headingForAnchor } from "./toc";
+
+const Hd = (level: number, text: string, line: number): Heading => ({
+  level,
+  text,
+  line,
+});
+
+describe("headingForAnchor", () => {
+  const headings = [
+    Hd(1, "Overview", 0),
+    Hd(2, "Design decisions", 4),
+    Hd(2, "Design decisions", 9), // duplicate → second gets -1
+    Hd(2, "中文 标题", 14),
+  ];
+
+  it("matches a heading by its GitHub-style slug", () => {
+    expect(headingForAnchor(headings, "design-decisions")?.line).toBe(4);
+    expect(headingForAnchor(headings, "overview")?.level).toBe(1);
+  });
+
+  it("resolves duplicate-slug -N suffixes", () => {
+    expect(headingForAnchor(headings, "design-decisions-1")?.line).toBe(9);
+  });
+
+  it("matches non-ASCII slugs and is case-insensitive", () => {
+    expect(headingForAnchor(headings, "中文-标题")?.line).toBe(14);
+    expect(headingForAnchor(headings, "OVERVIEW")?.line).toBe(0);
+  });
+
+  it("returns null for an unknown or empty fragment", () => {
+    expect(headingForAnchor(headings, "nope")).toBeNull();
+    expect(headingForAnchor(headings, "")).toBeNull();
+  });
+});
 
 describe("ghSlug", () => {
   it("lowercases", () => {

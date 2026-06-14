@@ -3,12 +3,14 @@ import { type RefObject, useCallback, useEffect } from "react";
 import { showToast } from "../components/Toast";
 import { splitEmbedTarget } from "../lib/embed-slice";
 import { wikilinkAtCursor } from "../lib/follow-wikilink";
-import { headingLineIndex, jumpToSourceLine } from "../lib/headings";
+import { headingLineIndex, jumpToSourceLine, parseHeadings } from "../lib/headings";
 import { installHoverPreview } from "../lib/hover-preview";
 import type { useT } from "../lib/i18n";
 import { subscribe as subscribeIndex } from "../lib/link-index-store";
 import { isExternalHref, resolveDocHref } from "../lib/relative-link";
+import { scrollToHeading } from "../lib/scroll-to-heading";
 import { readFile } from "../lib/tauri";
+import { headingForAnchor } from "../lib/toc";
 import type { LoadedFile } from "../lib/types";
 import { findVaultFile, wikilinkAtClick } from "../lib/wikilink";
 import { getActiveTab, useAppStore, type VaultFile } from "../store";
@@ -268,9 +270,22 @@ export function useEditorInteractions({
         return;
       }
       const current = getActiveTab(useAppStore.getState());
-      if (!current?.path) return;
+      if (!current) return;
+      // In-page `#heading` anchor (e.g. an inserted TOC link) — scroll to the
+      // matching heading in the current doc rather than letting the webview
+      // navigate (Milkdown headings carry no id, so the default does nothing).
+      if (href.startsWith("#")) {
+        const frag = decodeURIComponent(href.slice(1));
+        const h = headingForAnchor(parseHeadings(current.content), frag);
+        if (!h) return;
+        e.preventDefault();
+        e.stopPropagation();
+        scrollToHeading(h.text, h.level, h.line);
+        return;
+      }
+      if (!current.path) return;
       const resolved = resolveDocHref(href, current.path);
-      if (!resolved) return; // in-page anchor / asset / unknown — leave default
+      if (!resolved) return; // asset / unknown — leave default
       e.preventDefault();
       e.stopPropagation();
       const hit = useAppStore.getState().vaultFiles.find((f) => f.path === resolved.path);
