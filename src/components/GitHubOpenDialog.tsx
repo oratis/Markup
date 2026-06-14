@@ -41,11 +41,27 @@ const RAW_HEADERS = {
   "X-GitHub-Api-Version": "2022-11-28",
 };
 
-function httpError(status: number): string {
-  if (status === 404) return "Not found (or the repo is private).";
-  if (status === 401) return "Sign-in expired — please sign in again.";
-  if (status === 403) return "GitHub rate limit reached.";
-  return `GitHub request failed (HTTP ${status}).`;
+/** Map an HTTP status to a message and whether signing in would likely help
+ *  (so the dialog can offer a "Sign in" shortcut). `signedIn` tailors the copy:
+ *  a signed-out 404 is probably a private repo; a 403 is probably a rate limit. */
+function classifyHttp(
+  status: number,
+  signedIn: boolean,
+): { message: string; authHint: boolean } {
+  if (status === 404) {
+    return signedIn
+      ? { message: "Not found.", authHint: false }
+      : { message: "Not found — if it's a private repo, sign in first.", authHint: true };
+  }
+  if (status === 401) {
+    return { message: "Sign-in expired — please sign in again.", authHint: true };
+  }
+  if (status === 403) {
+    return signedIn
+      ? { message: "GitHub rate limit reached.", authHint: false }
+      : { message: "GitHub rate limit reached — sign in to raise it.", authHint: true };
+  }
+  return { message: `GitHub request failed (HTTP ${status}).`, authHint: false };
 }
 
 /**
@@ -59,6 +75,9 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
   const [loading, setLoading] = useState(false);
   const [vaultStatus, setVaultStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // True when the current error is likely fixable by signing in (private repo /
+  // rate limit while signed out) — drives an inline "Sign in" shortcut.
+  const [authHint, setAuthHint] = useState(false);
   // Browse stack: empty = the URL input; non-empty = browsing the last dir.
   const [stack, setStack] = useState<GitHubLink[]>([]);
   const [entries, setEntries] = useState<GitHubEntry[]>([]);
@@ -149,15 +168,28 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
     setRepos([]);
   }
 
+  /** Set the error + auth-hint from an HTTP status (signed-in-aware). */
+  function failWith(status: number) {
+    const c = classifyHttp(status, getGitHubToken() !== null);
+    setError(c.message);
+    setAuthHint(c.authHint);
+  }
+
+  /** Clear any prior error before starting a fetch. */
+  function clearError() {
+    setError(null);
+    setAuthHint(false);
+  }
+
   async function openFile(link: GitHubLink) {
     setLoading(true);
-    setError(null);
+    clearError();
     try {
       const res = await fetch(contentsApiUrl(link), {
         headers: { ...RAW_HEADERS, ...githubAuthHeaders() },
       });
       if (!res.ok) {
-        setError(httpError(res.status));
+        failWith(res.status);
         return;
       }
       onOpen(fileName(link), await res.text());
@@ -171,7 +203,7 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
 
   async function openAsVault(link: GitHubLink) {
     setLoading(true);
-    setError(null);
+    clearError();
     setVaultStatus("Preparing…");
     let unlisten: (() => void) | undefined;
     try {
@@ -207,13 +239,13 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
 
   async function enterDir(link: GitHubLink, push: boolean) {
     setLoading(true);
-    setError(null);
+    clearError();
     try {
       const res = await fetch(contentsApiUrl(link), {
         headers: { ...JSON_HEADERS, ...githubAuthHeaders() },
       });
       if (!res.ok) {
-        setError(httpError(res.status));
+        failWith(res.status);
         return;
       }
       setEntries(parseContents(await res.json()));
@@ -404,7 +436,20 @@ export function GitHubOpenDialog({ onClose, onOpen, onOpenVault }: Props) {
         )}
 
         {vaultStatus && <div className="mt-2 text-[12px] opacity-70">{vaultStatus}</div>}
-        {error && <div className="mt-2 text-[12px] text-red-500">{error}</div>}
+        {error && (
+          <div className="mt-2 text-[12px] text-red-500">
+            {error}
+            {authHint && !haveToken && (
+              <button
+                onClick={signIn}
+                disabled={signInCode !== null}
+                className="ml-2 underline text-blue-500 hover:text-blue-600 disabled:opacity-50"
+              >
+                Sign in
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mt-4 flex items-center justify-end gap-2 text-[12px]">
           <button
