@@ -143,15 +143,31 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onInRepoDoc = onInRepoDoc
         context.coordinator.onFinishLoad = onFinishLoad
         context.coordinator.loadedFilePath = fileURL?.standardizedFileURL.path
+        // In-memory HTML to fall back to if the file:// load fails or the file
+        // isn't on disk yet — so the reader never shows a blank/black page.
+        context.coordinator.fallbackHTML = html
+        context.coordinator.fallbackBaseURL = baseURL ?? fileURL?.deletingLastPathComponent()
         let key = (fileURL.map { "file:" + $0.path } ?? html) + "#\(loadToken)"
         if context.coordinator.lastHTML != key {
             context.coordinator.lastHTML = key
             context.coordinator.loaded = false
-            if let fileURL {
+            context.coordinator.didFallback = false
+            if let fileURL, FileManager.default.fileExists(atPath: fileURL.path) {
+                // On-disk doc (raw .html, or an app-owned vault's rendered
+                // sibling): a file load grants read access so relative
+                // images/CSS resolve against the working copy.
                 webView.loadFileURL(
                     fileURL, allowingReadAccessTo: readAccessURL ?? fileURL.deletingLastPathComponent())
-            } else {
-                webView.loadHTMLString(html, baseURL: baseURL)
+            } else if !html.isEmpty {
+                // No file on disk yet (an app-owned sibling is written just
+                // after first paint) — render the in-memory HTML now so the page
+                // is never blank; the post-write token bump reloads from the
+                // file for full fidelity (relative images).
+                webView.loadHTMLString(html, baseURL: baseURL ?? fileURL?.deletingLastPathComponent())
+            } else if let fileURL {
+                // Raw .html doc with no fallback string: load it directly.
+                webView.loadFileURL(
+                    fileURL, allowingReadAccessTo: readAccessURL ?? fileURL.deletingLastPathComponent())
             }
         }
 
@@ -182,6 +198,12 @@ struct ReaderWebView: UIViewRepresentable {
         /// document has finished loading (so a push has somewhere to land).
         var lastLive: String?
         var loaded = false
+        /// In-memory HTML + base to fall back to when a file:// load fails, so a
+        /// read-access/not-found error degrades to a readable page, not black.
+        /// `didFallback` guards against re-entering the fallback for one load.
+        var fallbackHTML = ""
+        var fallbackBaseURL: URL?
+        var didFallback = false
 
         init(onScroll: @escaping (Double) -> Void, onToggleTask: @escaping (Int) -> Void) {
             self.onScroll = onScroll
@@ -211,6 +233,21 @@ struct ReaderWebView: UIViewRepresentable {
             loaded = true
             if let md = lastLive { pushMarkdown(into: webView, md) }
             onFinishLoad()
+        }
+
+        // A document load failed (e.g. a file:// read-access denial, or the
+        // app-owned sibling wasn't on disk). Degrade to the in-memory HTML so the
+        // reader shows the document instead of a blank/black page. Deliberate
+        // cancels (in-repo link interception, external-link opens) are ignored.
+        func webView(
+            _ webView: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError error: Error
+        ) {
+            let ns = error as NSError
+            let cancelled = (ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled)
+                || (ns.domain == "WebKitErrorDomain" && ns.code == 102) // interrupted by policy
+            guard !cancelled, !fallbackHTML.isEmpty, !didFallback else { return }
+            didFallback = true
+            webView.loadHTMLString(fallbackHTML, baseURL: fallbackBaseURL)
         }
 
         func userContentController(
