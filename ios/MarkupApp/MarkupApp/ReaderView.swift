@@ -174,6 +174,7 @@ struct ReaderView: View {
                 // is (re)written on every render-input change via `.task(id:)`.
                 // We never write into user-picked folders.
                 ReaderWebView(
+                    html: html,
                     fileURL: renderedSiblingURL,
                     readAccessURL: vault.rootURL,
                     loadToken: htmlReloadToken,
