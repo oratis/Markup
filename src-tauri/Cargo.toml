@@ -63,7 +63,7 @@ zip = { version = "8", default-features = false, features = ["deflate-flate2-zli
 
 # B305: git blob SHA-1 of local files, to detect which differ from the
 # manifest (the same id GitHub reports per blob) for "propose changes".
-sha1 = "0.10"
+sha1 = "0.11"
 
 # Native "move to Trash" — replaces an osascript→Finder round-trip, so trashing
 # a file no longer needs an Automation-access prompt and there's no AppleScript
