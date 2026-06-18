@@ -623,6 +623,23 @@ div[class*="hover:bg-black/5"][class*="dark:hover:bg-white/10"]:hover {
 .milkdown .editor tr:hover td {
   background: var(--mk-bg-hover);
 }
+/* The imported Nord theme stripes table columns via `:where(td,th):nth-child(odd)`
+   and flips them (and row borders) to dark under the OS `prefers-color-scheme` —
+   which clashes when the app theme differs from the OS (e.g. a light document on
+   a dark Mac → an unreadable dark first column). Re-assert table backgrounds and
+   borders from OUR theme variables, with specificity (0,3,1) ≥ Nord's (0,3,0) so
+   tables follow the chosen app theme, not the OS. */
+.milkdown .editor :is(td, th):nth-child(odd),
+.milkdown .editor :is(td, th):nth-child(even) {
+  background-color: transparent;
+}
+.milkdown .editor th:nth-child(odd),
+.milkdown .editor th:nth-child(even) {
+  background-color: var(--mk-bg-elevated);
+}
+.milkdown .editor table tr {
+  border-color: var(--mk-border);
+}
 
 /* Lists */
 .milkdown .editor ul,
