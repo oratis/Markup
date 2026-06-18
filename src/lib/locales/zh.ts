@@ -32,6 +32,11 @@ export const zh: Strings = {
 
   // dialogs
   "settings.title": "设置",
+  "settings.close": "关闭",
+  "settings.catAppearance": "外观",
+  "settings.catEditor": "编辑器",
+  "settings.catFiles": "文件",
+  "settings.catAdvanced": "高级",
   "settings.fontSize": "字体大小",
   "settings.proseWidth": "正文宽度",
   "settings.autosaveDelay": "自动保存延迟",

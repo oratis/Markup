@@ -76,17 +76,18 @@ export function ShortcutsEditor() {
   }
 
   return (
-    <div className="border-t border-black/5 dark:border-white/10 pt-4 mt-4">
-      <div className="text-[12px] font-medium mb-1">{t("settings.shortcuts")}</div>
-      <div className="text-[10px] opacity-60 mb-2">{t("settings.shortcutsHint")}</div>
+    <div>
+      <div className="mk-settings-desc text-[11px] mb-2">
+        {t("settings.shortcutsHint")}
+      </div>
       <input
         type="text"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder={t("settings.shortcutsFilter")}
-        className="w-full text-[12px] px-2 py-1 mb-2 rounded border border-black/10 dark:border-white/15 bg-transparent outline-none focus:border-blue-500"
+        className="mk-settings-input w-full text-[12px] px-2 py-1 mb-2"
       />
-      <div className="space-y-0.5 max-h-[260px] overflow-auto no-scrollbar text-[12px]">
+      <div className="space-y-0.5 max-h-[340px] overflow-auto no-scrollbar text-[12px]">
         {visibleIds.length === 0 && (
           <div className="text-[11px] opacity-50 py-1">
             {t("settings.shortcutsNoMatch")}
@@ -141,8 +142,9 @@ export function ShortcutsEditor() {
         })}
       </div>
       <button
+        type="button"
         onClick={resetAll}
-        className="mt-2 text-[11px] opacity-70 hover:opacity-100 underline"
+        className="mk-settings-desc mt-3 text-[11px] hover:underline"
       >
         {t("settings.shortcutsReset")}
       </button>

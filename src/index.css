@@ -1110,3 +1110,141 @@ div.flex.items-stretch.border-b > .titlebar-no-drag.relative:hover {
 .mk-pager-arrow {
   opacity: 0.6;
 }
+
+/* ============================================================
+   Settings dialog — tabbed / sidebar layout
+   Surface, category nav, setting rows, controls, and the toggle
+   switch, all wired to --mk-* tokens so the panel tracks the
+   light / dark / sepia themes (not the Tailwind `dark:` class,
+   which never fires under `html.theme-sepia`).
+   ============================================================ */
+.mk-settings {
+  background: var(--mk-bg-app);
+  border: 1px solid var(--mk-border-strong);
+  box-shadow: var(--mk-shadow);
+  color: var(--mk-fg-default);
+}
+
+.mk-settings-header {
+  background: var(--mk-bg-sidebar);
+  border-bottom: 1px solid var(--mk-border);
+}
+.mk-settings-title {
+  color: var(--mk-fg-strong);
+  letter-spacing: -0.01em;
+}
+
+/* Category nav (left rail) */
+.mk-settings-nav {
+  background: var(--mk-bg-sidebar);
+  border-right: 1px solid var(--mk-border);
+}
+.mk-settings-navbtn {
+  background: transparent;
+  border: 0;
+  color: var(--mk-fg-muted);
+  cursor: pointer;
+  transition:
+    background 80ms,
+    color 80ms;
+}
+.mk-settings-navbtn:hover {
+  background: var(--mk-bg-hover);
+  color: var(--mk-fg-default);
+}
+.mk-settings-navbtn.is-active {
+  background: var(--mk-bg-selected);
+  color: var(--mk-fg-strong);
+  font-weight: 500;
+}
+
+/* Setting rows — hairline divider, last row flush */
+.mk-settings-row {
+  border-bottom: 1px solid var(--mk-border);
+}
+.mk-settings-row:last-child {
+  border-bottom: 0;
+}
+.mk-settings-label {
+  color: var(--mk-fg-strong);
+}
+.mk-settings-desc {
+  color: var(--mk-fg-muted);
+}
+
+/* Text / select / textarea controls */
+.mk-settings-input,
+.mk-settings-select,
+.mk-settings-textarea {
+  background: transparent;
+  border: 1px solid var(--mk-border-strong);
+  border-radius: 6px;
+  color: var(--mk-fg-default);
+  outline: none;
+  transition:
+    border-color 100ms,
+    box-shadow 100ms;
+}
+.mk-settings-input:focus,
+.mk-settings-select:focus,
+.mk-settings-textarea:focus {
+  border-color: var(--mk-accent);
+  box-shadow: 0 0 0 3px var(--mk-accent-soft);
+}
+.mk-settings input[type="range"] {
+  accent-color: var(--mk-accent);
+}
+
+/* Footer */
+.mk-settings-footer {
+  background: var(--mk-bg-sidebar);
+  border-top: 1px solid var(--mk-border);
+}
+.mk-settings-done {
+  background: var(--mk-accent);
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  transition: filter 100ms;
+}
+.mk-settings-done:hover {
+  filter: brightness(1.08);
+}
+.mk-settings-done:focus-visible {
+  outline: 2px solid var(--mk-accent);
+  outline-offset: 2px;
+}
+
+/* Toggle switch (replaces the old checkbox + "On/Off" label) */
+.mk-toggle {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mk-border-strong);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.mk-toggle.is-on {
+  background: var(--mk-accent);
+}
+.mk-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 120ms ease;
+}
+.mk-toggle.is-on .mk-toggle-thumb {
+  transform: translateX(14px);
+}
+.mk-toggle:focus-visible {
+  outline: 2px solid var(--mk-accent);
+  outline-offset: 2px;
+}
