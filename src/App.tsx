@@ -69,7 +69,7 @@ import {
 import { formatTable, toggleTaskCheckboxOnLine } from "./lib/cm-table-format";
 import { collapseBlankLines } from "./lib/collapse-blanks";
 import { sliceEmbed, splitEmbedTarget } from "./lib/embed-slice";
-import { exportHtml, exportPdfViaPrint } from "./lib/export";
+import { exportPdfViaPrint } from "./lib/export";
 import { installFocusTypewriter } from "./lib/focus-typewriter";
 import { wikilinkAtCursor } from "./lib/follow-wikilink";
 import {
@@ -131,6 +131,7 @@ import {
   refreshGitHubVault,
   openNewWindow,
   openVault,
+  pickHtmlSavePath,
   pickSavePath,
   pickVault,
   pushRecentFileNative,
@@ -1215,19 +1216,38 @@ export function App() {
   }, []);
 
   async function handleExportHtml() {
-    if (!tab) return;
-    const baseName = (tab.name || "Untitled").replace(/\.[^.]+$/, "");
+    // Read the live active tab from the store, not a captured render closure:
+    // the menu listener is registered once, so a closed-over `tab` would always
+    // be the first (welcome) document.
+    const state = useAppStore.getState();
+    const t = state.activeTabId
+      ? state.tabs.find((x) => x.id === state.activeTabId)
+      : null;
+    if (!t) return;
+    const baseName = (t.name || "Untitled").replace(/\.[^.]+$/, "");
     try {
-      await exportHtml(tab.content, baseName, exportTheme);
+      // Let the user pick where to save (instead of a silent Downloads dump).
+      const raw = await pickHtmlSavePath(`${baseName}.html`);
+      if (!raw) return; // cancelled
+      const target = /\.html?$/i.test(raw) ? raw : `${raw}.html`;
+      const html = await renderHtml(t.content, baseName, exportTheme);
+      await writeFile(target, html, null);
+      showToast(tr("toast.exportedHtml", target.split("/").pop() || target));
     } catch (e) {
       console.error("exportHtml failed", e);
+      setActiveStatus("error", String(e));
     }
   }
   async function handleExportPdf() {
-    if (!tab) return;
-    const title = tab.name || "Untitled";
+    // Same stale-closure fix as handleExportHtml — read the live active tab.
+    const state = useAppStore.getState();
+    const t = state.activeTabId
+      ? state.tabs.find((x) => x.id === state.activeTabId)
+      : null;
+    if (!t) return;
+    const title = t.name || "Untitled";
     try {
-      await exportPdfViaPrint(tab.content, title, exportTheme);
+      await exportPdfViaPrint(t.content, title, exportTheme);
     } catch (e) {
       console.error("exportPdf failed", e);
     }

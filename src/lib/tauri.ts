@@ -24,6 +24,18 @@ export async function pickSavePath(defaultName: string): Promise<string | null> 
   return path ?? null;
 }
 
+/** Save dialog for an exported HTML file (filters to .html). Authorizes the
+ * chosen path for writing, like pickSavePath. */
+export async function pickHtmlSavePath(defaultName: string): Promise<string | null> {
+  const path = await saveDialog({
+    title: "Export as HTML",
+    defaultPath: defaultName,
+    filters: [{ name: "HTML", extensions: ["html", "htm"] }],
+  });
+  if (path) await authorizePaths([path]);
+  return path ?? null;
+}
+
 export async function openFileDialog(): Promise<LoadedFile | null> {
   return await invoke<LoadedFile | null>("open_file");
 }

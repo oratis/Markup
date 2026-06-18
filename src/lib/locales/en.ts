@@ -73,6 +73,12 @@ export const en = {
   "about.tagline": "High-performance Markdown editor for macOS",
   "about.version": "Version",
   "about.close": "Close",
+  "about.checkUpdates": "Check for Updates",
+  "about.checking": "Checking…",
+  "about.upToDate": "You're on the latest version",
+  "about.updateAvailable": "Get {0}",
+  "about.checkFailed": "Couldn't check for updates",
+  "about.changelog": "Changelog",
 
   // command palette / quick open
   "palette.placeholder": "Run a command…",
@@ -117,6 +123,7 @@ export const en = {
   "toast.githubUpdated": "GitHub vault updated ({0})",
   "toast.githubUpToDate": "Already up to date",
   "toast.githubPullFailed": "Couldn't pull from GitHub",
+  "toast.exportedHtml": "Exported {0}",
   "github.confirmPullDirty":
     "{0} file(s) have local changes since the last sync. Pulling from GitHub will overwrite them. Continue?",
   "toast.renameNoFile": "No file to rename",
