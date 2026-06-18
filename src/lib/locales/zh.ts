@@ -69,6 +69,12 @@ export const zh: Strings = {
   "about.tagline": "面向 macOS 的高性能 Markdown 编辑器",
   "about.version": "版本",
   "about.close": "关闭",
+  "about.checkUpdates": "检查更新",
+  "about.checking": "检查中…",
+  "about.upToDate": "已是最新版本",
+  "about.updateAvailable": "获取 {0}",
+  "about.checkFailed": "无法检查更新",
+  "about.changelog": "更新日志",
 
   // command palette / quick open
   "palette.placeholder": "运行命令…",

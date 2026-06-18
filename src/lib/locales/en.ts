@@ -68,6 +68,12 @@ export const en = {
   "about.tagline": "High-performance Markdown editor for macOS",
   "about.version": "Version",
   "about.close": "Close",
+  "about.checkUpdates": "Check for Updates",
+  "about.checking": "Checking…",
+  "about.upToDate": "You're on the latest version",
+  "about.updateAvailable": "Get {0}",
+  "about.checkFailed": "Couldn't check for updates",
+  "about.changelog": "Changelog",
 
   // command palette / quick open
   "palette.placeholder": "Run a command…",

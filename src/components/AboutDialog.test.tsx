@@ -1,10 +1,20 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as checkUpdate from "../lib/check-update";
 import * as tauri from "../lib/tauri";
 import { AboutDialog } from "./AboutDialog";
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+const release = (version: string) => ({
+  tagName: `v${version}`,
+  version,
+  htmlUrl: `https://github.com/oratis/Markup/releases/tag/v${version}`,
+  publishedAt: "2026-01-01T00:00:00Z",
+  name: null,
+  body: null,
 });
 
 describe("AboutDialog", () => {
@@ -33,5 +43,39 @@ describe("AboutDialog", () => {
     render(<AboutDialog onClose={onClose} />);
     fireEvent.click(screen.getByText(/^close$/i));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Check for Updates reports when you're on the latest version", async () => {
+    vi.spyOn(tauri, "getVersion").mockResolvedValue("1.0.0");
+    vi.spyOn(checkUpdate, "checkUpdateAgainstGithub").mockResolvedValue({
+      hasUpdate: false,
+      current: "1.0.0",
+      latest: release("1.0.0"),
+      dismissed: false,
+    });
+    render(<AboutDialog onClose={() => {}} />);
+    fireEvent.click(screen.getByText("Check for Updates"));
+    await waitFor(() =>
+      expect(screen.getByText("You're on the latest version")).toBeInTheDocument(),
+    );
+  });
+
+  it("Check for Updates surfaces a newer release as a Get button", async () => {
+    vi.spyOn(tauri, "getVersion").mockResolvedValue("1.0.0");
+    vi.spyOn(checkUpdate, "checkUpdateAgainstGithub").mockResolvedValue({
+      hasUpdate: true,
+      current: "1.0.0",
+      latest: release("1.1.0"),
+      dismissed: false,
+    });
+    render(<AboutDialog onClose={() => {}} />);
+    fireEvent.click(screen.getByText("Check for Updates"));
+    await waitFor(() => expect(screen.getByText("Get v1.1.0")).toBeInTheDocument());
+  });
+
+  it("always offers a Changelog link", () => {
+    vi.spyOn(tauri, "getVersion").mockResolvedValue("1.0.0");
+    render(<AboutDialog onClose={() => {}} />);
+    expect(screen.getByText("Changelog")).toBeInTheDocument();
   });
 });
