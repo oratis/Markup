@@ -54,7 +54,7 @@
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "katex": "^0.16.11",
-    "marked": "^16.4.2",
+    "marked": "^18.0.5",
     "mermaid": "^11.4.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
