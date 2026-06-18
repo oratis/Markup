@@ -30,6 +30,11 @@ export const en = {
 
   // dialogs
   "settings.title": "Settings",
+  "settings.close": "Close",
+  "settings.catAppearance": "Appearance",
+  "settings.catEditor": "Editor",
+  "settings.catFiles": "Files",
+  "settings.catAdvanced": "Advanced",
   "settings.fontSize": "Font size",
   "settings.proseWidth": "Prose width",
   "settings.autosaveDelay": "Autosave delay",
