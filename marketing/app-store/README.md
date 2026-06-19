@@ -17,7 +17,7 @@ for the full step-by-step (certs, ASC, submit).
 - **[screenshots/ios-6.9/](./screenshots/ios-6.9/)** — 5 ready-to-upload iPhone
   6.9″ marketing screenshots (1320×2868).
 - **[screenshots/README.md](./screenshots/README.md)** — caption map, sizes, and
-  what's still needed (iPad). Source captures: `../MarkupScreenshots/`.
+  caption maps + sizes. Source captures: `../MarkupScreenshots-{iphone,ipad,mac}/`.
 - Regenerate screenshots: `python3 marketing/scripts/make-screenshots.py`.
 
 ## iOS — status
@@ -29,7 +29,7 @@ for the full step-by-step (certs, ASC, submit).
 | Promo / keywords / description | ✅ in [listing.md](./listing.md) |
 | App Privacy label | ✅ "Data Not Collected" ([privacy-and-review.md](./privacy-and-review.md)) |
 | iPhone 6.9″ screenshots | ✅ 5 in [screenshots/ios-6.9/](./screenshots/ios-6.9/) |
-| **iPad 13″ screenshots** | ❌ still needed — the app is universal, so Apple requires them |
+| iPad 13″ screenshots | ✅ 5 in [screenshots/ipad-13/](./screenshots/ipad-13/) |
 | Submit for Review | 🔑 you, in App Store Connect |
 
 ## To finish iOS (in App Store Connect)
@@ -41,7 +41,8 @@ for the full step-by-step (certs, ASC, submit).
 6. **Submit for Review.**
 
 ## Mac
-Listing copy for the Mac app is in [listing.md](./listing.md) (§Mac). Mac
-screenshots aren't in this kit yet (the provided captures are iPhone) — capture
-macOS shots (editor, GitHub vault, search, themes) and they can be framed the
-same way via the generator script.
+Listing copy for the Mac app is in [listing.md](./listing.md) (§Mac); **5 Mac
+screenshots** are in [screenshots/mac/](./screenshots/mac/) (2880×1800). Create
+the Mac App Store record (see the launch checklist), paste the §Mac copy, upload
+these screenshots, and submit. (Optional: add a Mac "Open from GitHub" shot — the
+set is currently all local-folder docs.)
