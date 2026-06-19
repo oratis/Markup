@@ -22,6 +22,7 @@ in the repo; the account-gated steps are called out as "you".
 ## Documents
 
 - **[launch-1.0-checklist.md](./launch-1.0-checklist.md)** — ⭐ the actionable 1.0 launch checklist for both stores (start here).
+- **[HANDOFF.md](./HANDOFF.md)** — current-state snapshot + "resume here" for picking the launch back up.
 - **[ios-submission.md](./ios-submission.md)** — iOS App Store runbook (TestFlight → App Store).
 - **[MAS-publishing-plan.md](./MAS-publishing-plan.md)** — Mac App Store plan (sandbox, certs, build flavor, review gotchas, phased plan).
 - **[signing-setup.md](./signing-setup.md)** — Developer ID signing for the **direct-download** macOS DMG (separate from MAS).
