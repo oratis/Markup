@@ -26,8 +26,8 @@ in the repo; the account-gated steps are called out as "you".
 - **[ios-submission.md](./ios-submission.md)** — iOS App Store runbook (TestFlight → App Store).
 - **[MAS-publishing-plan.md](./MAS-publishing-plan.md)** — Mac App Store plan (sandbox, certs, build flavor, review gotchas, phased plan).
 - **[signing-setup.md](./signing-setup.md)** — Developer ID signing for the **direct-download** macOS DMG (separate from MAS).
-- **[listing-copy.md](./listing-copy.md)** — store text for both products (name, subtitle, keywords, description), EN + 中文.
-- **[privacy-label-and-review.md](./privacy-label-and-review.md)** — App Privacy questionnaire answers + App Review notes for both.
+- **[listing.md](../../marketing/app-store/listing.md)** — store text for both products (name, subtitle, keywords, description), EN + 中文. *(canonical; in `marketing/app-store/`)*
+- **[privacy-and-review.md](../../marketing/app-store/privacy-and-review.md)** — App Privacy questionnaire answers + App Review notes for both. *(canonical; in `marketing/app-store/`)*
 - **[reviewer-sample-vault/](./reviewer-sample-vault/)** — a tiny vault to hand reviewers so the BYO-folder app isn't seen as "empty".
 - Related: the iOS TestFlight build is the [`ship-ios-testflight`](../../.claude/skills/ship-ios-testflight/SKILL.md) skill; privacy policy is [`PRIVACY.md`](../../PRIVACY.md).
 

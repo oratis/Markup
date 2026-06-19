@@ -29,10 +29,10 @@ Binary pipeline already proven (EAS → App Store Connect). Remaining:
 2. ⏳ ~5–10 min ASC processing.
 3. 🔑 App Store Connect → Markup → **+ Version → 1.0.0**:
    - Attach build **100000**
-   - Paste metadata from [`listing-copy.md`](./listing-copy.md) — name, subtitle, keywords, description, promo text, support/marketing/privacy URLs, **category Productivity**, **age 4+**, copyright
-   - **App Privacy → "Data Not Collected"** (answers in [`privacy-label-and-review.md`](./privacy-label-and-review.md))
+   - Paste metadata from [`listing.md`](../../marketing/app-store/listing.md) — name, subtitle, keywords, description, promo text, support/marketing/privacy URLs, **category Productivity**, **age 4+**, copyright
+   - **App Privacy → "Data Not Collected"** (answers in [`privacy-and-review.md`](../../marketing/app-store/privacy-and-review.md))
    - Upload screenshots — iPhone 6.9″ (1320×2868) + 6.5″ (1242×2688) + iPad 13″ (2064×2752)
-   - **App Review notes** + sample-vault pointer ([`privacy-label-and-review.md`](./privacy-label-and-review.md))
+   - **App Review notes** + sample-vault pointer ([`privacy-and-review.md`](../../marketing/app-store/privacy-and-review.md))
 4. 🔑 **Submit for Review.**
 
 ---
@@ -52,7 +52,7 @@ Code is ready; this is new account/cert work.
    - `MAS_INSTALLER_IDENTITY` — e.g. `3rd Party Mac Developer Installer: Bihao Wang (9LH9NBX7P4)`
    - `MAS_PROVISION_PROFILE_BASE64` — base64 of the `.provisionprofile`
 5. 🤖 Produce the `.pkg`: push tag **`v1.0.0`** → CI `mas` job runs `scripts/build-mas.sh` → uploads `Markup.pkg` artifact (7-day retention). *I can create + push the tag once the secrets exist.* (Local alt: run `scripts/build-mas.sh` with the three `MAS_*` env vars.)
-6. 🔑 App Store Connect → **+ New App** (macOS) for `com.appkon.markup`: SKU, **Free**, metadata from [`listing-copy.md`](./listing-copy.md), **"Data Not Collected"**, screenshots (1280×800 or 2560×1600, ≥1).
+6. 🔑 App Store Connect → **+ New App** (macOS) for `com.appkon.markup`: SKU, **Free**, metadata from [`listing.md`](../../marketing/app-store/listing.md), **"Data Not Collected"**, screenshots (1280×800, 1440×900, 2560×1600, or 2880×1800 — the `mac/` set is 2880×1800; ≥1).
 7. 🔑 Upload `Markup.pkg` — **Transporter.app** (drag in) or
    `xcrun altool --upload-app -f Markup.pkg -t macos --apple-id wangharp@gmail.com --password <app-specific-password>`.
 8. 🔑 Attach build → **Submit for Review.**

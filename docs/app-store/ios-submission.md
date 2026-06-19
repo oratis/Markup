@@ -13,7 +13,7 @@ target iOS 17 · universal (iPhone + iPad).
 ## Already satisfied in the project (no work)
 
 - ✅ **App Privacy** is "Data Not Collected" (backed by `PrivacyInfo.xcprivacy`).
-  Fill the questionnaire per [`privacy-label-and-review.md`](./privacy-label-and-review.md).
+  Fill the questionnaire per [`privacy-and-review.md`](../../marketing/app-store/privacy-and-review.md).
 - ✅ **Export compliance**: `ITSAppUsesNonExemptEncryption=NO` is set, so uploads
   don't prompt.
 - ✅ **App icon**: a 1024×1024 marketing icon is present (single-size app icons
@@ -25,7 +25,7 @@ target iOS 17 · universal (iPhone + iPad).
 ## You provide (account-gated — I can't log in)
 
 1. **Apple Developer Program** active on `wangharp@gmail.com` (Team `9LH9NBX7P4`). ✅ already used for TestFlight.
-2. **Screenshots** (see [`listing-copy.md`](./listing-copy.md) for sizes): iPhone
+2. **Screenshots** (see [`screenshots/README.md`](../../marketing/app-store/screenshots/README.md) for sizes): iPhone
    6.9" + 6.5", and **iPad 13" (required — the app supports iPad)**.
 3. **Privacy Policy URL**: https://github.com/oratis/Markup/blob/main/PRIVACY.md
 4. (optional) Localized zh-Hans metadata for a China listing.
@@ -42,16 +42,16 @@ target iOS 17 · universal (iPhone + iPad).
 2. In **App Store Connect → Apps → Markup → (＋) macOS/iOS App → iOS App**, create
    a new **App Store version** (e.g. `1.0.0`).
 3. **Listing**: paste name/subtitle/keywords/description/promo from
-   [`listing-copy.md`](./listing-copy.md). Set **Category = Productivity**,
+   [`listing.md`](../../marketing/app-store/listing.md). Set **Category = Productivity**,
    **Price = Free**, **Support URL** + **Privacy Policy URL**.
 4. **Screenshots**: upload iPhone + iPad sets.
 5. **Build**: attach the processed TestFlight build to this version.
 6. **App Privacy**: complete as "Data Not Collected"
-   ([`privacy-label-and-review.md`](./privacy-label-and-review.md)).
+   ([`privacy-and-review.md`](../../marketing/app-store/privacy-and-review.md)).
 7. **Age rating**: answer the questionnaire → 4+.
 8. **App Review Information**: paste the review notes (incl. the sample-vault
    pointer + "GitHub sign-in is optional") from
-   [`privacy-label-and-review.md`](./privacy-label-and-review.md).
+   [`privacy-and-review.md`](../../marketing/app-store/privacy-and-review.md).
 9. **Submit for Review.** First reviews are typically ~24–48h.
 
 ## Versioning note
