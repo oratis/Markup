@@ -62,10 +62,15 @@ cp "$MAS_PROFILE" "$APP/Contents/embedded.provisionprofile"
 
 echo "==> 3/5 Signing nested code, then the app (Apple Distribution + sandbox entitlements)"
 # Sign inner binaries/frameworks first (inside-out), then the bundle.
-find "$APP/Contents/Frameworks" -type f \( -name "*.dylib" -o -perm -111 \) 2>/dev/null | while read -r f; do
-  codesign --force --timestamp --options runtime \
-    --sign "$MAS_APP_IDENTITY" "$f" || true
-done
+# Tauri's bundle has no Contents/Frameworks when tauri.conf.json sets
+# "frameworks": [] — guard the find so a missing dir doesn't trip
+# `set -o pipefail` (find exits non-zero on a nonexistent path).
+if [ -d "$APP/Contents/Frameworks" ]; then
+  find "$APP/Contents/Frameworks" -type f \( -name "*.dylib" -o -perm -111 \) 2>/dev/null | while read -r f; do
+    codesign --force --timestamp --options runtime \
+      --sign "$MAS_APP_IDENTITY" "$f" || true
+  done
+fi
 codesign --force --timestamp \
   --entitlements "$ENTITLEMENTS" \
   --sign "$MAS_APP_IDENTITY" \
