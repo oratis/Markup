@@ -44,14 +44,21 @@ if [ ! -f "$MAS_PROFILE" ]; then
   exit 1
 fi
 
-APP="src-tauri/target/release/bundle/macos/Markup.app"
+# Universal (arm64 + x86_64). MAS requires Intel support unless the deployment
+# target is macOS 12+ (ours is 10.15), so `tauri --target universal-apple-darwin`
+# lipos both arches into one bundle; output lands under target/universal-apple-darwin/.
+APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/Markup.app"
 ENTITLEMENTS="src-tauri/Entitlements.mas.plist"
-PKG="src-tauri/target/release/bundle/macos/Markup.pkg"
+PKG="src-tauri/target/universal-apple-darwin/release/bundle/macos/Markup.pkg"
 
-echo "==> 1/5 Building sandboxed app (VITE_MARKUP_MAS=1, MAS entitlements)"
+echo "==> 1/5 Building sandboxed universal app (VITE_MARKUP_MAS=1, MAS entitlements)"
+# Both arches must be present for the universal build — no-op if already added;
+# works locally and on CI (rustup manages the toolchain in both).
+rustup target add aarch64-apple-darwin x86_64-apple-darwin >/dev/null 2>&1 || true
 # --bundles app: we package the .pkg ourselves after signing.
 # --config layers the MAS entitlements over tauri.conf.json.
 VITE_MARKUP_MAS=1 pnpm tauri build \
+  --target universal-apple-darwin \
   --bundles app \
   --config src-tauri/tauri.mas.conf.json
 
@@ -60,12 +67,22 @@ VITE_MARKUP_MAS=1 pnpm tauri build \
 echo "==> 2/5 Embedding provisioning profile"
 cp "$MAS_PROFILE" "$APP/Contents/embedded.provisionprofile"
 
+# Strip extended attributes before signing: a browser-downloaded provisioning
+# profile carries com.apple.quarantine, and the App Store rejects any file with
+# it (error 91109). Clearing here keeps the bundle clean for the signature/pkg.
+xattr -cr "$APP"
+
 echo "==> 3/5 Signing nested code, then the app (Apple Distribution + sandbox entitlements)"
 # Sign inner binaries/frameworks first (inside-out), then the bundle.
-find "$APP/Contents/Frameworks" -type f \( -name "*.dylib" -o -perm -111 \) 2>/dev/null | while read -r f; do
-  codesign --force --timestamp --options runtime \
-    --sign "$MAS_APP_IDENTITY" "$f" || true
-done
+# Tauri's bundle has no Contents/Frameworks when tauri.conf.json sets
+# "frameworks": [] — guard the find so a missing dir doesn't trip
+# `set -o pipefail` (find exits non-zero on a nonexistent path).
+if [ -d "$APP/Contents/Frameworks" ]; then
+  find "$APP/Contents/Frameworks" -type f \( -name "*.dylib" -o -perm -111 \) 2>/dev/null | while read -r f; do
+    codesign --force --timestamp --options runtime \
+      --sign "$MAS_APP_IDENTITY" "$f" || true
+  done
+fi
 codesign --force --timestamp \
   --entitlements "$ENTITLEMENTS" \
   --sign "$MAS_APP_IDENTITY" \
