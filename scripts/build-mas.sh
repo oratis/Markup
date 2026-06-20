@@ -64,6 +64,20 @@ VITE_MARKUP_MAS=1 pnpm tauri build \
 
 [ -d "$APP" ] || { echo "::error:: $APP missing — build failed" >&2; exit 1; }
 
+# MAS-only Info.plist tweaks, applied before signing (codesign seals Info.plist):
+#  - ITSAppUsesNonExemptEncryption=false: Markup's only crypto is standard
+#    HTTPS/TLS (exempt), so declaring it lets the App Store auto-clear export
+#    compliance — no per-upload encryption prompt, no France docs. Matches iOS.
+#  - CFBundleVersion: set MAS_BUILD_NUMBER to bump the build number when
+#    re-uploading the same marketing version (the App Store needs a higher one).
+PLIST="$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null \
+  || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
+if [ -n "${MAS_BUILD_NUMBER:-}" ]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $MAS_BUILD_NUMBER" "$PLIST"
+  echo "    CFBundleVersion → $MAS_BUILD_NUMBER"
+fi
+
 echo "==> 2/5 Embedding provisioning profile"
 cp "$MAS_PROFILE" "$APP/Contents/embedded.provisionprofile"
 
