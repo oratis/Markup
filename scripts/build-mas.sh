@@ -67,6 +67,11 @@ VITE_MARKUP_MAS=1 pnpm tauri build \
 echo "==> 2/5 Embedding provisioning profile"
 cp "$MAS_PROFILE" "$APP/Contents/embedded.provisionprofile"
 
+# Strip extended attributes before signing: a browser-downloaded provisioning
+# profile carries com.apple.quarantine, and the App Store rejects any file with
+# it (error 91109). Clearing here keeps the bundle clean for the signature/pkg.
+xattr -cr "$APP"
+
 echo "==> 3/5 Signing nested code, then the app (Apple Distribution + sandbox entitlements)"
 # Sign inner binaries/frameworks first (inside-out), then the bundle.
 # Tauri's bundle has no Contents/Frameworks when tauri.conf.json sets
