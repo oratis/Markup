@@ -16,8 +16,8 @@
 3. **10K DAU 是更难的那个目标，而且今天根本无法测量**（卖点就是"无遥测"）。需要四件事同时成立：移动端放量、跨平台桌面、"原生读任意 GitHub 仓库文档"这个高频杀手场景、以及一套**不破坏隐私承诺的计数办法**。
 4. **三个必须下的注：** ① 把已就绪的发射**真正打完**（Phase 0，零新增工程，最高 ROI）；② **上 Windows/Linux**（TAM 总闸）；③ 把**"原生 GitHub 文档阅读器"做成病毒级 hero + 可测量的 DAU 引擎**。
 
-> **需要你拍板的一个分叉**（详见 §3 解锁二）：要 10K/10K，跨平台是**非选项**。
-> 若坚持 Apple-only，请把现实目标改写为 **~3–5K★ / ~3–5K DAU**——依然是很好的结果，但不是 10K。
+> **✅ 决策已定（2026-06-27）：全力跨平台。** 10K/10K 目标维持，排一个 Win/Linux hardening 里程碑（落到 §5 的 P1）。
+> （留档：若当时选 Apple-only，现实目标应改为 ~3–5K★ / ~3–5K DAU。）
 
 ---
 
@@ -101,12 +101,12 @@
 - 发射当天**在场 3–4 小时**逐条回帖（HN 的转化高度依赖 maker 在场）。
 - 这是 **Week 1** 的事，文案在 [LAUNCH-POSTS.md](./LAUNCH-POSTS.md) 已 paste-ready。
 
-### 解锁二 · 跨平台 Windows/Linux（TAM 总闸）⚠️ 需你拍板
+### 解锁二 · 跨平台 Windows/Linux（TAM 总闸）✅ 已拍板：做
 
 - **技术上几乎免费**：Tauri 天生跨平台，代码里已有 `cfg(not(target_os = "macos"))` 回退；现在 bundle targets 只配了 `["dmg","app"]`。
 - **为什么是 THE lever**：开发者星海在 Linux/Windows；§2a 每个 10K+ 竞品都全平台；"macOS only"四个字直接劝退一半 star 来源，并把 DAU 天花板焊死。
 - **成本/风险**（要排一个"跨平台 hardening"里程碑承接）：文件监听/路径差异、中文 IME 在 WebView2/WebKitGTK 的表现、各 OS 签名（Windows 代码签名证书、Linux AppImage/deb/flatpak）、渲染差异回归。
-- **决策**：要 10K/10K ⇒ 跨平台是非选项。坚持 Apple-only ⇒ 目标降为 3–5K★/3–5K DAU。
+- **决策（已定 2026-06-27）**：全力跨平台。下一步起一个 spike 分支在 Win/Linux runner 上 `pnpm tauri build`，验证 WebView2/WebKitGTK 渲染与中文 IME，产出"跨平台 hardening"待办并排进 P1。
 
 ### 解锁三 · 独占"原生 GitHub 文档阅读器"（病毒 + 高频 + 可测量）
 
