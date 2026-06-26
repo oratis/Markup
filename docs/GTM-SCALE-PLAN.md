@@ -177,7 +177,7 @@
 
 **悖论**：卖点是"无账号、无遥测、无追踪"。下面的解法**都不破坏这个承诺**：
 
-1. **自更新 ping 作为活跃装机代理（已经在跑！）**：v0.6.1 的 Tauri 签名 updater 每次都拉 `latest.json`。把这个 feed 经一个计数端点代理（或解析 GitHub release 资产的 CDN 日志）⇒ **匿名的活跃装机下界**。零新增追踪、零 PII。**这是最干净的 DAU 代理，建议第一周就上。**
+1. **自更新 ping 作为活跃装机代理 —— ✅ 已落地（零基础设施）**：updater endpoint 是 `releases/latest/download/latest.json`，**每次检查更新都会下载它，而 GitHub 本来就按资产记 `download_count`**。所以连计数端点都不用建——这个数字已经在被记录。已加 [`scripts/metrics-snapshot.sh`](../scripts/metrics-snapshot.sh) + 每日 [`metrics.yml`](../.github/workflows/metrics.yml)，把 stars / updater-ping / dmg 下载 逐日落到 `metrics-data` 分支；口径与方法见 [`docs/metrics/README.md`](./metrics/README.md)。**这是匿名的活跃装机下界，零新增追踪、零 PII。**（真·唯一日活需要在 feed 前加计数端点，属升级路径，需先定托管——见 metrics/README「Upgrade path」。）
 2. **App Store Connect 分析（免费、Apple 提供、无需 SDK）**：iOS+MAS 的 active devices / installs / 转化，开箱即用、不碰隐私。
 3. **web 渲染端点的服务器日志**（解锁三）：天然用量信号。
 4. **（可选）opt-in 聚合**：若要真·DAU，可加**单条匿名每日 ping（无 ID、仅国家级粒度）**，附**显眼的 opt-out** 和公开的隐私声明；或自托管 Plausible 式聚合。**要做就透明地做**，写进 PRIVACY.md。
@@ -203,7 +203,7 @@
 
 > 外向动作（开 awesome-list/AlternativeTo PR、发任何帖）**发射前需你点头**；下面标 🔵 的是需你确认/亲自做的对外动作，⚙️ 是可由 Claude 会话推进的内部工程/素材。
 
-1. ⚙️ **先上 updater-ping 计数**（或解析 release 资产 CDN 日志）—— 发射前先能看见装机数字。
+1. ✅ ⚙️ **updater-ping 计数已落地** —— `scripts/metrics-snapshot.sh` + 每日 `metrics.yml` → `metrics-data` 分支。当前基线：8★ / 7 updater-ping / 234 DMG 下载。
 2. 🔵 **发布视频上 YouTube**，链接回填 README + 各渠道文案。
 3. ⚙️ **冻结 main + 跑 5 分钟冒烟**（IME/打开 vault/导出 HTML/自更新）。
 4. 🔵 **软发射**：r/macapps、V2EX 分享创造、Tauri Discord、即刻 —— 收早期反馈并快速修。
