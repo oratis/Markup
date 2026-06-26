@@ -21,14 +21,16 @@ pub fn new_window(app: AppHandle) -> AppResult<()> {
         .title("Markup")
         .inner_size(1100.0, 720.0)
         .min_inner_size(640.0, 400.0)
-        .resizable(true)
-        .hidden_title(true);
+        .resizable(true);
 
-    // The transparent title bar is a macOS-only WebviewWindowBuilder method;
+    // Transparent title bar + hidden title text are macOS-only builder methods;
     // Windows/Linux use the default decorations. Matches the static window in
-    // tauri.conf.json, whose `titleBarStyle` is likewise ignored off macOS.
+    // tauri.conf.json, whose `titleBarStyle`/`hiddenTitle` are likewise ignored
+    // off macOS.
     #[cfg(target_os = "macos")]
-    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+    let builder = builder
+        .title_bar_style(tauri::TitleBarStyle::Transparent)
+        .hidden_title(true);
 
     builder
         .build()
