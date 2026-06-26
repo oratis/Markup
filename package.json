@@ -18,7 +18,8 @@
     "bench:spike03": "cd src-tauri && cargo test --release --test spike_03 -- --nocapture --ignored",
     "lint": "biome check src",
     "lint:fix": "biome check --write src",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "metrics": "bash scripts/metrics-snapshot.sh"
   },
   "dependencies": {
     "@codemirror/commands": "^6.7.1",

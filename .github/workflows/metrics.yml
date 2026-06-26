@@ -1,0 +1,56 @@
+name: Metrics
+
+# Daily privacy-preserving growth snapshot (docs/metrics/README.md).
+# Reads only what GitHub already exposes — stars, updater-ping (latest.json)
+# downloads, dmg downloads — and appends one row to snapshots.csv on the
+# dedicated `metrics-data` branch (kept off `main` so this auto-commit never
+# fights branch protection). No secrets; uses the built-in GITHUB_TOKEN.
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # 06:17 UTC daily
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: metrics
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    name: Daily snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Capture snapshot row
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: bash scripts/metrics-snapshot.sh > /tmp/row.csv
+
+      - name: Append to the metrics-data branch
+        run: |
+          set -euo pipefail
+          header="date,stars,forks,updater_pings,dmg_downloads,all_asset_downloads,latest_tag"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git fetch origin metrics-data 2>/dev/null; then
+            git checkout -B metrics-data origin/metrics-data
+          else
+            git checkout --orphan metrics-data
+            git rm -rf . >/dev/null 2>&1 || true
+            echo "$header" > snapshots.csv
+          fi
+
+          [ -f snapshots.csv ] || echo "$header" > snapshots.csv
+          cat /tmp/row.csv >> snapshots.csv
+
+          git add snapshots.csv
+          git commit -m "chore(metrics): snapshot $(date -u +%F)" || { echo "no change"; exit 0; }
+          git push origin metrics-data
