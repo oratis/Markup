@@ -17,13 +17,20 @@ pub fn new_window(app: AppHandle) -> AppResult<()> {
         .unwrap_or(0);
     let label = format!("w{}", suffix);
 
-    WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
+    let builder = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
         .title("Markup")
         .inner_size(1100.0, 720.0)
         .min_inner_size(640.0, 400.0)
         .resizable(true)
-        .title_bar_style(tauri::TitleBarStyle::Transparent)
-        .hidden_title(true)
+        .hidden_title(true);
+
+    // The transparent title bar is a macOS-only WebviewWindowBuilder method;
+    // Windows/Linux use the default decorations. Matches the static window in
+    // tauri.conf.json, whose `titleBarStyle` is likewise ignored off macOS.
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+
+    builder
         .build()
         .map_err(|e| AppError::Other(format!("create window: {e}")))?;
     Ok(())
