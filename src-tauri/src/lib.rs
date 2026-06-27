@@ -100,7 +100,12 @@ pub fn run() {
     // Markdown file passed on the second instance's argv.
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-        if let Some(win) = app.get_webview_window("main") {
+        // Focus the primary window, falling back to any open window — the user
+        // may have closed "main" while keeping a secondary window (w0/w1/…) open.
+        if let Some(win) = app
+            .get_webview_window("main")
+            .or_else(|| app.webview_windows().into_values().next())
+        {
             let _ = win.set_focus();
         }
         let paths = paths_from_argv(&argv);
