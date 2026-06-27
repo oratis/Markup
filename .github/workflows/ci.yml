@@ -173,3 +173,54 @@ jobs:
       - name: Cargo build --release (verifies the binary links)
         working-directory: src-tauri
         run: cargo build --release
+
+  cross-platform:
+    name: Cross-platform compile (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    # Guards the cfg(target_os) gating so a macOS-only change can't silently
+    # break the Windows/Linux build (GTM §9 "提前搭 CI 矩阵"). Compile + link
+    # only (--debug --no-bundle); real installers are the on-demand
+    # cross-platform-bundle workflow.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Linux WebKitGTK toolchain (Tauri v2 → webkit2gtk-4.1). Windows ships
+      # WebView2 with the runner image.
+      - name: Install Linux system deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libssl-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      - name: tauri build (compile + link only)
+        run: pnpm tauri build --debug --no-bundle
