@@ -1,0 +1,46 @@
+name: Deploy site (GitHub Pages)
+
+# Publishes the product landing page in site/ to GitHub Pages (GTM §7
+# "真正的产品站"). Manual on purpose: going live changes the public homepage,
+# which is the owner's call, and it also avoids a red run on main before Pages
+# is enabled.
+#
+# ONE-TIME owner setup before the first run:
+#   1. Repo → Settings → Pages → Build and deployment → Source: "GitHub Actions".
+#   2. Run this workflow (Actions tab → "Deploy site" → Run workflow).
+#   3. Point package.json `homepageUrl` / the repo "Website" at the Pages URL.
+# After that, switching to auto-deploy is one line — add a `push:` trigger
+# scoped to `paths: [site/**]`.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One concurrent deploy; don't cancel an in-progress publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/configure-pages@v5
+
+      - name: Upload site/ artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
