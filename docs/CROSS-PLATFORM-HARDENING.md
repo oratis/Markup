@@ -43,15 +43,22 @@ Ordered by user-visible impact.
 
 ### P2 — packaging & distribution (can't ship without)
 
-3. **Bundle targets are macOS-only.** `tauri.conf.json` → `bundle.targets` is
-   `["dmg","app"]`. Add per-platform targets: Linux `deb` + `appimage`
-   (+ optional `flatpak`), Windows `nsis` + optional `msi`. The spike used
-   `--no-bundle`, so packaging is **unverified** — expect AppImage FUSE / NSIS
-   quirks on first real bundle.
-4. **Code signing.** Windows needs a **code-signing certificate** (EV or OV) or
-   SmartScreen will warn on every download; Linux AppImage/flatpak signing is
-   lighter. Budget + procure the Windows cert (this is the real cost flagged in
-   GTM §3).
+3. **✅ Packaging works (unsigned, CI-verified).** The bundle spike
+   (`.github/workflows/cross-platform-bundle.yml`) produces real installers on
+   both platforms with `tauri build --bundles …` (no change to `tauri.conf.json`,
+   so the macOS release flow is untouched):
+   - Linux → `Markup_1.0.1_amd64.deb` + `Markup_1.0.1_amd64.AppImage`
+     (`libfuse2` needed on the runner for AppImage)
+   - Windows → `Markup_1.0.1_x64-setup.exe` (NSIS)
+
+   No bundler errors. **Remaining:** decide whether to bake these targets into
+   `tauri.conf.json` per-OS (vs CLI `--bundles`) and wire them into a real
+   release pipeline (today `release.yml` is macOS-only). `flatpak` / `msi` still
+   optional/unbuilt.
+4. **Code signing — owner's call.** The installers above are **unsigned**:
+   Windows needs a **code-signing certificate** (EV or OV) or SmartScreen warns
+   on every download; Linux AppImage/flatpak signing is lighter. Budget +
+   procure the Windows cert (the real cost flagged in GTM §3).
 5. **Updater per-platform.** The updater endpoint (`latest.json`) and signed
    artifacts are currently macOS-only. Extend the release pipeline
    (`.github/workflows/release.yml`) to build, sign, and publish Win/Linux
