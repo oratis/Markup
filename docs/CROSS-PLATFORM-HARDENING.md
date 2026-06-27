@@ -36,12 +36,16 @@ Ordered by user-visible impact.
    `PendingOpenFiles` / `"open-files"` path. Double-clicking a `.md` should focus
    the running window and open the file. **Still needs a manual runtime check on
    real Windows/Linux** (CI only proves it compiles).
-2. **✅ GitHub token credential store** — *done (resolution-verified).* `keyring`
-   is now declared per target: `apple-native` (macOS), `windows-native`
-   (Windows Credential Manager), `sync-secret-service` + `crypto-rust` (Linux
-   Secret Service via `dbus-secret-service`, pure-Rust crypto). ⚠️ Linux Secret
-   Service needs a running keyring daemon — **headless/server fallback still
-   undecided** (e.g. detect-and-warn, or an encrypted-file backend).
+2. **✅ GitHub token credential store + headless fallback** — *done.* `keyring`
+   is declared per target: `apple-native` (macOS), `windows-native` (Windows
+   Credential Manager), `sync-secret-service` + `crypto-rust` (Linux Secret
+   Service via `dbus-secret-service`, pure-Rust crypto). **Headless Linux**
+   (no Secret Service daemon): keyring errors now carry an actionable hint, and
+   a user on a trusted box can opt in with **`MARKUP_TOKEN_FILE_FALLBACK=1`** to
+   store the token in a `0600` file under `$XDG_DATA_HOME` (`token_store.rs`).
+   Opt-in on purpose — we never silently downgrade to on-disk storage. It's
+   weaker than the keyring but still keeps the token out of the webview (the
+   threat the keyring move addressed); roundtrip + `0600` perms unit-tested.
 
 ### P2 — packaging & distribution (can't ship without)
 
@@ -53,19 +57,20 @@ Ordered by user-visible impact.
      (`libfuse2` needed on the runner for AppImage)
    - Windows → `Markup_1.0.1_x64-setup.exe` (NSIS)
 
-   No bundler errors. **Remaining:** decide whether to bake these targets into
-   `tauri.conf.json` per-OS (vs CLI `--bundles`) and wire them into a real
-   release pipeline (today `release.yml` is macOS-only). `flatpak` / `msi` still
-   optional/unbuilt.
+   No bundler errors. ✅ **Now wired into `release.yml`** — the `build-desktop` +
+   `release-desktop` jobs build these on every `v*` tag and attach them to the
+   GitHub Release, decoupled from the macOS jobs (a Win/Linux failure can't block
+   a macOS release). `flatpak` / `msi` still optional/unbuilt.
 4. **Code signing — owner's call.** The installers above are **unsigned**:
    Windows needs a **code-signing certificate** (EV or OV) or SmartScreen warns
    on every download; Linux AppImage/flatpak signing is lighter. Budget +
    procure the Windows cert (the real cost flagged in GTM §3).
-5. **Updater per-platform.** The updater endpoint (`latest.json`) and signed
-   artifacts are currently macOS-only. Extend the release pipeline
-   (`.github/workflows/release.yml`) to build, sign, and publish Win/Linux
-   updater artifacts, or scope the updater to macOS and document manual updates
-   elsewhere.
+5. **Updater scoped to macOS (decided).** `latest.json` + signed updater
+   artifacts stay macOS-only; Win/Linux ship installers **without** the
+   auto-updater, so those users update by re-downloading. Adding a Win/Linux
+   updater later means producing signed `createUpdaterArtifacts` bundles (needs
+   the Windows cert from item 4) and extending `latest.json` with
+   `windows-x86_64` / `linux-x86_64` entries.
 
 ### P3 — verify behaviour on the real webviews (manual, can't be done in headless CI)
 
