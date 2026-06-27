@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Markup — a fast, native, open-source Markdown editor</title>
+<meta name="description" content="Markup is a free, open-source Markdown editor. Read your notes and any GitHub repo like a beautiful web page; edit when you want. Native, private by default, no telemetry." />
+<link rel="icon" href="assets/128x128@2x.png" />
+
+<!-- Open Graph / Twitter -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Markup — a fast, native, open-source Markdown editor" />
+<meta property="og:description" content="Read your notes and any GitHub repo like a beautiful web page; edit when you want. Open source, native, no telemetry." />
+<meta property="og:image" content="assets/social-card.png" />
+<meta property="og:url" content="https://github.com/oratis/Markup" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f7f9;
+    --bg-card: #ffffff;
+    --fg: #15181d;
+    --fg-soft: #5b6470;
+    --border: #e6e8ec;
+    --accent: #4f46e5;
+    --accent-fg: #ffffff;
+    --shadow: 0 1px 2px rgba(20,24,31,.06), 0 8px 24px rgba(20,24,31,.06);
+    --radius: 14px;
+    --maxw: 1080px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #11161d;
+      --bg-card: #151b23;
+      --fg: #e9edf2;
+      --fg-soft: #9aa6b2;
+      --border: #232b35;
+      --accent: #7c83ff;
+      --accent-fg: #0d1117;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+  h1, h2, h3 { line-height: 1.2; letter-spacing: -0.02em; }
+
+  /* Header */
+  header.site {
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: saturate(160%) blur(10px);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+  header.site .wrap { display: flex; align-items: center; gap: 16px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--fg); }
+  .brand img { width: 28px; height: 28px; border-radius: 7px; }
+  header.site nav { margin-left: auto; display: flex; gap: 22px; align-items: center; }
+  header.site nav a { color: var(--fg-soft); font-size: 15px; }
+  header.site nav a:hover { color: var(--fg); text-decoration: none; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 20px; border-radius: 10px; font-weight: 600; font-size: 15px;
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--fg);
+    cursor: pointer; transition: transform .04s ease, box-shadow .2s ease;
+  }
+  .btn:hover { text-decoration: none; box-shadow: var(--shadow); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+  .btn.small { padding: 8px 14px; font-size: 14px; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 72px 0 28px; }
+  .hero h1 { font-size: clamp(32px, 5vw, 52px); margin: 0 0 18px; }
+  .hero h1 .em { color: var(--accent); }
+  .hero p.sub { font-size: clamp(17px, 2.4vw, 21px); color: var(--fg-soft); max-width: 720px; margin: 0 auto 28px; }
+  .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .trust { margin-top: 18px; color: var(--fg-soft); font-size: 14px; }
+  .trust b { color: var(--fg); font-weight: 600; }
+  .hero-shot { margin: 36px auto 0; max-width: 960px; }
+  .hero-shot img {
+    width: 100%; height: auto; border-radius: var(--radius);
+    border: 1px solid var(--border); box-shadow: var(--shadow); display: block;
+  }
+
+  /* Sections */
+  section { padding: 56px 0; }
+  section.alt { background: var(--bg-soft); border-block: 1px solid var(--border); }
+  .section-head { text-align: center; max-width: 680px; margin: 0 auto 36px; }
+  .section-head h2 { font-size: clamp(26px, 3.4vw, 36px); margin: 0 0 10px; }
+  .section-head p { color: var(--fg-soft); font-size: 17px; margin: 0; }
+
+  /* Download matrix */
+  .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .dl-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
+  .dl-card h3 { margin: 0 0 4px; font-size: 18px; }
+  .dl-card .meta { color: var(--fg-soft); font-size: 14px; margin: 0 0 16px; min-height: 40px; }
+  .dl-card .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--bg-soft); color: var(--fg-soft); border: 1px solid var(--border); }
+  .dl-card.soon { opacity: .82; }
+
+  /* Feature grid */
+  .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  .feat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+  .feat .ic { font-size: 22px; }
+  .feat h3 { margin: 10px 0 6px; font-size: 17px; }
+  .feat p { margin: 0; color: var(--fg-soft); font-size: 15px; }
+
+  /* Shots */
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+  .shots figure { margin: 0; }
+  .shots img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); display: block; }
+  .shots figcaption { color: var(--fg-soft); font-size: 14px; margin-top: 10px; text-align: center; }
+
+  /* Comparison table */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; background: var(--bg-card); }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 15px; }
+  thead th { background: var(--bg-soft); font-weight: 700; }
+  tbody th { font-weight: 600; color: var(--fg); }
+  td.mk { color: var(--accent); font-weight: 600; }
+  .note { color: var(--fg-soft); font-size: 13.5px; margin-top: 12px; text-align: center; }
+
+  /* Wedge */
+  .wedge { display: grid; grid-template-columns: 1.1fr 1fr; gap: 36px; align-items: center; }
+  .wedge h2 { font-size: clamp(24px, 3vw, 32px); margin: 0 0 12px; }
+  .wedge p { color: var(--fg-soft); font-size: 16px; }
+  .wedge ul { color: var(--fg-soft); padding-left: 20px; }
+  .wedge img { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); }
+  @media (max-width: 820px) { .wedge { grid-template-columns: 1fr; } }
+
+  /* Footer */
+  footer { padding: 40px 0; border-top: 1px solid var(--border); color: var(--fg-soft); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+  footer nav { display: flex; gap: 18px; flex-wrap: wrap; }
+  footer a { color: var(--fg-soft); }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/128x128@2x.png" alt="Markup" /> Markup</a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#compare">Compare</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/oratis/Markup">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<a id="top"></a>
+<section class="hero">
+  <div class="wrap">
+    <h1>Read your notes — and any <span class="em">GitHub repo</span> —<br />like a beautiful web page.</h1>
+    <p class="sub">Markup is a fast, native, open-source Markdown editor. Reader-first by design: it renders your Markdown like a polished page, and edits on demand.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="#download">Download for macOS</a>
+      <a class="btn" href="https://github.com/oratis/Markup">Star on GitHub ★</a>
+    </div>
+    <p class="trust"><b>Free</b> · <b>Open source (MIT)</b> · <b>No account, no telemetry</b></p>
+    <div class="hero-shot">
+      <img src="assets/hero.gif" alt="Markup rendering Markdown like a web page, with a vault, backlinks, and search" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>A reader-first Markdown app with a real knowledge base</h2>
+      <p>Point it at a folder of notes — or a GitHub repo — and everything just works. Your files stay plain Markdown on disk.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat"><div class="ic">📖</div><h3>Reader-first</h3><p>Renders Markdown like a web page — code, math, Mermaid, tables, callouts — and drops into editing when you want.</p></div>
+      <div class="feat"><div class="ic">🗂️</div><h3>Vault, links &amp; graph</h3><p>Open any folder as a vault: wikilinks, backlinks with context, a per-note outline, tags, and a graph view.</p></div>
+      <div class="feat"><div class="ic">🔎</div><h3>Instant full-text search</h3><p>Tantivy-powered search across thousands of files in about a second, with <code>tag:</code> and <code>path:</code> filters.</p></div>
+      <div class="feat"><div class="ic">🐙</div><h3>Open a GitHub repo as a vault</h3><p>Read a whole project's docs offline — and round-trip your edits back to GitHub.</p></div>
+      <div class="feat"><div class="ic">🎨</div><h3>Canvas &amp; export</h3><p>Obsidian-compatible Canvas, plus high-fidelity self-contained HTML and PDF export.</p></div>
+      <div class="feat"><div class="ic">🔒</div><h3>Private &amp; native</h3><p>Built on Tauri + Rust — small, fast, native. No account, no telemetry, no tracking.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="screenshots">
+  <div class="wrap">
+    <div class="shots">
+      <figure><img src="assets/screenshot-read.png" alt="Reading a rendered Markdown document in Markup" loading="lazy" /><figcaption>Read like a page — beautifully rendered</figcaption></figure>
+      <figure><img src="assets/screenshot-vault.png" alt="Browsing a vault of notes in Markup" loading="lazy" /><figcaption>A whole vault, not one file</figcaption></figure>
+      <figure><img src="assets/screenshot-outline.png" alt="Per-document outline and navigation in Markup" loading="lazy" /><figcaption>Outline, links &amp; navigation</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="download">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Download Markup</h2>
+      <p>macOS is available now. iOS &amp; iPadOS are in App Store review; Windows &amp; Linux are on the way.</p>
+    </div>
+    <div class="dl-grid">
+      <div class="dl-card">
+        <span class="badge">Available</span>
+        <h3>macOS</h3>
+        <p class="meta">Apple Silicon &amp; Intel · signed &amp; notarized · auto-updates.</p>
+        <a class="btn primary" href="https://github.com/oratis/Markup/releases/latest">Download .dmg</a>
+      </div>
+      <div class="dl-card">
+        <span class="badge">In review</span>
+        <h3>iPhone &amp; iPad</h3>
+        <p class="meta">Read-first vault on iOS &amp; iPadOS with iCloud / Files.</p>
+        <a class="btn" href="https://github.com/oratis/Markup">App Store — soon</a>
+      </div>
+      <div class="dl-card soon">
+        <span class="badge">Coming soon</span>
+        <h3>Windows &amp; Linux</h3>
+        <p class="meta">Builds are validated in CI (deb / AppImage / NSIS). Beta on the way.</p>
+        <a class="btn" href="https://github.com/oratis/Markup">Watch the repo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>How Markup compares</h2>
+      <p>An honest look. Where another app is stronger for your workflow, we say so.</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>Markup</th><th>Typora</th><th>Obsidian</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Price</th><td class="mk">Free</td><td>Paid</td><td>Free (personal)</td></tr>
+          <tr><th>Open source</th><td class="mk">Yes (MIT)</td><td>No</td><td>No</td></tr>
+          <tr><th>Native (not Electron)</th><td class="mk">Yes (Tauri/Rust)</td><td>Yes</td><td>No</td></tr>
+          <tr><th>Reader-first rendering</th><td class="mk">Yes</td><td>Editor-first</td><td>Editor-first</td></tr>
+          <tr><th>Vault · backlinks · graph</th><td class="mk">Yes</td><td>No</td><td>Yes</td></tr>
+          <tr><th>Open a GitHub repo as a vault</th><td class="mk">Yes (round-trip)</td><td>No</td><td>Via plugins</td></tr>
+          <tr><th>Plugin ecosystem</th><td>Young</td><td>Limited</td><td class="mk">Large &amp; mature</td></tr>
+          <tr><th>Telemetry</th><td class="mk">None</td><td>—</td><td>Minimal</td></tr>
+          <tr><th>Platforms</th><td>macOS, iOS <span style="color:var(--fg-soft)">(Win/Linux soon)</span></td><td>mac/win/linux</td><td>All</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Typora is mature and cross-platform today; Obsidian has a deep plugin ecosystem. Markup focuses on a fast, native, open, reader-first core — and your files stay plain Markdown, so trying it costs you nothing.</p>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="wedge">
+      <div>
+        <h2>Read any GitHub repo's docs — offline</h2>
+        <p>Reading a project's README, <code>/docs</code>, or wiki on github.com is fine at a desk and miserable on the move. Markup opens any repo as a vault and renders the whole thing natively, online or off.</p>
+        <ul>
+          <li>Browse a repo's docs as one connected document set</li>
+          <li>Full-text search across the whole project</li>
+          <li>Fix a typo and round-trip it back to GitHub</li>
+          <li>On your Mac today — and your phone</li>
+        </ul>
+        <a class="btn small" href="https://github.com/oratis/Markup">Learn more on GitHub</a>
+      </div>
+      <img src="assets/screenshot-vault.png" alt="Reading a GitHub repository's documentation in Markup" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap" style="text-align:center;">
+    <div class="section-head" style="margin-bottom:24px;">
+      <h2>Bring your Markdown to life</h2>
+      <p>Free, open source, native, and private by default.</p>
+    </div>
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/oratis/Markup/releases/latest">Download for macOS</a>
+      <a class="btn" href="https://github.com/oratis/Markup">Star on GitHub ★</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand"><img src="assets/128x128@2x.png" alt="" style="width:22px;height:22px;border-radius:6px;" /> Markup</div>
+    <nav>
+      <a href="https://github.com/oratis/Markup">GitHub</a>
+      <a href="https://github.com/oratis/Markup/releases/latest">Releases</a>
+      <a href="https://github.com/oratis/Markup/blob/main/PRIVACY.md">Privacy</a>
+      <a href="https://github.com/oratis/Markup/blob/main/LICENSE">License (MIT)</a>
+    </nav>
+  </div>
+</footer>
+
+</body>
+</html>
