@@ -89,6 +89,12 @@ objc2-foundation = { version = "0.3", features = [
 [target.'cfg(target_os = "windows")'.dependencies]
 keyring = { version = "3", default-features = false, features = ["windows-native"] }
 
+# Windows/Linux deliver "Open With" / double-click as a process launch argument
+# (not a RunEvent::Opened event like macOS). single-instance focuses the running
+# window and forwards the argv instead of spawning a second copy.
+[target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = "2"
+
 # Linux → Secret Service (GNOME Keyring / KWallet) over D-Bus, with pure-Rust
 # crypto so there's no OpenSSL system dependency. Requires a running Secret
 # Service daemon at runtime (headless/server users need a fallback — tracked in
