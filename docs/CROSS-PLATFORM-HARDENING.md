@@ -1,8 +1,10 @@
 # Cross-platform hardening to-do (Windows + Linux)
 
 > Output of the GTM-SCALE-PLAN.md §3 (unlock 2) / §10 item 7 **spike**.
-> The spike workflow ([`.github/workflows/cross-platform-spike.yml`](../.github/workflows/cross-platform-spike.yml))
-> runs `tauri build --no-bundle` on `ubuntu-latest` + `windows-latest`.
+> Cross-platform compile is now guarded on every PR by the `cross-platform` job
+> in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml); real installers
+> are produced on demand by
+> [`.github/workflows/cross-platform-bundle.yml`](../.github/workflows/cross-platform-bundle.yml).
 > This file enumerates what the spike found and what's left before a real
 > Win/Linux beta (GTM §5 P1).
 >
@@ -78,9 +80,11 @@ Ordered by user-visible impact.
 
 ### P4 — CI & process
 
-9. **Promote the spike into real CI** once green: add Win/Linux to the matrix in
-   `ci.yml` (build + Rust tests), and a bundling smoke. Retire
-   `cross-platform-spike.yml` or fold it in.
+9. **✅ Cross-platform compile is in real CI.** Folded into `ci.yml` as the
+   `cross-platform` job (ubuntu + windows, compile + link on every PR/main push);
+   the standalone `cross-platform-spike.yml` is retired. The on-demand
+   `cross-platform-bundle.yml` is the bundling smoke. *Optional next:* run the
+   Rust test suite on Win/Linux too (currently compile-only to keep PR CI fast).
 10. **Maintenance load**: GTM §9 risk — staff the matrix and lean on the
     contributor community so cross-platform doesn't rot.
 
