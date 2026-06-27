@@ -1,0 +1,99 @@
+name: Cross-platform bundle spike
+
+# GTM-SCALE-PLAN.md §3 (unlock 2) / docs/CROSS-PLATFORM-HARDENING.md P2.
+# The compile spike (cross-platform-spike.yml) proved Markup *links* on
+# Win/Linux. This one goes further: it produces real **installers** —
+# Linux .deb + .AppImage, Windows NSIS .exe — to surface packaging issues
+# (AppImage FUSE/linuxdeploy, NSIS) before a beta. UNSIGNED on purpose:
+# Windows code-signing needs a cert (owner's call, GTM §3); these artifacts
+# are for validation, not distribution. Does not touch the macOS release flow
+# (`--bundles` overrides tauri.conf.json's macOS targets per invocation, and
+# createUpdaterArtifacts is unset so no updater signing key is required).
+#
+# Heavy (release LTO build) — runs on demand + on push to a *bundle* spike branch.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["spike/*bundle*"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  bundle:
+    name: bundle (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bundles: deb,appimage
+          - os: windows-latest
+            bundles: nsis
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Linux: WebKitGTK toolchain + libfuse2 (AppImage runtime needs FUSE 2).
+      - name: Install Linux system deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libssl-dev \
+            libfuse2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      # Real release bundle. `--bundles` overrides the macOS-only config targets.
+      # No signing env: createUpdaterArtifacts is unset, so this needs no key.
+      - name: tauri build (bundle ${{ matrix.bundles }})
+        run: pnpm tauri build --bundles ${{ matrix.bundles }}
+
+      - name: List produced bundles
+        shell: bash
+        run: |
+          echo "── bundles ──────────────────────────────"
+          find src-tauri/target/release/bundle -maxdepth 2 \
+            \( -name '*.deb' -o -name '*.AppImage' -o -name '*.exe' -o -name '*.msi' \) \
+            -print -exec ls -lh {} \; 2>/dev/null || echo "no bundles found"
+
+      - name: Upload bundles
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: markup-bundle-${{ matrix.os }}
+          path: |
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.msi
+          if-no-files-found: warn
+          retention-days: 7
