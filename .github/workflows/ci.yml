@@ -173,3 +173,65 @@ jobs:
       - name: Cargo build --release (verifies the binary links)
         working-directory: src-tauri
         run: cargo build --release
+
+  cross-platform:
+    name: Cross-platform (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    # Compile + link the Tauri binary against each platform's webview so a
+    # macOS-only Tauri API (like the title_bar_style / RunEvent::Opened blockers
+    # PR #197 fixed) can't silently regress cross-platform builds on main.
+    # Promoted from the retired cross-platform-spike.yml — see
+    # docs/CROSS-PLATFORM-HARDENING.md item 9. Compile/link-only by design;
+    # bundling + signing stay out of CI (tracked as P2 in that doc).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: Linux
+          - os: windows-latest
+            label: Windows
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Linux WebKitGTK toolchain (Tauri v2 → webkit2gtk-4.1). Windows ships
+      # WebView2 with the runner image, so no system deps there.
+      - name: Install Linux system deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libssl-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      # `--no-bundle` compiles + links the binary against the platform webview
+      # (WebView2 / WebKitGTK) without producing installers, so the macOS-only
+      # bundle targets in tauri.conf.json are never exercised. `--debug` skips
+      # release LTO so the job finishes in CI-friendly time while still proving
+      # the link step.
+      - name: tauri build (compile + link only)
+        run: pnpm tauri build --debug --no-bundle
