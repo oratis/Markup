@@ -30,7 +30,10 @@ use commands_vault::{
 use commands_window::new_window;
 use recent::{clear_recent_files, list_recent_files, push_recent_file};
 use std::sync::Mutex;
-use tauri::{Emitter, Manager, RunEvent, State};
+use tauri::{Emitter, Manager, State};
+// RunEvent::Opened (the Finder open-document event) only exists on macOS.
+#[cfg(target_os = "macos")]
+use tauri::RunEvent;
 use vault::VaultState;
 
 /// Files macOS asked us to open (Finder double-click / "Open With" /
@@ -48,6 +51,11 @@ fn take_pending_files(state: State<PendingOpenFiles>) -> Vec<String> {
 
 /// Convert the `file://` URLs from a macOS open-document event into
 /// filesystem paths, keeping only Markdown files we recognise.
+///
+/// macOS-only: other platforms deliver file arguments via the process argv /
+/// single-instance plumbing instead of `RunEvent::Opened` (tracked in the
+/// cross-platform hardening to-do).
+#[cfg(target_os = "macos")]
 fn open_urls_to_paths(urls: &[tauri::Url]) -> Vec<String> {
     urls.iter()
         .filter_map(|u| u.to_file_path().ok())
@@ -134,22 +142,24 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building markup")
-        .run(|handle, event| {
+        .run(|_handle, _event| {
             // macOS delivers Finder double-clicks / "Open With" / `open
             // file.md` as RunEvent::Opened. We both buffer (for cold
             // start, before the webview listener exists) and emit (for
-            // when the app is already running).
-            if let RunEvent::Opened { urls } = event {
+            // when the app is already running). Windows/Linux deliver file
+            // arguments differently (argv) — see the hardening to-do.
+            #[cfg(target_os = "macos")]
+            if let RunEvent::Opened { urls } = _event {
                 let paths = open_urls_to_paths(&urls);
                 if paths.is_empty() {
                     return;
                 }
-                if let Some(state) = handle.try_state::<PendingOpenFiles>() {
+                if let Some(state) = _handle.try_state::<PendingOpenFiles>() {
                     if let Ok(mut v) = state.0.lock() {
                         v.extend(paths.iter().cloned());
                     }
                 }
-                let _ = handle.emit("open-files", paths);
+                let _ = _handle.emit("open-files", paths);
             }
         });
 }

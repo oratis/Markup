@@ -1,0 +1,75 @@
+name: Cross-platform spike
+
+# GTM-SCALE-PLAN.md §3 (unlock 2) / §10 item 7.
+# Validates that Markup *compiles and links* the webview on Windows + Linux —
+# the gating question for the "go cross-platform" bet. This is a SPIKE, not a
+# release pipeline: it builds the binary with `--no-bundle` (no installers, no
+# signing) and does NOT touch the macOS release flow. Rendering/IME/file-watch
+# behaviour still needs manual testing on real machines — those go into the
+# "cross-platform hardening" to-do, not here.
+#
+# Triggers: manual (workflow_dispatch) + push to spike/** so the branch self-tests.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["spike/**"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: tauri build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Linux WebKitGTK toolchain (Tauri v2 → webkit2gtk-4.1). Windows ships
+      # WebView2 with the runner image, so no system deps there.
+      - name: Install Linux system deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libssl-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      # `--no-bundle` compiles + links the binary against the platform webview
+      # (WebView2 / WebKitGTK) without producing installers — the macOS-only
+      # bundle targets in tauri.conf.json are therefore never exercised.
+      # `--debug` skips release LTO so the spike finishes in CI-friendly time
+      # while still proving the link step.
+      - name: tauri build (compile + link only)
+        run: pnpm tauri build --debug --no-bundle
