@@ -29,10 +29,10 @@ tokio = { version = "1", features = ["fs", "rt-multi-thread", "macros", "sync", 
 # send CORS headers, so the exchange must run here, not in the webview).
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 
-# GitHub access token at rest: the macOS login Keychain instead of the webview's
+# GitHub access token at rest: the OS credential store instead of the webview's
 # localStorage (any script running in the webview can read localStorage). The
-# `apple-native` backend uses Security.framework; other platform backends off.
-keyring = { version = "3", default-features = false, features = ["apple-native"] }
+# backend is platform-specific and declared per-target below (Keychain on macOS,
+# Credential Manager on Windows, Secret Service on Linux).
 
 # Spike 0.3: vault management
 walkdir = "2"
@@ -70,9 +70,12 @@ sha1 = "0.11"
 # string to escape.
 trash = "5"
 
+# Credential-store backend for the GitHub token (see the keyring comment above).
+# macOS → Security.framework Keychain.
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", default-features = false, features = ["apple-native"] }
 # macOS security-scoped bookmarks — lets a sandboxed (Mac App Store) build
 # re-access the user's vault folder across launches. No-op on other OSes.
-[target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", features = [
     "NSURL",
@@ -80,6 +83,20 @@ objc2-foundation = { version = "0.3", features = [
     "NSData",
     "NSError",
     "NSArray",
+] }
+
+# Windows → Credential Manager (wincred).
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3", default-features = false, features = ["windows-native"] }
+
+# Linux → Secret Service (GNOME Keyring / KWallet) over D-Bus, with pure-Rust
+# crypto so there's no OpenSSL system dependency. Requires a running Secret
+# Service daemon at runtime (headless/server users need a fallback — tracked in
+# docs/CROSS-PLATFORM-HARDENING.md).
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", default-features = false, features = [
+    "sync-secret-service",
+    "crypto-rust",
 ] }
 
 [dev-dependencies]
