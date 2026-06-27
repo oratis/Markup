@@ -16,6 +16,14 @@ env:
 # signed + notarized when the Developer ID secrets are populated,
 # unsigned when they're missing.
 #
+# It also produces Windows + Linux installers (build-desktop → release-desktop):
+# Linux .deb + .AppImage and a Windows NSIS .exe, appended to the same GitHub
+# Release. These are UNSIGNED today (Windows code-signing needs a cert — see the
+# build-desktop job) and ship WITHOUT the auto-updater (the updater latest.json
+# stays macOS-only; Win/Linux users update by re-downloading). The desktop jobs
+# are decoupled from the macOS build/release jobs — a Win/Linux failure can't
+# block a macOS release, and vice versa.
+#
 # Required secrets for signing (all six must be set, gated on
 # APPLE_TEAM_ID since it's the last to provision):
 #   APPLE_CERTIFICATE_BASE64    .p12 with the Developer ID Application
@@ -234,6 +242,88 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  # Windows + Linux installers. Decoupled from the macOS build/release jobs (it
+  # neither blocks nor is blocked by them), so a flaky AppImage/NSIS build can't
+  # break a macOS release. UNSIGNED today:
+  #   • Windows: SmartScreen warns until a code-signing cert is wired. To sign,
+  #     add the cert to tauri.conf.json → bundle.windows (certificateThumbprint +
+  #     timestampUrl, or a signCommand / Azure Trusted Signing) and pass its
+  #     secrets here — mirror the HAS_*_SIGNING gate idiom used by the mac jobs.
+  #   • Linux: .deb/.AppImage are conventionally unsigned; the repo is the trust
+  #     anchor.
+  # No auto-updater artifacts (createUpdaterArtifacts is unset) — Win/Linux
+  # updates are manual re-downloads for now (docs/CROSS-PLATFORM-HARDENING.md P2).
+  build-desktop:
+    name: Build installers (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bundles: deb,appimage
+          - os: windows-latest
+            bundles: nsis
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Linux: WebKitGTK toolchain + libfuse2 (AppImage runtime needs FUSE 2).
+      - name: Install Linux system deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libssl-dev \
+            libfuse2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.os }}
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # `--bundles` overrides the macOS-only config targets; createUpdaterArtifacts
+      # is unset so this needs no signing key.
+      - name: Build installers (${{ matrix.bundles }})
+        run: pnpm tauri build --bundles ${{ matrix.bundles }}
+
+      - name: Stage installers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p staged
+          find src-tauri/target/release/bundle -maxdepth 2 \
+            \( -name '*.deb' -o -name '*.AppImage' -o -name '*.exe' \) \
+            -exec cp {} staged/ \;
+          ls -lh staged/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.os }}
+          path: staged/*
+          retention-days: 7
+          if-no-files-found: error
+
   # Mac App Store flavor: a sandboxed, Apple-Distribution-signed .pkg built by
   # scripts/build-mas.sh. Independent of the DMG build/release jobs (it neither
   # blocks nor is blocked by them), so a misconfig here can't break direct
@@ -397,3 +487,41 @@ jobs:
             dmg-staging/*.app.tar.gz
             dmg-staging/latest.json
             dmg-staging/SHA256SUMS
+
+  # Attach the Windows/Linux installers to the same GitHub Release. Separate from
+  # the macOS `release` job (which owns release-notes generation) so the two
+  # platforms can't block each other; action-gh-release upserts by tag, so this
+  # just adds files to the release the macOS job creates (or creates it if this
+  # wins the race — both are idempotent on the tag).
+  release-desktop:
+    needs: build-desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download desktop installer artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: desktop-*
+          path: desktop-staging
+          merge-multiple: true
+
+      - name: Compute SHA256SUMS (desktop)
+        run: |
+          set -euo pipefail
+          cd desktop-staging
+          shopt -s nullglob
+          ls -lh
+          shasum -a 256 *.deb *.AppImage *.exe > SHA256SUMS-desktop
+          cat SHA256SUMS-desktop
+
+      - name: Add installers to the GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          fail_on_unmatched_files: false
+          files: |
+            desktop-staging/*.deb
+            desktop-staging/*.AppImage
+            desktop-staging/*.exe
+            desktop-staging/SHA256SUMS-desktop
