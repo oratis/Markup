@@ -175,12 +175,13 @@ jobs:
         run: cargo build --release
 
   cross-platform:
-    name: Cross-platform compile (${{ matrix.os }})
+    name: Cross-platform compile + test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     # Guards the cfg(target_os) gating so a macOS-only change can't silently
-    # break the Windows/Linux build (GTM §9 "提前搭 CI 矩阵"). Compile + link
-    # only (--debug --no-bundle); real installers are the on-demand
+    # break the Windows/Linux build (GTM §9 "提前搭 CI 矩阵"), and runs the Rust
+    # suite there so platform-specific logic is tested, not just compiled.
+    # Compile + link via --debug --no-bundle; real installers are the on-demand
     # cross-platform-bundle workflow.
     strategy:
       fail-fast: false
@@ -224,3 +225,10 @@ jobs:
 
       - name: tauri build (compile + link only)
         run: pnpm tauri build --debug --no-bundle
+
+      # Run the Rust suite on Win/Linux too, so platform-specific logic
+      # (argv file-open, the Linux token-file fallback) is tested where it
+      # actually runs — not just compiled.
+      - name: Cargo test
+        working-directory: src-tauri
+        run: cargo test
