@@ -49,24 +49,36 @@ fn take_pending_files(state: State<PendingOpenFiles>) -> Vec<String> {
     std::mem::take(&mut *v)
 }
 
+/// True for paths we treat as openable Markdown documents.
+fn is_markdown_path(path: &str) -> bool {
+    let lower = path.to_ascii_lowercase();
+    lower.ends_with(".md")
+        || lower.ends_with(".markdown")
+        || lower.ends_with(".mdx")
+        || lower.ends_with(".mkd")
+}
+
 /// Convert the `file://` URLs from a macOS open-document event into
 /// filesystem paths, keeping only Markdown files we recognise.
-///
-/// macOS-only: other platforms deliver file arguments via the process argv /
-/// single-instance plumbing instead of `RunEvent::Opened` (tracked in the
-/// cross-platform hardening to-do).
 #[cfg(target_os = "macos")]
 fn open_urls_to_paths(urls: &[tauri::Url]) -> Vec<String> {
     urls.iter()
         .filter_map(|u| u.to_file_path().ok())
         .map(|p| p.to_string_lossy().into_owned())
-        .filter(|p| {
-            let lower = p.to_ascii_lowercase();
-            lower.ends_with(".md")
-                || lower.ends_with(".markdown")
-                || lower.ends_with(".mdx")
-                || lower.ends_with(".mkd")
-        })
+        .filter(|p| is_markdown_path(p))
+        .collect()
+}
+
+/// Extract openable Markdown paths from a process argv. Windows/Linux deliver
+/// "Open With" / double-click as a launch argument rather than a
+/// `RunEvent::Opened` event. Skips argv[0] and keeps only args that point at an
+/// existing Markdown file (guards against flags or stale paths).
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn paths_from_argv(argv: &[String]) -> Vec<String> {
+    argv.iter()
+        .skip(1)
+        .filter(|a| is_markdown_path(a) && std::path::Path::new(a).is_file())
+        .cloned()
         .collect()
 }
 
@@ -80,7 +92,35 @@ pub fn run() {
         )
         .try_init();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // single-instance must be registered FIRST. macOS already enforces a single
+    // instance for .app bundles and delivers file opens via RunEvent::Opened, so
+    // this path is Windows/Linux only: focus the running window and forward any
+    // Markdown file passed on the second instance's argv.
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+        // Focus the primary window, falling back to any open window — the user
+        // may have closed "main" while keeping a secondary window (w0/w1/…) open.
+        if let Some(win) = app
+            .get_webview_window("main")
+            .or_else(|| app.webview_windows().into_values().next())
+        {
+            let _ = win.set_focus();
+        }
+        let paths = paths_from_argv(&argv);
+        if paths.is_empty() {
+            return;
+        }
+        if let Some(state) = app.try_state::<PendingOpenFiles>() {
+            if let Ok(mut v) = state.0.lock() {
+                v.extend(paths.iter().cloned());
+            }
+        }
+        let _ = app.emit("open-files", paths);
+    }));
+
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -103,6 +143,21 @@ pub fn run() {
                     tracing::warn!("emit menu-event failed: {e}");
                 }
             });
+
+            // Windows/Linux: open a Markdown file passed on the initial launch
+            // argv (macOS receives RunEvent::Opened instead). The frontend
+            // drains PendingOpenFiles on startup via take_pending_files.
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            {
+                let paths = paths_from_argv(&std::env::args().collect::<Vec<_>>());
+                if !paths.is_empty() {
+                    if let Some(state) = app.try_state::<PendingOpenFiles>() {
+                        if let Ok(mut v) = state.0.lock() {
+                            v.extend(paths);
+                        }
+                    }
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

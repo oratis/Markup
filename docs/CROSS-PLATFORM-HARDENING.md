@@ -28,20 +28,18 @@ Ordered by user-visible impact.
 
 ### P1 — functional gaps (a build that runs but misbehaves)
 
-1. **Open-file from the OS doesn't work off macOS.** `RunEvent::Opened` is the
-   Finder "Open With" / double-click path; Windows + Linux pass the file as a
-   process **argv** to a (possibly second) instance. Add
-   **`tauri-plugin-single-instance`** + argv parsing so double-clicking a `.md`
-   focuses the running window and opens the file. Today, file associations in
-   `tauri.conf.json` register the type but nothing handles the launch arg off
-   macOS.
-2. **GitHub token has no credential store off macOS.** `Cargo.toml` enables
-   `keyring` with **only** `features = ["apple-native"]`. On Windows/Linux the
-   crate compiles but has no backend → token save/load fails at runtime, so
-   GitHub round-trip / private repos break. Add target-gated features:
-   `windows-native` (Win) and `sync-secret-service` or `linux-native` (Linux).
-   Decide the Linux story (Secret Service needs a running keyring daemon —
-   headless/server users may need a fallback).
+1. **✅ Open-file from the OS** — *done (compile-verified; runtime test pending a
+   real machine).* Added `tauri-plugin-single-instance` (Win/Linux only) +
+   first-instance argv parsing in `lib.rs`, both feeding the existing
+   `PendingOpenFiles` / `"open-files"` path. Double-clicking a `.md` should focus
+   the running window and open the file. **Still needs a manual runtime check on
+   real Windows/Linux** (CI only proves it compiles).
+2. **✅ GitHub token credential store** — *done (resolution-verified).* `keyring`
+   is now declared per target: `apple-native` (macOS), `windows-native`
+   (Windows Credential Manager), `sync-secret-service` + `crypto-rust` (Linux
+   Secret Service via `dbus-secret-service`, pure-Rust crypto). ⚠️ Linux Secret
+   Service needs a running keyring daemon — **headless/server fallback still
+   undecided** (e.g. detect-and-warn, or an encrypted-file backend).
 
 ### P2 — packaging & distribution (can't ship without)
 
