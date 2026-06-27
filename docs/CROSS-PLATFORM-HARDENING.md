@@ -36,12 +36,16 @@ Ordered by user-visible impact.
    `PendingOpenFiles` / `"open-files"` path. Double-clicking a `.md` should focus
    the running window and open the file. **Still needs a manual runtime check on
    real Windows/Linux** (CI only proves it compiles).
-2. **✅ GitHub token credential store** — *done (resolution-verified).* `keyring`
-   is now declared per target: `apple-native` (macOS), `windows-native`
-   (Windows Credential Manager), `sync-secret-service` + `crypto-rust` (Linux
-   Secret Service via `dbus-secret-service`, pure-Rust crypto). ⚠️ Linux Secret
-   Service needs a running keyring daemon — **headless/server fallback still
-   undecided** (e.g. detect-and-warn, or an encrypted-file backend).
+2. **✅ GitHub token credential store + headless fallback** — *done.* `keyring`
+   is declared per target: `apple-native` (macOS), `windows-native` (Windows
+   Credential Manager), `sync-secret-service` + `crypto-rust` (Linux Secret
+   Service via `dbus-secret-service`, pure-Rust crypto). **Headless Linux**
+   (no Secret Service daemon): keyring errors now carry an actionable hint, and
+   a user on a trusted box can opt in with **`MARKUP_TOKEN_FILE_FALLBACK=1`** to
+   store the token in a `0600` file under `$XDG_DATA_HOME` (`token_store.rs`).
+   Opt-in on purpose — we never silently downgrade to on-disk storage. It's
+   weaker than the keyring but still keeps the token out of the webview (the
+   threat the keyring move addressed); roundtrip + `0600` perms unit-tested.
 
 ### P2 — packaging & distribution (can't ship without)
 
