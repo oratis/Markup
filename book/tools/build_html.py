@@ -56,9 +56,16 @@ def inline(s, linkmap):
         anchor = linkmap.get(base)
         return f'<a href="#{anchor}">{text}</a>' if anchor else f"<span>{text}</span>"
     s = re.sub(r"\[([^\]\[]+)\]\(([^)]+)\)", link, s)
-    s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
+    # 代码段先摘出来存起来。否则 `**` 这种"用代码块引用星号"的写法会被后面的
+    # 粗体规则拆开，生成 <strong> 与 <code> 交叉的非法嵌套。
+    spans = []
+    def stash(m):
+        spans.append(m.group(1))
+        return f"\x00{len(spans)-1}\x00"
+    s = re.sub(r"`([^`]+)`", stash, s)
     s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
     s = re.sub(r"(?<![\*\w])\*([^*\n]+)\*(?!\*)", r"<em>\1</em>", s)
+    s = re.sub(r"\x00(\d+)\x00", lambda m: f"<code>{spans[int(m.group(1))]}</code>", s)
     return s
 
 def render_table(rows, linkmap):
