@@ -11,7 +11,7 @@
 """
 import re, glob, os, sys
 
-PRESS = "【成书前】"
+PRESS = "【成书前"   # 兼容「【成书前】」与「【成书前·主编事项…】」两种写法
 
 def scan():
     rows = []

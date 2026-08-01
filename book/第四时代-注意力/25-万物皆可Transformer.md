@@ -1,7 +1,7 @@
 ---
 status: draft
 target_words: 10000
-words: 9691
+words: 10263
 synopsis: 图像、代码、蛋白质：同一把锤子砸开了所有的门，还顺手解掉了一个五十年的科学难题——而「解掉」二字要订正。
 people: [多索维茨基, 拉德福德, 江珀, 哈萨比斯, 贝克, 安芬森, 莱文塔尔]
 ---
@@ -144,7 +144,19 @@ people: [多索维茨基, 拉德福德, 江珀, 哈萨比斯, 贝克, 安芬森,
 
 **第二个东西更让公众有反应：给一句话，它画一张图。**
 
-**在 2021 年，它画得还很糙。** 而它画的东西，是这个世界上没有过的——你要一把牛油果形状的扶手椅，它给你一把牛油果形状的扶手椅。
+**在 2021 年，它画得还很糙。** 而它画的东西，是这个世界上没有过的。
+
+**发布当天那批示例里最出名的一条，提示词是这么写的**（以下为中译，原文附后）：
+
+> **一把牛油果形状的扶手椅。一把模仿牛油果的扶手椅。**
+>
+> （*an armchair in the shape of an avocado. an armchair imitating an avocado.*）
+
+**而它就给了你一把牛油果形状的扶手椅。**（同一批示例里还有一只穿着芭蕾裙、正在遛狗的白萝卜宝宝。）
+
+**发布方自己的解释很谨慎**：它**看起来**是把半只牛油果的轮廓对应到了椅背，把那颗核对应到了坐垫。**"看起来"三个字是原文里就有的。**
+
+**（还要补一句发布方写明、而后来的转述里几乎总是掉的话：** 页面上展示的图，是每条提示词先生成五百一十二张，再取前三十二张；**排序用的正是同一天发布的前面那个东西**——那个把图和字放进同一套坐标的模型。**挑图的和画图的，是一起发布的一对。** 除了页面顶部的缩略图与几张单独配图，发布方声明没有再做人工挑选。**所以你在 2021 年看到的那把椅子，不是它随手一画的第一张。**）
 
 **母题六（洛夫莱斯的问题）又一次正面站到了台前。**
 
@@ -243,6 +255,8 @@ people: [多索维茨基, 拉德福德, 江珀, 哈萨比斯, 贝克, 安芬森,
 **它显然没有在穷举。而我们不知道它在干什么。**
 
 **这个矛盾困扰了这个领域五十年。**
+
+**"五十年"这个数得交代一句，因为不同的书算法不同。** 本书取的起点是安芬森 1972 年那次演讲——**那个论断一立，"从序列算出形状"才成为一道可以去攻的题**；终点是 2020 年那场竞赛，中间四十八年，**"五十年"是取整**。若把起点提到莱文塔尔 1969 年，是五十一年，**同样落在这个整数上**。
 
 在此期间，测一个蛋白质结构的办法只有实验——**用 X 射线晶体学之类的手段，一个结构可能要花几个月到几年，花费以万美元计。** 到 2020 年，全世界那个公共结构库里存着的条目是十几万条，**而已知的蛋白质序列已经以亿计。**
 
@@ -447,10 +461,12 @@ people: [多索维茨基, 拉德福德, 江珀, 哈萨比斯, 贝克, 安芬森,
 - [x] 安芬森（Christian Anfinsen, 1916-03-26 — 1995-05-14）1972 年诺贝尔化学奖演讲提出热力学假说，原表述为"天然构象由全部原子间相互作用的总和、亦即由氨基酸序列在给定环境下决定"；莱文塔尔（Cyrus Levinthal, 1922-05-02 — 1990-11-04）1969 年在 Allerton House 会议报告《How to Fold Graciously》中提出该悖论（约 10^300 种构象）。**生卒年已补入正文**，规则 18 已满足 —— 来源：NobelPrize.org 传记页、en.wikipedia.org/wiki/Levinthal%27s_paradox、NLM findingaids（2026-08 核）
 - [x] "2020 年结构库十几万条、已知序列以亿计、差三个数量级" —— **带日期的 2020 年一手快照已补到**：UniProtKB/TrEMBL **release 2020_04（2020-08-12）为 188,961,949 条**序列（ftp.uniprot.org/pub/databases/uniprot/previous_major_releases/release-2020_04/knowledgebase/UniProtKB_TrEMBL-relstat.html，一手）；PDB 2020 年底约 **17.3 万**条目（二手汇总，RCSB 年度统计页仍未直接命中）。两数相除 ≈ 1.1×10³，**"差三个数量级"精确成立**。正文现在的"十几万条 / 以亿计"是安全表述，可维持；**若成书要恢复精确数，用上面这两个数即可，只需再补一份 PDB 一手统计**（2026-08 核）
 - [x] 江珀 1985 年生、贝克 1962 年生 —— 来源：NobelPrize.org 2024 年化学奖 facts 页（Jumper 生于 1985 年 Little Rock；Baker 生于 1962 年 Seattle）（2026-08 核）
+- [ ] **【成书前·主编事项，非事实欠账】** 第四轮改动后的篇幅数字，供主编同步：**全章正文非空白字符 10 263**（frontmatter 的 `words` 已同步为 10 263；**该字段不是本轮改的——本轮按约定未动 frontmatter**）。**五节现为 1 251 / 705 / 3 000 / 3 311 / 1 965**。本轮在第三节补入牛油果那条一手件（提示词原文＋"appears to"限定＋512 选 32 的挑选口径），在第四节补入"五十年"的口径交代；**补写时已就地压过一次，第三节压回到 3 000 的上限之内**。**第二节 705 字与第四节 3 311 字两处越界在本轮之前即已存在**，非本轮造成（第四节本轮只增约 110 字）。**若要平，第二节（ViT 那一节）宜扩，第四节宜拆**——AlphaFold 那一节里"这道题为什么难"与"它做到了什么／没做到什么"本就是两段，中间有天然分界
 - [ ] **【成书前】** **多索维茨基（Alexey Dosovitskiy）生年未见公开记载（已试 ORCID / DBLP / 机构页 / 访谈自述等途径）**——本轮另加查 Wikidata（Q69497081，无 P569 出生日期）、弗莱堡大学与慕尼黑 EML 的人物页、俄语来源与俄语媒体，仍无。**正文已点名但不给生年**，按规范第 18 条对当代在世研究者的例外处理；**正文该处无空括号、无占位标记，已复核**。规则 18 的这一口子建议由主编在全书级一次定案（同第 21–24、26、27 章诸条）
 - [x] ViT —— arXiv:2010.11929，2020-10-22 提交，第一作者 Alexey Dosovitskiy，题《An Image is Worth 16x16 Words》。对照设置：在 ImageNet 量级的中等数据上，比同等规模 ResNet 低几个百分点；预训练数据加到 1400 万至 3 亿张（ImageNet-21k / 谷歌内部 JFT-300M）后反超。论文原句意为"大规模训练胜过归纳偏置"，**正文已把这句补进去**（2026-08 核）
 - [x] CLIP（2021-01）：4 亿组图文对、对比学习、零样本分类 —— 三项均核实（2026-08 核）
-- [x] DALL·E —— OpenAI 于 2021-01-05 发布，为 120 亿参数的 GPT-3 变体；"一把牛油果形状的扶手椅"确为其发布材料的招牌示例（另一例为"穿芭蕾裙的白萝卜宝宝"）。来源：MIT Technology Review 2021-01-05《This avocado armchair could be the future of AI》、CNBC 2021-01-08。**openai.com 对抓取返回 403，一手博文未能直接读到，故正文不引原文措辞**（2026-08 核）
+- [x] DALL·E —— OpenAI 于 2021-01-05 发布，为 120 亿参数的 GPT-3 变体；"一把牛油果形状的扶手椅"确为其发布材料的招牌示例（另一例为"穿芭蕾裙的白萝卜宝宝"）。来源：MIT Technology Review 2021-01-05《This avocado armchair could be the future of AI》、CNBC 2021-01-08。~~**openai.com 对抓取返回 403，一手博文未能直接读到，故正文不引原文措辞**~~（2026-08 核）
+- [x] **【第四轮 2026-08-01：一手件已取到，本条与终章那条连带全清】牛油果扶手椅的原始出处。** openai.com 对本工具仍返回 403，**改走 web.archive.org 快照并直取未改写正本**（`.../<timestamp>id_/` 形式，需带 `--compressed`，否则回来的是 gzip 乱码——这是前几轮"抓不到"的真正原因，记下来备用）。件：**OpenAI,《DALL·E: Creating Images from Text》，2021-01-05**，快照 https://web.archive.org/web/20210106233019/https://openai.com/blog/dall-e/ 。**逐条对上的原文**：①页面日期栏即 "January 5, 2021"；②开篇 "DALL·E [1] is a 12-billion parameter version of GPT-3 trained to generate images from text descriptions, using a dataset of text–image pairs."（**"120 亿参数的 GPT-3 变体"这一说法出自发布方自己，不是外界概括**）；③牛油果那条**提示词原文逐字为** "an armchair in the shape of an avocado. an armchair imitating an avocado."（页面顶部的示例栏作 "an armchair in the shape of an avocado […]"，省略号是原文就有的）；④另一例逐字为 "an illustration of a baby daikon radish in a tutu walking a dog"（**比旧注多出"遛狗"一节，正文已按全句补正**）；⑤发布方对该例的解释原文 "When generating some of these objects, such as 'an armchair in the shape of an avocado', DALL·E **appears to** relate the shape of a half avocado to the back of the chair, and the pit of the avocado to the cushion."——**"appears to"是原文自带的限定，正文已把这三个字单独点出来**；⑥同页另载 "The samples shown for each caption in the visuals are obtained by taking the top 32 of 512 after reranking with CLIP, but we do not use any manual cherry-picking, aside from the thumbnails and standalone images that appear outside."——**即展示图是 512 选 32、由同日发布的 CLIP 排序**，正文已据此新增一段括注。**正文现在的引语全部是真原话的中译并附英文原文，无一处把转述写成引语。**（2026-08-01 核）
 - [x] **【P1·时效】图像与视频生成骨架** —— 已按 2026-08 重核并改写正文：早期扩散模型算的是卷积那一路的 U-Net；2023 年 DiT（扩散 Transformer，Peebles & Xie）把 U-Net 换成 Transformer，Sora（2024）之后成为主流；截至 2026 年年中，视频侧主力公开模型（Wan、HunyuanVideo 一路）骨架为全时空注意力的 DiT。**例外已写进正文**：为省算力，已有一批模型把部分全局注意力换成线性注意力或状态空间结构做成混合骨架（如 SANA-Video 一路的纯线性视频 DiT、Mamba-Transformer 混合）。正文现在的表述是"截至 2026 年年中……说的是趋势，不是纯度"。**再版时这一段必须重新走一遍**
 - [x] Codex / Copilot 时间线 —— Copilot 于 2021-06-29 以免费技术预览发布，2022-06-21 转为正式付费产品，底层为 OpenAI Codex；正文已补入。许可争议：Doe v. GitHub（N.D. Cal. 4:22-cv-06823，2022-11 起诉），一审 22 项主张中 20 项被驳，DMCA §1202(b) 争点获准中间上诉（第九巡回法院 No. 24-6136），2026-02-11 言词辩论，**截至 2026-08 未裁**。正文已加时间戳并按"给各方主张、不裁决"补上被告一侧的论证（2026-08 核）
 - [x] Codex **训练语料的具体构成** —— **已取到一手论文原文核对**：Chen et al., *Evaluating Large Language Models Trained on Code*, arXiv:2107.03374（2021），"Evaluation Framework / Data collection"一节原文作 "Our training dataset was collected in May 2020 from 54 million public software repositories hosted on GitHub, containing 179 GB of unique Python files under 1 MB"，过滤条件为疑似自动生成、平均行长 >100、最长行 >1000、字母数字字符占比过低，"After filtering, our final dataset totaled 159 GB"；并载明模型自 GPT-3 微调而来（理由是"models fine-tuned from GPT converge more quickly"），规模自 12M 至 12B。正文已据此补入采集时间、5400 万仓库、179 GB→159 GB 两段数字与"从已有通用语言模型接着训"一句。**注意口径**：常引的"159 GB Python"是过滤后的数，采集时是 179 GB，二者不可混用（来源：https://arxiv.org/abs/2107.03374 ）
@@ -464,7 +480,11 @@ people: [多索维茨基, 拉德福德, 江珀, 哈萨比斯, 贝克, 安芬森,
 - [x] （2026-08-01 主控已回填：校正编号线已于 2026-08-01 整体拆除，改为不编号的「订正 · 事由」区块，无须登记）第十二次校正需登记进[全书提纲](../提纲/全书提纲.md)的校正计数线 —— **已核（本章确为第 12 次校正，正文编号未动），待回填全书提纲**。按本轮约束未动该文件
 - [x] AlphaFold 数据库四项 —— 2021-07 与 EMBL-EBI 合作上线，首批为人类全蛋白质组加 20 个模式生物、约 35 万个结构；2022-07 扩至 2 亿以上；提供 pLDDT 与 PAE 两种置信度指标。**"覆盖当时已编目的几乎所有蛋白质序列"是发布方自己的口径，正文已加"按发布方自己的说法"这一归属**（2026-08 核；来源：ebi.ac.uk 新闻稿、deepmind 博客、*NAR* 2024 数据库文章）
 - [ ] **【成书前】** **"这是这门学科对世界做过的最好的一件事"** —— 非事实陈述，是本书明确下的价值判断，本轮不作核实、原样保留；成书时由主编决定是否加注说明这是作者判断
-- [ ] "万物"清单逐项代表作 —— 已核到的两项：**国际象棋**（Ruoss 等 2024，arXiv:2402.04494，2.7 亿参数 Transformer、无搜索、Lichess 快棋 Elo 2895，正文已由"围棋"改为"国际象棋"并补入）、**芯片布局**（Mirhoseini 等，*Nature* 594:207-212, 2021，用的是边图卷积网络加强化学习，**不是注意力**，正文已把这一项一并写进末尾那条限定）。**六项中已补到四项代表作**：语音 = Whisper（OpenAI 2022，arXiv:2212.04356）与 wav2vec 2.0；音乐 = Jukebox（OpenAI 2020，多尺度 VQ-VAE + 自回归 Transformer）与 MusicLM（2023）；数学证明的形式化步骤 = GPT-f《Generative Language Modeling for Automated Theorem Proving》（arXiv:2009.03393，在 Metamath 上闭合 56.22% 的留出证明，且有新证明被 Metamath 主库收录）；机器人动作序列 = RT-1（arXiv:2212.06817，把动作离散成 token 由 Transformer 输出）、Gato（2022）与 Decision Transformer（2021）。**尚缺视频与三维两项的定稿代表作**（视频侧可用 ViViT 一路，但与本章前面 DiT 那段有重叠，须主编定用哪一个；三维侧未检索）。正文暂维持不点名的罗列（2026-08 核）
+- [x] "万物"清单逐项代表作 —— 已核到的两项：**国际象棋**（Ruoss 等 2024，arXiv:2402.04494，2.7 亿参数 Transformer、无搜索、Lichess 快棋 Elo 2895，正文已由"围棋"改为"国际象棋"并补入）、**芯片布局**（Mirhoseini 等，*Nature* 594:207-212, 2021，用的是边图卷积网络加强化学习，**不是注意力**，正文已把这一项一并写进末尾那条限定）。**六项中已补到四项代表作**：语音 = Whisper（OpenAI 2022，arXiv:2212.04356）与 wav2vec 2.0；音乐 = Jukebox（OpenAI 2020，多尺度 VQ-VAE + 自回归 Transformer）与 MusicLM（2023）；数学证明的形式化步骤 = GPT-f《Generative Language Modeling for Automated Theorem Proving》（arXiv:2009.03393，在 Metamath 上闭合 56.22% 的留出证明，且有新证明被 Metamath 主库收录）；机器人动作序列 = RT-1（arXiv:2212.06817，把动作离散成 token 由 Transformer 输出）、Gato（2022）与 Decision Transformer（2021）。~~**尚缺视频与三维两项的定稿代表作**~~（视频侧可用 ViViT 一路，但与本章前面 DiT 那段有重叠，须主编定用哪一个；三维侧未检索）。正文暂维持不点名的罗列（2026-08 核）
+  - **【第四轮 2026-08-01：缺的两项已补齐，六项代表作到齐，本条结清。】** 按"须有明确'骨架是 Transformer'表述的一手件"这一标准取，两篇的摘要都自己把话说死了，不必再靠二手概括：
+    - **视频 = ViViT**：Arnab, Dehghani, Heigold, Sun, Lučić, Schmid,《ViViT: A Video Vision Transformer》，arXiv:2103.15691，v1 = 2021-03-29。摘要首句原文 "We present **pure-transformer** based models for video classification, drawing upon the recent success of such models in image classification. Our model extracts spatio-temporal tokens from the input video, which are then encoded by a series of transformer layers."——**"从视频里抽时空 token、再拿 transformer 层去编码"正是本章第二节 ViT 那一招换了数据**，与前面 DiT 那段**不重叠**：DiT 那段讲的是生成，ViViT 讲的是识别，两者一进一出，各占一头。**故主编那个"用哪一个"的悬置可以撤销：视频这一项用 ViViT，DiT 留在生成那段。**
+    - **三维 = LRM**：Hong, Zhang, Gu, Bi, Zhou, Liu, Liu, Sunkavalli, Bui, Tan,《LRM: Large Reconstruction Model for Single Image to 3D》，arXiv:2311.04400，v1 = 2023-11-08。摘要原文 "LRM adopts a highly scalable **transformer-based** architecture with 500 million learnable parameters to directly predict a neural radiance field (NeRF) from the input image."——**五亿参数、单图五秒出三维，且摘要自陈其相对前人的差别正是"不再按类别在小数据集上专训"**，与本章"大数据、端到端、不写先验"那条主线同形。
+    - **口径提醒**：这两项与国际象棋、语音、音乐、数学证明、机器人动作一样，是**代表作备查**，正文按本章体例仍不点名（唯一点名的是国际象棋那一处，因为它带了一个具体成绩）。**末尾那条"不是每一项都以注意力为骨架"的限定不受影响**——它针对的是天气与芯片布局两项，这两项仍是图网络一路。
 - [x] 天气一段 —— GraphCast（DeepMind，arXiv 2022-12，*Science* 2023）在 1380 项测试变量与预报时效中的 90% 以上优于 ECMWF 的 HRES，对流层内为 99.7%；10 天预报在单台 TPU v4 机器上不到一分钟，而传统做法需数百台机器的超算算数小时。Pangu-Weather（华为，*Nature* 2023）用的才是注意力一路。**正文的三处数字已按此改准**（"绝大多数指标""上百台机器的超算好几个小时""一台机器不到一分钟"），并把"不是每个都以注意力为骨架"的限定扩写到覆盖芯片布局（2026-08 核）
 - [x] （2026-08-01 主控核毕：经核第 29、30 章均已接住这条伏笔，且各自展开的角度不同，不重复）代码"自带批改老师"一节：论点成立，本章只埋伏笔未展开，**须确认不与第 29、30 章重复**且那两章接得住 —— 跨章事项，本轮未动那两章
 - [x] （2026-08-01 主控已回填：五人均已在册，安芬森 1916–1995 与莱文塔尔 1922–1990 已补）回填：人物谱需新增多索维茨基（生年不详）、江珀（1985– ）、贝克（1962– ）、安芬森（1916–1995）、莱文塔尔（1922–1990）；时间线需补 2020-10-22 ViT、2020-11 CASP14、2021-01-05 DALL·E 与 2021-01 CLIP、2021-06-29 Copilot 技术预览与 2022-06-21 转正、2022-11 Doe v. GitHub 起诉、2021-07 *Nature* AlphaFold2 与数据库上线、2022-07 数据库扩至两亿、2021 Anthropic 成立、2019-03-27 图灵奖、2024 双诺奖。**以上生卒年与日期均已核，待回填共享文件**；按本轮约束未动那两个文件
