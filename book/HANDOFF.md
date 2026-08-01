@@ -5,6 +5,53 @@
 
 ---
 
+## 〇、路径与坐标（先记住这几条）
+
+| 项 | 值 |
+|---|---|
+| **仓库** | `oratis/Markup` |
+| **worktree 绝对路径** | `/Users/oratis/Documents/Claude/Markup/.claude/worktrees/bold-wilbur-184fa9` |
+| **书稿目录（下面所有相对路径的基准）** | `<worktree>/book/` |
+| **分支** | `claude/ai-history-book-planning-0bd661` |
+| **PR** | <https://github.com/oratis/Markup/pull/228>（**已开，未合并**） |
+| **基线提交** | `8d5621e` — 50 files, +16667 |
+| **本文件** | `book/HANDOFF.md` |
+
+**下面所有脚本都假定你的工作目录是 `book/`。** 第一条命令请先跑：
+
+```bash
+cd /Users/oratis/Documents/Claude/Markup/.claude/worktrees/bold-wilbur-184fa9/book
+```
+
+（上一个 session 多次因为 shell 工作目录被别的命令改掉而让脚本报 `FileNotFoundError`，跑脚本前确认一下 `pwd`。）
+
+### 关键文件清单
+
+| 路径 | 是什么 |
+|---|---|
+| `book/README.md` | 项目说明 + 进度看板 + 四步写作流程 |
+| `book/HANDOFF.md` | 本文件 |
+| `book/_manuscript.md` | 稿件树（W1 设计的 dogfood，嵌套列表 + wikilink） |
+| `book/提纲/写作规范.md` | **31 条可执行规则，全部质量约束的来源** |
+| `book/提纲/全书提纲.md` | 五时代 31 章结构、七条母题对照表、「第 N 次校正」编号线 |
+| `book/提纲/人物谱.md` | 人物索引（译名 + 生卒年 + 速写 + 出场章） |
+| `book/提纲/时间线.md` | 编年骨架 |
+| `book/提纲/参考资料.md` | 分层书目 + 四个流行叙述陷阱 |
+| `book/第X时代-*/_时代细纲.md` | 五份分时代细纲，**第五时代那份开头有专用落笔纪律** |
+| `book/序章-最后的问题.md` | 序章 |
+| `book/第一时代-寓言/01…05` | 第 1–5 章 |
+| `book/第二时代-计算/06…12` | 第 6–12 章 |
+| `book/第三时代-网络/13…20` | 第 13–20 章 |
+| `book/第四时代-注意力/21…25` | 第 21–25 章 |
+| `book/第五时代-涌现/26…31` | 第 26–31 章 |
+| `book/终章-要有光.md` | 终章 |
+| `docs/research/06-longform-writing.md` | 写作能力调研（在 worktree 根下的 `docs/`，不在 `book/` 里） |
+| `docs/design/07-writing-mode.md` | 写作模式 W1–W6 设计 |
+
+**git 规矩**：所有改动走 PR + 合并，**绝不直接推 main**。当前分支已有 PR #228；继续在这个分支上提交即可累积到同一个 PR。**发起新的对外动作（新 PR、发帖）前必须先问用户。**
+
+---
+
 ## 一、这是什么
 
 《要有光——人工智能史话》。中文，参照《上帝掷骰子吗——量子物理史话》的写法（人物传记 + 科学进展混合）。
@@ -109,13 +156,11 @@
 
 ## 五、已知问题清单（按优先级）
 
-### P0 —— 版本保护
+### ~~P0 —— 版本保护~~ ✅ 已解决
 
-**`book/` 整个目录至今未纳入 git**（`git status` 显示 `?? book/`）。29 万字没有任何版本保护，多个 agent 都单独提醒过这件事。
+`book/` 已于基线提交 `8d5621e` 纳入 git，PR #228 已开（未合并）。29 万字现在有版本保护了。
 
-当前分支：`claude/ai-history-book-planning-0bd661`
-
-**仓库规矩：所有改动走 PR + 合并，绝不直接推 main；发起对外动作（新 PR、发帖）前必须先问用户。** 提交与开 PR 需要用户点头，**不要自作主张**。
+**继续在 `claude/ai-history-book-planning-0bd661` 分支上提交，会自动累积到 PR #228。** 不要另开分支或新 PR，除非用户明确要求。
 
 ### P1 —— 540 条未清欠账
 
