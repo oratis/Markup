@@ -34,8 +34,9 @@ rows.append((99, f"| [终章 · 要有光](终章-要有光.md) | {c:,} | {s} |"
 table = "| 篇 | 字数 | 节 |\n|---|---:|:--:|\n" + "\n".join(r for _, r in sorted(rows))
 
 readme = open("README.md", encoding="utf-8").read()
-new = re.sub(r"\| 篇 \| 字数 \| 节 \|\n\|[-|: ]+\|\n(?:\|.*\n)+", table + "\n", readme, count=1)
-assert new != readme, "看板表未匹配"
+pat = r"\| 篇 \| 字数 \| 节 \|\n\|[-|: ]+\|\n(?:\|.*\n)+"
+assert re.search(pat, readme), "看板表未匹配——README 结构变了，先看一眼"
+new = re.sub(pat, table + "\n", readme, count=1)
 
 new = re.sub(r"当前正文字数：约 \*\*[\d,\s]+ / 320 000\*\*",
              f"当前正文字数：约 **{tot:,} / 320 000**", new, count=1)
