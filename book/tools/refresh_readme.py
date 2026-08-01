@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 """从文件实测重刷 README 看板的字数表与总字数。永远不要手写字数。"""
-import re, glob, os
+import re, glob, os, sys
 
 TITLES = {
     0: ("序章 · 最后的问题", "序章-最后的问题.md"),
     99: ("终章 · 要有光", "终章-要有光.md"),
 }
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from measure import count, sections   # 全书统一口径：不把 Markdown 记号算成正文
+
 def measure(path):
-    t = open(path, encoding="utf-8").read()
-    b = re.sub(r"<!--.*?-->", "", re.sub(r"^---.*?\n---\n", "", t, flags=re.S), flags=re.S)
-    return len(re.sub(r"\s", "", b)), len(re.findall(r"^## ", b, flags=re.M))
+    return count(path), sections(path)
 
 def chnum(p):
     m = re.match(r"(\d+)", os.path.basename(p))
