@@ -80,3 +80,6 @@ test-fixtures/
 docs/marketing/*.mp4
 docs/marketing/*.mov
 docs/marketing/.build/
+
+# 生成的阅读稿（1MB 量级，不入库）
+要有光-全书.html
