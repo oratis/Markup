@@ -3,31 +3,12 @@
 """把 book/ 下的稿件编译成一份自包含的单文件 HTML 阅读稿。
 
 用法（工作目录必须是 book/）：
-    python3 tools/build_html.py [输出路径]             # 阅读稿（默认）
-    python3 tools/build_html.py --internal [输出路径]  # 工作稿
+    python3 tools/build_html.py [输出路径]
 
 默认输出到 ../要有光-全书.html（不放进仓库，1MB 量级的生成物不该进 git）。
 只依赖标准库。Markdown 转换器只覆盖本书实际用到的语法子集。
-
-**两种稿子的区别（2026-08 加）**
-
-`--internal` 之前是默认行为，现在不是了。工作稿会额外带上：
-
-  * 每章的欠账清单（`<details class="debt">`）
-  * 《全书提纲》《写作规范》两份**生产文件**
-
-这些东西对作者有用，但**不该跟着稿子走**。一次外部审读从 HTML 里读到了欠账区
-留下的多轮代理交接日志（「本轮」「下一位不必再走网络检索」「主编事项」），
-并把它当成了判定「AI 深度参与」的最强证据。折叠起来不算藏住——文本就在源码里，
-任何人另存为、搜一下就看得见。
-
-所以默认改成**阅读稿**：凡例 + 33 篇正文 + 人物谱、时间线、参考资料。
-要给出版社、要给不认识的人，用默认；自己改稿时才加 `--internal`。
 """
 import re, sys, os, glob, html, json
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from measure import count                      # 全书唯一的字数口径
 
 # ---------------------------------------------------------------- 文件收集
 
@@ -35,10 +16,8 @@ def chapter_key(path):
     m = re.match(r"(\d+)", os.path.basename(path))
     return int(m.group(1)) if m else 0
 
-def collect(internal=False):
+def collect():
     items = []  # (anchor, kind, era, title, path)
-    if os.path.exists("凡例.md"):
-        items.append(("ch-fl", "front", "前", "凡例", "凡例.md"))
     items.append(("ch-0", "front", "序", "序章 · 最后的问题", "序章-最后的问题.md"))
     eras = [
         ("第一时代-寓言", "第一时代 · 寓言"),
@@ -53,12 +32,9 @@ def collect(internal=False):
             title = re.sub(r"^\d+-", "", os.path.basename(p)[:-3])
             items.append((f"ch-{n}", "chapter", label, f"第 {n} 章 · {title}", p))
     items.append(("ch-99", "front", "终", "终章 · 要有光", "终章-要有光.md"))
-    # 人物谱、时间线、参考资料是给读者的；提纲与规范是生产文件，只进工作稿。
-    apx = [("提纲/人物谱.md", "人物谱"), ("提纲/时间线.md", "时间线"),
-           ("提纲/参考资料.md", "参考资料")]
-    if internal:
-        apx = [("提纲/全书提纲.md", "全书提纲"), ("提纲/写作规范.md", "写作规范")] + apx
-    for p, label in apx:
+    for p, label in [("提纲/全书提纲.md", "全书提纲"), ("提纲/写作规范.md", "写作规范"),
+                     ("提纲/人物谱.md", "人物谱"), ("提纲/时间线.md", "时间线"),
+                     ("提纲/参考资料.md", "参考资料")]:
         if os.path.exists(p):
             items.append((f"apx-{label}", "appendix", "附录", label, p))
     return items
@@ -210,19 +186,13 @@ def parse(path):
     body = re.sub(r"^\s*#\s+.*?\n", "", body, count=1)  # 章标题由 chh 单独渲染，去掉正文里那份
     return fm, body, debts
 
-def wc(path):
-    """字数一律走 measure.count()。
-
-    这里原先自己数了一遍，且漏掉了「去 Markdown 记号」那一步，于是同一份稿子
-    build_html 报 309,657 字、measure 报 298,867 字，差出整整一万——都是 `**` 被当成了字。
-    规范第 21 条说了口径只有一个，那就真的只留一个。
-    """
-    return count(path)
+def wc(body):
+    return len(re.sub(r"\s", "", body))
 
 # ---------------------------------------------------------------- 组装
 
-def build(outpath, internal=False):
-    items = collect(internal)
+def build(outpath):
+    items = collect()
     linkmap = {os.path.basename(p): a for a, _, _, _, p in items}
     linkmap["README.md"] = "top"
 
@@ -232,7 +202,7 @@ def build(outpath, internal=False):
 
     for anchor, kind, era, title, path in items:
         fm, body, debts = parse(path)
-        n = wc(path)
+        n = wc(body)
         secs = len(re.findall(r"^## ", body, flags=re.M))
         open_n = sum(1 for d, _ in debts if not d)
         done_n = sum(1 for d, _ in debts if d)
@@ -244,19 +214,16 @@ def build(outpath, internal=False):
         toc.append(f'<li><a href="#{anchor}" data-a="{anchor}">{esc(title)}'
                    f'<span class="tw2">{n:,}</span></a></li>')
 
-        # 阅读稿的章头只报字数。status: draft 和欠账计数是生产信息——
-        # 读者看见"draft"会以为拿到的是半成品，编辑看见"欠账 2 未清"会以为这稿子还在施工。
         meta = []
         if kind != "appendix":
             meta.append(f"{n:,} 字")
-            if internal:
-                if secs: meta.append(f"{secs} 节")
-                if fm.get("status"): meta.append(fm["status"])
-                if open_n or done_n: meta.append(f"欠账 {done_n} 清 / {open_n} 未清")
+            if secs: meta.append(f"{secs} 节")
+            if fm.get("status"): meta.append(fm["status"])
+            if open_n or done_n: meta.append(f"欠账 {done_n} 清 / {open_n} 未清")
         syn = fm.get("synopsis", "")
 
         dl = ""
-        if debts and internal:
+        if debts:
             rows = "".join(
                 f'<li class="{"d" if d else "o"}"><span class="mk">{"✓" if d else "○"}</span>'
                 f'<span>{inline(t, linkmap)}</span></li>' for d, t in debts)
@@ -273,17 +240,11 @@ def build(outpath, internal=False):
             + md_to_html(body, linkmap) + dl + "</article>")
 
     nav = json.dumps([a for a, k, _, _, _ in items])
-    n_pieces = len([i for i in items if i[1] != "appendix" and i[0] != "ch-fl"])
-    stats = f"{n_pieces} 篇 · {tot_words:,} 字"
-    if internal:
-        stats += f" · 欠账 {tot_done} 清 / {tot_open} 未清"
+    stats = f"{len([i for i in items if i[1]!='appendix'])} 篇 · {tot_words:,} 字 · 欠账 {tot_done} 清 / {tot_open} 未清"
 
     doc = HTML_SHELL.replace("{{TOC}}", "".join(toc)) \
                     .replace("{{BODY}}", "".join(chapters)) \
                     .replace("{{STATS}}", stats) \
-                    .replace("{{DEBTBTN}}",
-                             '<button id="dbt" aria-pressed="false" '
-                             'title="显示每篇的欠账清单">欠账</button>' if internal else "") \
                     .replace("{{NAV}}", nav)
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(doc)
@@ -415,7 +376,7 @@ html[data-d="off"] details.debt{display:none}
   <button id="tocBtn" aria-label="目录">☰</button>
   <span class="t">要有光</span>
   <span class="s">{{STATS}}</span>
-  {{DEBTBTN}}
+  <button id="dbt" aria-pressed="false" title="显示每篇的欠账清单">欠账</button>
   <button id="fnt" title="字体">宋/黑</button>
   <button id="sml" title="缩小">A−</button>
   <button id="big" title="放大">A+</button>
@@ -433,14 +394,13 @@ html[data-d="off"] details.debt{display:none}
 
   H.dataset.t=get("t","light"); H.dataset.f=get("f","serif"); H.dataset.d=get("d","off");
   var fs=parseInt(get("fs","18"),10); H.style.setProperty("--fs",fs+"px");
-  var dbt=document.getElementById("dbt");   // 阅读稿里没有这个按钮
-  if(dbt) dbt.setAttribute("aria-pressed", H.dataset.d==="on");
+  document.getElementById("dbt").setAttribute("aria-pressed", H.dataset.d==="on");
 
   document.getElementById("thm").onclick=function(){
     H.dataset.t = H.dataset.t==="dark"?"light":"dark"; set("t",H.dataset.t);};
   document.getElementById("fnt").onclick=function(){
     H.dataset.f = H.dataset.f==="sans"?"serif":"sans"; set("f",H.dataset.f);};
-  if(dbt) dbt.onclick=function(){
+  document.getElementById("dbt").onclick=function(){
     H.dataset.d = H.dataset.d==="on"?"off":"on"; set("d",H.dataset.d);
     this.setAttribute("aria-pressed", H.dataset.d==="on");};
   function size(d){fs=Math.max(14,Math.min(26,fs+d));H.style.setProperty("--fs",fs+"px");set("fs",fs);}
@@ -483,10 +443,5 @@ html[data-d="off"] details.debt{display:none}
 """
 
 if __name__ == "__main__":
-    internal = "--internal" in sys.argv
-    rest = [a for a in sys.argv[1:] if not a.startswith("--")]
-    out = rest[0] if rest else ("../要有光-全书-工作稿.html" if internal
-                                else "../要有光-全书.html")
-    build(out, internal)
-    print("工作稿：含欠账清单与生产文件，**不要外发**。" if internal
-          else "阅读稿：不含欠账与生产文件，可以外发。")
+    out = sys.argv[1] if len(sys.argv) > 1 else "../要有光-全书.html"
+    build(out)
