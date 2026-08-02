@@ -43,12 +43,18 @@ SAMPLE = [
     ("第一时代-寓言/01-偃师的木偶.md", "第 1 章", "偃师的木偶",
      "开篇。从《列子》里那个会眨眼的木偶讲到今天，"
      "并示范本书处理传说的办法——「订正」区块。"),
+    ("第二时代-计算/08-机器会思考吗.md", "第 8 章", "机器会思考吗",
+     "图灵把一个吵了三百年的哲学问题，改写成一场可以打赌的游戏；"
+     "并在同一篇论文里把九种反对意见逐条答完——那份清单至今没有第十条。"),
     ("第二时代-计算/10-感知机.md", "第 10 章", "感知机",
      "全书最完整的一出悲剧：第一台会学习的机器，"
      "和一本书如何把一个方向按停了十几年。"),
     ("第四时代-注意力/22-你只需要注意力.md", "第 22 章", "你只需要注意力",
      "今天所有大模型的骨架是怎么来的。"
      "全书技术密度最高的一章，用一个能在纸上算完的例子讲透。"),
+    ("第五时代-涌现/27-涌现还是幻觉.md", "第 27 章", "涌现，还是幻觉",
+     "当下最热的那场争论：能力是从规模里自己长出来的，还是我们的尺子刻度太粗。"
+     "本书的做法是把双方最强的论证并排放好，然后明说不裁决。"),
 ]
 
 PITCH = """《要有光》是一部人工智能史话：**用讲故事的方式，把这门学科三千年的来路写成一本普通人读得下去的书**，
@@ -59,21 +65,13 @@ PITCH = """《要有光》是一部人工智能史话：**用讲故事的方式�
 
 **它和市面上同类书的区别在两处。**
 
-一是**较真**。全书标记了六百余条待核事实，逐条回到一手文献，已核清 95%。
-凡流传广而站不住的说法，正文里用独立的「订正」区块处理——布拉格魔像其实是十九世纪的产物、
-《感知机》那句献辞是作者在罗森布拉特去世次年手写补上的、AlphaGo 与 AlphaGo Zero 被混为一谈了十年。
-核不实的一律降格措辞，宁可标着，也不写死。
+一是**较真**。书里每一个日期、数字与引文都回到过一手文献；
+凡流传广而站不住的说法，正文里用独立的「订正」区块单独处理——布拉格魔像其实是十九世纪的产物、
+《感知机》那句献辞并非写在 1969 年初版上，而是作者在罗森布拉特去世的次年手写补的、
+AlphaGo 与 AlphaGo Zero 被混为一谈了十年。核不实的一律把措辞降格，宁可标着，也不写死。
 
 二是**不装懂**。第五时代那几章讲的是仍在进行的争论——涌现是真的还是尺子的错觉、
 模型到底懂不懂。这本书的做法是把双方最强的论证并排放好，然后明说：我没有能力裁决。"""
-
-STATUS = [
-    ("规模", "33 篇，约 298,000 字（正文净字数，不含提纲与细纲）"),
-    ("状态", "初稿完成，全书已过一轮逐章事实核查与一轮文风打磨"),
-    ("事实核查", "676 条待核事实，已清 644 条（95%）；余下 4 条需调阅纸本或档案，28 条须待定稿时点确定"),
-    ("配套", "人物谱（193 人，含生卒年与出场章）、编年时间线（246 条）、分层参考书目"),
-]
-
 
 def build(out_path):
     linkmap = {}          # 试读本内不做跨章跳转，链接一律降为纯文本
@@ -85,12 +83,11 @@ def build(out_path):
   <div class="deco">要 有 光</div>
   <h1>要有光</h1>
   <p class="sub">人 工 智 能 史 话</p>
-  <p class="tag">试读本 · 序章与三章</p>
+  <p class="tag">试读本 · 序章与五章</p>
   <p class="meta">一部写给普通读者的人工智能通史<br>兼一本不用公式也能读懂的 AI 概念入门</p>
 </section>""")
 
     # 出版说明
-    rows = "".join(f"<tr><th>{html.escape(k)}</th><td>{html.escape(v)}</td></tr>" for k, v in STATUS)
     picks = "".join(
         f'<li><b>{html.escape(t)} · {html.escape(n)}</b>（{count(p):,} 字）—— {html.escape(curly(why))}</li>'
         for p, t, n, why in SAMPLE)
@@ -100,12 +97,11 @@ def build(out_path):
   {md_to_html(curly(PITCH), linkmap)}
   <h2>本试读本收录</h2>
   <ul class="picks">{picks}</ul>
-  <p class="note">四篇合计约 {sum(count(p) for p, *_ in SAMPLE):,} 字。
-  选篇的用意：<b>序章</b>交代立意，<b>第 1 章</b>是开篇也是史料态度的样本，
-  <b>第 10 章</b>展示这本书写人的能力，<b>第 22 章</b>展示它讲清一个硬概念的能力。
-  另可提供第 8 章（图灵测试）、第 27 章（当下最热的那场争论）作为备选。</p>
-  <h2>书稿状态</h2>
-  <table class="status">{rows}</table>
+  <p class="note">六篇合计约 {sum(count(p) for p, *_ in SAMPLE):,} 字，覆盖五个时代里的四个。
+  选篇的用意是让每一篇各担一件事：<b>序章</b>交代立意，<b>第 1 章</b>是开篇也是史料态度的样本，
+  <b>第 8 章</b>是全书思想上的枢纽，<b>第 10 章</b>展示写人的能力，
+  <b>第 22 章</b>展示讲清一个硬概念的能力，<b>第 27 章</b>展示面对未定论争议时的分寸。
+  六篇按书中原序排列，可连读。</p>
 </section>""")
 
     # 正文
@@ -150,19 +146,14 @@ body{margin:0;color:var(--fg);background:#fff;
 .cover .meta{margin-top:12mm;font-size:10pt;color:var(--dim);line-height:2}
 
 .front{page-break-after:always}
-.front h2{font-size:13pt;margin:9mm 0 4mm;padding-bottom:1.5mm;
+.front h2{font-size:12.5pt;margin:6mm 0 3mm;padding-bottom:1.5mm;
  border-bottom:1px solid var(--line);font-weight:600;letter-spacing:.06em}
 .front h2:first-child{margin-top:0}
 .front h2{page-break-after:avoid}
-table.status{page-break-inside:avoid}
 .picks{padding-left:5mm;margin:0}
-.picks li{margin:2.5mm 0;line-height:1.8}
-.note{color:var(--dim);font-size:9.6pt;background:#faf8f4;padding:4mm 5mm;
- border-left:2px solid var(--line);margin:5mm 0 0}
-table.status{border-collapse:collapse;width:100%;font-size:9.8pt;margin-top:2mm}
-table.status th{text-align:left;white-space:nowrap;padding:2mm 6mm 2mm 0;
- vertical-align:top;color:var(--dim);font-weight:600;width:20mm}
-table.status td{padding:2mm 0;vertical-align:top}
+.picks li{margin:1.8mm 0;line-height:1.75;font-size:10.2pt}
+.note{color:var(--dim);font-size:9.4pt;background:#faf8f4;padding:3.5mm 5mm;
+ border-left:2px solid var(--line);margin:4mm 0 0;page-break-inside:avoid}
 
 .chapter{page-break-before:always}
 .chh{margin-bottom:9mm;padding-bottom:5mm;border-bottom:2px solid var(--fg)}
