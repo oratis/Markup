@@ -78,7 +78,8 @@ def chapters():
     out = []
     for f in fs:
         if any(f.startswith(d) for d in ("提纲", "投稿", "tools")): continue
-        if os.path.basename(f).startswith("_") or os.path.basename(f) in ("README.md", "HANDOFF.md"): continue
+        if os.path.basename(f).startswith("_") or os.path.basename(f) in (
+                "README.md", "HANDOFF.md", "凡例.md"): continue   # 凡例是体例说明，不是一篇
         out.append(f)
     # 序章、01..31、终章 的自然顺序
     def key(f):
@@ -95,12 +96,55 @@ def label(p):
     return m.group(1).lstrip("0") if m else b
 
 
+# ── 硬违例 ──────────────────────────────────────────────────────────
+# 上面那些指标是**定位器**：数字高不代表有问题，要去看上下文。
+# 下面这几条不一样，是**禁令**——出现即违例，不需要判断。
+BANS = [
+    ("母题编号进了正文",
+     re.compile(r"母题[一二三四五六七八九十0-9]")),
+    ("自指计数（数章数）",
+     re.compile(r"(?:这本书|本书)[^。？！\n]{0,12}"
+                r"(?:讲了|写到|写了|前面)[^。？！\n]{0,8}"
+                r"(?:第?[一二三四五六七八九十百]{1,4}|\d{1,2})\s*章")),
+    # 「香农第二次出场是 1948 年」——出场/登场是舞台动词，说的是这本书的调度，
+    # 不是历史本身。历史人物不会「出场」，只有被人写进书里才会。
+    ("自指计数（数出场次数）",
+     re.compile(r"第[一二三四五六七八九十0-9]+次(?:出场|登场)|"
+                r"(?:出场|登场)[了过]?[一二三四五六七八九十0-9]+[次回]")),
+    ("正文在讲这本书怎么写",
+     re.compile(r"全书(?:两个|三个)?[^。？！\n]{0,8}(?:技术高峰|高峰之一)|"
+                r"按[^。？！\n]{0,10}落笔纪律|"
+                r"这一章(?:要)?写得枯燥|"
+                r"本(?:章|节)(?:要|不)裁决|我在这一章不裁决")),
+]
+
+
+def check(rows):
+    """把禁令过一遍。返回违例条数；0 才算过。"""
+    bad = 0
+    for r in rows:
+        t = re.sub(r"^##.*$", "", body(r["path"]), flags=re.M)
+        t = re.sub(r"^\s*#\s+.*?\n", "", t, count=1)
+        for name, rx in BANS:
+            for m in rx.finditer(t):
+                bad += 1
+                s = max(0, m.start() - 30); e = min(len(t), m.end() + 30)
+                print(f"✗ {label(r['path']):>3} [{name}] …"
+                      f"{re.sub(chr(10), ' ', t[s:e])}…")
+    print("─" * 60)
+    print(f"{'✓ 无违例' if not bad else f'✗ {bad} 处违例'}（检查 {len(rows)} 篇）")
+    return bad
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     show = "--show" in sys.argv
     rows = [scan(p) for p in chapters()]
     if args:
         rows = [r for r in rows if label(r["path"]) in args]
+
+    if "--check" in sys.argv:
+        sys.exit(1 if check(rows) else 0)
 
     if show:
         for r in rows:
