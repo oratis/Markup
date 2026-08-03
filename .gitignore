@@ -80,3 +80,6 @@ test-fixtures/
 docs/marketing/*.mp4
 docs/marketing/*.mov
 docs/marketing/.build/
+
+# 语言史：单文件 HTML 阅读稿，由 tools/build_html.py 生成
+星号之下-全书.html
