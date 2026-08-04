@@ -9,6 +9,9 @@
 只依赖标准库。Markdown 转换器只覆盖本书实际用到的语法子集。
 """
 import re, sys, os, glob, html, json
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from measure import count_text
 
 # ---------------------------------------------------------------- 文件收集
 
@@ -185,11 +188,12 @@ def parse(path):
         for item in re.findall(r"^- \[([ x])\]\s*(.*?)(?=\n- \[|\n*\Z)", blk, flags=re.S | re.M):
             debts.append((item[0] == "x", re.sub(r"\s+", " ", item[1]).strip()))
     body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
+    words = count_text(body)   # 先数字数：章标题算正文，与 README／measure.count 同口径
     body = re.sub(r"^\s*#\s+.*?\n", "", body, count=1)  # 章标题由 chh 单独渲染，去掉正文里那份
-    return fm, body, debts
+    return fm, body, debts, words
 
-def wc(body):
-    return len(re.sub(r"\s", "", body))
+# 字数由 parse() 在去掉章标题之前算好，见 measure.count_text。
+# **不要在这里另写一套数法**——2026-08-04 就是这样漏掉 Markdown 记号，与 README 差了 11 148 字。
 
 # ---------------------------------------------------------------- 组装
 
@@ -203,8 +207,7 @@ def build(outpath):
     era_now = None
 
     for anchor, kind, era, title, path in items:
-        fm, body, debts = parse(path)
-        n = wc(body)
+        fm, body, debts, n = parse(path)
         secs = len(re.findall(r"^## ", body, flags=re.M))
         open_n = sum(1 for d, _ in debts if not d)
         done_n = sum(1 for d, _ in debts if d)
