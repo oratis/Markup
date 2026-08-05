@@ -81,5 +81,10 @@ docs/marketing/*.mp4
 docs/marketing/*.mov
 docs/marketing/.build/
 
-# 语言史：单文件 HTML 阅读稿，由 tools/build_html.py 生成
+# 生成的阅读稿（1MB 量级，不入库）
+要有光-全书.html
+要有光-试读本.html
+要有光-试读本.pdf
 星号之下-全书.html
+星号之下-试读本.html
+星号之下-试读本.pdf
