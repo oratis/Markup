@@ -202,6 +202,7 @@ export const zh: Strings = {
   "onboard.shortcuts": "几个常用快捷键",
   "onboard.openVault": "打开 Vault",
   "onboard.openFile": "打开文件",
+  "onboard.openGitHub": "打开 GitHub 仓库",
   "onboard.skip": "跳过",
   "onboard.kb.openFile": "打开文件",
   "onboard.kb.openVault": "打开 Vault",

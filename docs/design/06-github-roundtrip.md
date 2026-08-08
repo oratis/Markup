@@ -1,8 +1,9 @@
 # Desktop — GitHub round-trip (read a repo as a vault, propose changes as a PR)
 
-> Status: **design approved for build** (B-layer track 1 from
-> [PRODUCT-DIRECTION.md](../PRODUCT-DIRECTION.md) — "桌面端 GitHub 双向化").
-> Batches **B301–B307**. Companion to the shipped iOS design
+> Status: **B301–B302 shipped** (read-as-vault, the 0.8.0 milestone); B303–B307
+> remain (the write-back / PR round-trip, 0.9.0). B-layer track 1 from
+> [PRODUCT-DIRECTION.md](../PRODUCT-DIRECTION.md) — "桌面端 GitHub 双向化".
+> Companion to the shipped iOS design
 > ([ios/03-github-primary-vault.md](ios/03-github-primary-vault.md)); reuse its
 > decisions wherever the platform allows.
 
@@ -75,13 +76,13 @@ copy is **editable from day one** — edits are exactly how a PR gets authored.
 
 ## 4. Batches (PR-sized, each lands green on its own)
 
-- **B301 — `github_vault.rs`: zipball → working copy.** Rust: download
+- **B301 — `github_vault.rs`: zipball → working copy.** ✅ *shipped.* Rust: download
   (`codeload.github.com/{o}/{r}/zip/{ref}`), atomic extract (strip the
   `repo-sha/` wrapper dir), emit progress events (reuse the #127 channel),
   write the manifest (tree fetch → path/SHA/size). Pure-logic tests: zip
   fixture extraction, manifest shape, wrapper-strip, traversal-entry rejection
   (`../` names in zip).
-- **B302 — "Open repo as vault" UI.** GitHubOpenDialog gains the action next
+- **B302 — "Open repo as vault" UI.** ✅ *shipped.* GitHubOpenDialog gains the action next
   to the existing single-file open; calls B301 then `open_vault`; recents
   remember `github:owner/repo@ref` sources. The indexing indicator (#127)
   covers perceived latency.

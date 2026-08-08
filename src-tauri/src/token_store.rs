@@ -28,6 +28,13 @@ pub fn github_token_load() -> Result<Option<String>, String> {
     }
 }
 
+/// Best-effort token read for Rust-side GitHub calls (zipball / tree download):
+/// `None` on no entry *or* any Keychain error, so callers fall back to
+/// unauthenticated requests (public repos work signed-out) rather than failing.
+pub fn load_token() -> Option<String> {
+    entry().ok()?.get_password().ok()
+}
+
 /// Persist the token, overwriting any existing one.
 #[tauri::command]
 pub fn github_token_save(token: String) -> Result<(), String> {

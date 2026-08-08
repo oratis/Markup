@@ -23,6 +23,27 @@ the toolbar — search syntax, navigation, and Canvas.
 - **Open a single file** — `⌘O`, drag a `.md` / `.markdown` / `.html` /
   `.canvas` file onto the window, or double-click it in Finder.
 
+## Open a GitHub repo as a vault
+
+Markup can open any GitHub repository **as a vault** — no `git clone`, no
+terminal. From the first-run screen choose **Open from GitHub**, or run
+**Open from GitHub…** from the Command Palette (`⌘⇧P`).
+
+- Type `owner/repo` (or paste a `github.com` repo URL) and click **Open as
+  vault**, or pick one from **Your repositories** once you're signed in.
+- Markup downloads the repo into a local working copy and indexes it, so the
+  full vault experience — file tree, full-text search, wikilinks, backlinks,
+  graph, relative images — works exactly like a local folder, and stays usable
+  offline.
+- **Public repos work signed-out.** Sign in (GitHub device flow — you enter a
+  short code at github.com; no password touches the app) to raise rate limits
+  and open **private** repos. The token is stored in the macOS Keychain.
+- Prefer to grab just one file? Use **Open file** (or **Browse** a repo) to pull
+  a single document into an unsaved tab instead.
+
+> Built for docs-sized repos. Very large repositories (hundreds of MB) are
+> refused rather than downloaded.
+
 ## Search
 
 Two complementary tools:

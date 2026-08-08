@@ -2977,6 +2977,12 @@ export function App() {
         <GitHubOpenDialog
           onClose={() => setShowGitHub(false)}
           onOpen={openScratchWithContent}
+          onOpenVaultPath={(root) => {
+            setShowGitHub(false);
+            // The materialized repo is just a local folder — open it through the
+            // normal vault flow (indexes it, lists files, remembers it in recents).
+            openRecentVault(root);
+          }}
         />
       )}
       {showOnboarding && (
@@ -2989,6 +2995,10 @@ export function App() {
           onOpenVault={() => {
             dismissOnboarding();
             handleOpenVault();
+          }}
+          onOpenGitHub={() => {
+            dismissOnboarding();
+            setShowGitHub(true);
           }}
         />
       )}

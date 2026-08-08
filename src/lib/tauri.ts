@@ -103,6 +103,49 @@ export async function listVaultFiles(): Promise<VaultFile[]> {
   return await invoke<VaultFile[]>("list_vault_files");
 }
 
+export interface GitHubVaultOpened {
+  /** Local path of the materialized working copy — open it via `openVault`. */
+  root: string;
+  owner: string;
+  repo: string;
+  /** Resolved ref name (branch/tag) the snapshot came from. */
+  gitRef: string;
+}
+
+/** Download a GitHub repo (at `gitRef`, or its default branch) into a local
+ * working copy and return its path. The caller then opens that path through the
+ * normal `openVault` flow — the materialized copy is just a folder of files, so
+ * the whole vault experience (tree, search, wikilinks) works unchanged. Public
+ * repos work signed-out; private repos need a token (Keychain, read by Rust). */
+export async function openGitHubRepoVault(
+  owner: string,
+  repo: string,
+  gitRef: string | null,
+): Promise<GitHubVaultOpened> {
+  return await invoke<GitHubVaultOpened>("github_open_repo_vault", {
+    owner,
+    repo,
+    gitRef,
+  });
+}
+
+/** Phase of an in-progress "open repo as vault": resolving the commit,
+ * downloading the zipball, extracting it, snapshotting the manifest, done. */
+export type GitHubVaultPhase =
+  | "resolving"
+  | "downloading"
+  | "extracting"
+  | "manifest"
+  | "done";
+
+/** Progress ticks while a GitHub repo is materializing into a local vault.
+ * Indexing afterwards reports on the existing `vault-index-progress` channel. */
+export async function listenGitHubVaultProgress(
+  cb: (phase: GitHubVaultPhase) => void,
+): Promise<UnlistenFn> {
+  return await listen<GitHubVaultPhase>("github-vault-progress", (e) => cb(e.payload));
+}
+
 export async function currentVault(): Promise<string | null> {
   return await invoke<string | null>("current_vault");
 }

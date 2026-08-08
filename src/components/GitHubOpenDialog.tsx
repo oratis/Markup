@@ -21,12 +21,29 @@ import {
   parseRepos,
   repoLink,
 } from "../lib/github-link";
+import {
+  type GitHubVaultPhase,
+  listenGitHubVaultProgress,
+  openGitHubRepoVault,
+} from "../lib/tauri";
 
 interface Props {
   onClose: () => void;
-  /** Called with (name, content) when a file is fetched. */
+  /** Called with (name, content) when a single file is fetched. */
   onOpen: (name: string, content: string) => void;
+  /** Called with the local path of a repo materialized as a vault — the caller
+   * opens it through the normal open-vault flow. */
+  onOpenVaultPath: (root: string) => void;
 }
+
+/** Human label for each materialize phase (mirrors the Rust event payloads). */
+const PHASE_LABEL: Record<GitHubVaultPhase, string> = {
+  resolving: "Resolving latest commit…",
+  downloading: "Downloading repository…",
+  extracting: "Extracting files…",
+  manifest: "Finishing up…",
+  done: "Opening vault…",
+};
 
 const JSON_HEADERS = {
   Accept: "application/vnd.github+json",
@@ -50,13 +67,15 @@ function httpError(status: number): string {
  * private repos, and lists your repositories. The fetched file opens as a new
  * unsaved buffer.
  */
-export function GitHubOpenDialog({ onClose, onOpen }: Props) {
+export function GitHubOpenDialog({ onClose, onOpen, onOpenVaultPath }: Props) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Browse stack: empty = the URL input; non-empty = browsing the last dir.
   const [stack, setStack] = useState<GitHubLink[]>([]);
   const [entries, setEntries] = useState<GitHubEntry[]>([]);
+  // Non-null while a repo is materializing into a local vault (shows progress).
+  const [materializing, setMaterializing] = useState<GitHubVaultPhase | null>(null);
 
   // Auth + repos list.
   const [signedIn, setSignedIn] = useState(isGitHubSignedIn());
@@ -92,6 +111,15 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
 
   // Stop any in-flight poll when the dialog unmounts.
   useEffect(() => () => signInAbort.current?.abort(), []);
+
+  // Reflect materialize phases (download/extract/…) emitted by Rust while a
+  // repo is being opened as a vault. Events only fire during our own open.
+  useEffect(() => {
+    const un = listenGitHubVaultProgress((phase) => setMaterializing(phase));
+    return () => {
+      un.then((f) => f());
+    };
+  }, []);
 
   // Hydrate the token from the Keychain on first open (migrating any token a
   // pre-Keychain build left in localStorage), then refresh the signed-in state.
@@ -179,6 +207,31 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
     else openFile(link);
   }
 
+  /** Download the whole repo behind `link` (its owner/repo/ref — any path is
+   * ignored) into a local working copy, then hand the path to the app to open
+   * as a vault. */
+  async function openAsVault(link: GitHubLink) {
+    setError(null);
+    setMaterializing("resolving");
+    try {
+      const opened = await openGitHubRepoVault(link.owner, link.repo, link.ref);
+      onOpenVaultPath(opened.root);
+      onClose();
+    } catch (e) {
+      setError(String(e));
+      setMaterializing(null);
+    }
+  }
+
+  function submitAsVault() {
+    const link = parseGitHubLink(url);
+    if (!link) {
+      setError("Not a valid GitHub link");
+      return;
+    }
+    openAsVault(link);
+  }
+
   function back() {
     const next = stack.slice(0, -1);
     setStack(next);
@@ -228,8 +281,19 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
             ))}
         </div>
 
+        {/* Materializing a repo into a local vault */}
+        {materializing && (
+          <div className="py-6 text-center">
+            <div className="inline-block w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <div className="text-[13px] opacity-80">{PHASE_LABEL[materializing]}</div>
+            <div className="text-[11px] opacity-50 mt-1">
+              Downloading the repo so the whole vault works offline.
+            </div>
+          </div>
+        )}
+
         {/* Device-flow sign-in panel */}
-        {!browsing && signInCode && (
+        {!materializing && !browsing && signInCode && (
           <div className="mb-3 rounded border border-blue-500/40 bg-blue-500/5 p-3 text-[13px]">
             <div className="opacity-80 mb-2">Enter this code at GitHub:</div>
             <div className="flex items-center gap-3 mb-2">
@@ -253,21 +317,21 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
           </div>
         )}
 
-        {!browsing && !signInCode && (
+        {!materializing && !browsing && !signInCode && (
           <input
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !loading) submit();
+              if (e.key === "Enter" && !loading && url.trim() !== "") submitAsVault();
             }}
-            placeholder="owner/repo  or  github.com/owner/repo/blob/main/README.md"
+            placeholder="owner/repo  or  a github.com repo URL"
             className="w-full px-2 py-1.5 rounded border border-black/10 dark:border-white/20 bg-transparent outline-none focus:border-blue-500 text-[13px]"
           />
         )}
 
         {/* Your repositories (signed in, not browsing, not mid-sign-in) */}
-        {!browsing && !signInCode && haveToken && (
+        {!materializing && !browsing && !signInCode && haveToken && (
           <div className="mt-3">
             <div className="text-[12px] uppercase tracking-wide opacity-50 mb-1">
               Your repositories
@@ -280,20 +344,32 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
                 <div className="px-3 py-4 text-[12px] opacity-60">No repositories.</div>
               )}
               {repos.map((r) => (
-                <button
+                <div
                   key={r.fullName}
-                  onClick={() => enterDir(repoLink(r), true)}
-                  className="w-full text-left px-3 py-1.5 text-[13px] flex items-center gap-2 hover:bg-black/5 dark:hover:bg-white/10 border-b border-black/5 dark:border-white/10 last:border-0"
+                  className="flex items-center hover:bg-black/5 dark:hover:bg-white/10 border-b border-black/5 dark:border-white/10 last:border-0"
                 >
-                  <span className="opacity-60">{r.isPrivate ? "🔒" : "📦"}</span>
-                  <span className="flex-1 truncate">{r.fullName}</span>
-                </button>
+                  <button
+                    onClick={() => openAsVault(repoLink(r))}
+                    title="Open this repository as a vault"
+                    className="flex-1 min-w-0 text-left px-3 py-1.5 text-[13px] flex items-center gap-2"
+                  >
+                    <span className="opacity-60">{r.isPrivate ? "🔒" : "📦"}</span>
+                    <span className="flex-1 truncate">{r.fullName}</span>
+                  </button>
+                  <button
+                    onClick={() => enterDir(repoLink(r), true)}
+                    title="Browse files instead"
+                    className="shrink-0 px-2.5 py-1.5 text-[11px] opacity-50 hover:opacity-100"
+                  >
+                    Browse
+                  </button>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        {browsing && (
+        {!materializing && browsing && (
           <div className="max-h-[320px] overflow-auto rounded border border-black/10 dark:border-white/15">
             {entries.length === 0 && !loading && (
               <div className="px-3 py-4 text-[12px] opacity-60">Empty folder</div>
@@ -317,23 +393,43 @@ export function GitHubOpenDialog({ onClose, onOpen }: Props) {
 
         {error && <div className="mt-2 text-[12px] text-red-500">{error}</div>}
 
-        <div className="mt-4 flex items-center justify-end gap-2 text-[12px]">
-          <button
-            onClick={onClose}
-            className="px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
-          >
-            {browsing ? "Done" : "Cancel"}
-          </button>
-          {!browsing && !signInCode && (
+        {!materializing && (
+          <div className="mt-4 flex items-center justify-end gap-2 text-[12px]">
             <button
-              onClick={submit}
-              disabled={loading || url.trim() === ""}
-              className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+              onClick={onClose}
+              className="px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
             >
-              {loading ? "Opening…" : "Open"}
+              {browsing ? "Done" : "Cancel"}
             </button>
-          )}
-        </div>
+            {/* While browsing, still let the user open the whole repo as a vault. */}
+            {browsing && current && (
+              <button
+                onClick={() => openAsVault(current)}
+                className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600"
+              >
+                Open as vault
+              </button>
+            )}
+            {!browsing && !signInCode && (
+              <>
+                <button
+                  onClick={submit}
+                  disabled={loading || url.trim() === ""}
+                  className="px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-50"
+                >
+                  {loading ? "Opening…" : "Open file"}
+                </button>
+                <button
+                  onClick={submitAsVault}
+                  disabled={loading || url.trim() === ""}
+                  className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+                >
+                  Open as vault
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

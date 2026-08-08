@@ -34,6 +34,12 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 # `apple-native` backend uses Security.framework; other platform backends off.
 keyring = { version = "3", default-features = false, features = ["apple-native"] }
 
+# "Open a GitHub repo as a vault": the repo's zipball is extracted into a local
+# working copy, then the existing vault pipeline indexes it. GitHub zipballs are
+# DEFLATE-only, so we drop the other (bzip2/zstd/aes) codecs to keep the build
+# lean and C-free (flate2's pure-Rust miniz_oxide backend, matching rustls).
+zip = { version = "4", default-features = false, features = ["deflate"] }
+
 # Spike 0.3: vault management
 walkdir = "2"
 notify = "8"

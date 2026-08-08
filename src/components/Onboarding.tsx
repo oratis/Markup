@@ -3,6 +3,7 @@ import { useT } from "../lib/i18n";
 interface Props {
   onOpenVault: () => void;
   onOpenFile: () => void;
+  onOpenGitHub: () => void;
   onSkip: () => void;
 }
 
@@ -17,7 +18,7 @@ const SHORTCUTS: { key: keyof import("../lib/locales/en").Strings; acc: string }
   { key: "onboard.kb.settings", acc: "⌘," },
 ];
 
-export function Onboarding({ onOpenVault, onOpenFile, onSkip }: Props) {
+export function Onboarding({ onOpenVault, onOpenFile, onOpenGitHub, onSkip }: Props) {
   const t = useT();
   return (
     <div
@@ -48,25 +49,33 @@ export function Onboarding({ onOpenVault, onOpenFile, onSkip }: Props) {
           ))}
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-2 text-[12px]">
+        <div className="mt-6 flex items-center justify-between gap-2 text-[12px]">
           <button
             onClick={onSkip}
             className="px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
           >
             {t("onboard.skip")}
           </button>
-          <button
-            onClick={onOpenFile}
-            className="px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
-          >
-            {t("onboard.openFile")}
-          </button>
-          <button
-            onClick={onOpenVault}
-            className="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
-          >
-            {t("onboard.openVault")}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenFile}
+              className="px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              {t("onboard.openFile")}
+            </button>
+            <button
+              onClick={onOpenVault}
+              className="px-3 py-1 rounded border border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              {t("onboard.openVault")}
+            </button>
+            <button
+              onClick={onOpenGitHub}
+              className="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {t("onboard.openGitHub")}
+            </button>
+          </div>
         </div>
       </div>
     </div>

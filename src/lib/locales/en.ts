@@ -204,6 +204,7 @@ export const en = {
   "onboard.shortcuts": "A few shortcuts to know",
   "onboard.openVault": "Open a Vault",
   "onboard.openFile": "Open a File",
+  "onboard.openGitHub": "Open from GitHub",
   "onboard.skip": "Skip",
   "onboard.kb.openFile": "Open file",
   "onboard.kb.openVault": "Open vault",
