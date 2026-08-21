@@ -24,6 +24,7 @@ import { calloutDecorate } from "../lib/milkdown/callout-deco";
 import { compositionTracker, isComposing } from "../lib/milkdown/composition";
 import { embedDecorate } from "../lib/milkdown/embed-deco";
 import { imageView } from "../lib/milkdown/image-view";
+import { tableView } from "../lib/milkdown/table-view";
 import { tagDecorate } from "../lib/milkdown/tag-deco";
 import { wikilinkDecorate } from "../lib/milkdown/wikilink-deco";
 import { log as perfLog } from "../lib/perf";
@@ -107,7 +108,8 @@ function WysiwygEditor({
       .use(tagDecorate)
       .use(embedDecorate)
       .use(calloutDecorate)
-      .use(imageView),
+      .use(imageView)
+      .use(tableView),
   );
 
   // Insert a real image node when the paste handler (App.tsx) writes a
