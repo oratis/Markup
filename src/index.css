@@ -628,6 +628,85 @@ div[class*="hover:bg-black/5"][class*="dark:hover:bg-white/10"]:hover {
   color: var(--mk-fg-default);
 }
 
+/* ------------------------------------------------------------------
+   Mermaid diagrams — see docs/design/09-mermaid-in-app.md.
+
+   Rendered to SVG by the diagram-view NodeView. The wrapper bleeds like
+   `.mk-table-wrap`, but the SVG is NOT stretched to fill it: mermaid emits
+   an inline `max-width: <natural>px`, so a diagram draws at its natural
+   size, centred, and only shrinks when the box is narrower than that. The
+   bleed therefore buys a big diagram more room before it has to shrink —
+   which is the whole point — while a small one looks exactly as it should.
+   ------------------------------------------------------------------ */
+.milkdown .editor .mk-diagram-wrap {
+  margin: 1.2em 0;
+  margin-inline: calc(-1 * var(--mk-bleed));
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.milkdown .editor .mk-diagram-figure {
+  display: flex;
+  justify-content: center;
+}
+.milkdown .editor .mk-diagram-figure > svg {
+  height: auto;
+  /* Never wider than the (bled) wrapper, whatever mermaid asked for. */
+  max-width: 100%;
+}
+.milkdown .editor .mk-diagram-selected {
+  outline: 2px solid var(--mk-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Source view + the parse-failure fallback share the code-block skin. */
+.milkdown .editor .mk-diagram-source {
+  width: 100%;
+  margin: 0;
+  background: var(--mk-code-bg);
+  border-left: 3px solid var(--mk-accent);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-size: 0.92em;
+  line-height: 1.6;
+  color: var(--mk-fg-default);
+  white-space: pre-wrap;
+}
+.milkdown .editor .mk-diagram-error {
+  width: 100%;
+}
+.milkdown .editor .mk-diagram-error-note {
+  margin: 0 0 6px;
+  font-size: 0.85em;
+  color: var(--mk-fg-muted);
+}
+/* Corner affordance: the node is an atom, so this is the only in-place way
+   to read the source. Absolutely positioned against the wrapper — which
+   sets `position: relative` in JS precisely because `container-type` on
+   `.milkdown` would otherwise be the containing block. */
+.milkdown .editor .mk-diagram-source-toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--mk-border);
+  border-radius: 5px;
+  background: var(--mk-bg-elevated);
+  color: var(--mk-fg-muted);
+  font-size: 11px;
+  line-height: 1.6;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.milkdown .editor .mk-diagram-wrap:hover .mk-diagram-source-toggle,
+.milkdown .editor .mk-diagram-source-toggle:focus-visible {
+  opacity: 1;
+}
+.milkdown .editor .mk-diagram-source-toggle:hover {
+  color: var(--mk-fg-strong);
+  border-color: var(--mk-border-strong);
+}
+
 /* Blockquote */
 .milkdown .editor blockquote {
   border-left: 3px solid var(--mk-accent);

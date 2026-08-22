@@ -81,6 +81,11 @@
     "vite": "^8.0.16",
     "vitest": "^4.1.8"
   },
+  "pnpm": {
+    "overrides": {
+      "mermaid": "^11.4.0"
+    }
+  },
   "engines": {
     "node": ">=18"
   }

@@ -21,6 +21,7 @@ import { nord } from "@milkdown/theme-nord";
 import { getMarkdown } from "@milkdown/utils";
 import { useEffect, useRef } from "react";
 import { calloutDecorate } from "../lib/milkdown/callout-deco";
+import { diagramView } from "../lib/milkdown/diagram-view";
 import { compositionTracker, isComposing } from "../lib/milkdown/composition";
 import { embedDecorate } from "../lib/milkdown/embed-deco";
 import { imageView } from "../lib/milkdown/image-view";
@@ -109,7 +110,8 @@ function WysiwygEditor({
       .use(embedDecorate)
       .use(calloutDecorate)
       .use(imageView)
-      .use(tableView),
+      .use(tableView)
+      .use(diagramView),
   );
 
   // Insert a real image node when the paste handler (App.tsx) writes a

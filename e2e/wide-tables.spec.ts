@@ -97,6 +97,12 @@ test.beforeEach(async ({ context, page }) => {
     "contenteditable",
     "true",
   );
+  // The welcome document contains a mermaid block, and it renders to SVG
+  // asynchronously — which changes the document height. `pasteMarkdown`
+  // clicks the CENTRE of the editor to place the caret, so pasting before
+  // the diagram settles can drop the table inside a blockquote or list item
+  // and measure that container instead of the prose column. Wait it out.
+  await expect(page.locator(".milkdown .editor .mk-diagram-wrap svg")).toBeVisible();
 });
 
 test("a wide table bleeds past the prose column without overflowing the pane", async ({
