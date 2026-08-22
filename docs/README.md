@@ -12,6 +12,7 @@
 6. [MVP 功能清单](./design/02-mvp-features.md)
 7. [路线图](./design/03-roadmap.md)
 8. [写作模式（长文 / 书籍）](./design/07-writing-mode.md) — 提案；调研见 [research/06](./research/06-longform-writing.md)，首个真实项目是 [`book/`](../book/README.md)
+9. [宽表格](./design/08-wide-tables.md) — 表格出血到窗格宽度、按内容分配列宽；实现见 `src/lib/milkdown/table-view.ts`
 
 ## 目录结构
 
@@ -31,7 +32,8 @@ docs/
     ├── 00-project-overview.md
     ├── 01-architecture.md
     ├── 02-mvp-features.md
-    └── 03-roadmap.md
+    ├── 03-roadmap.md
+    └── 08-wide-tables.md
 ```
 
 ## TL;DR 技术选型

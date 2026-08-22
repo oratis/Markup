@@ -570,21 +570,61 @@ div[class*="hover:bg-black/5"][class*="dark:hover:bg-white/10"]:hover {
   border: 1px solid var(--mk-border);
 }
 
-/* Code block */
+/* ------------------------------------------------------------------
+   Code blocks — the same bleed as tables, without a NodeView.
+
+   ProseMirror already renders every code block as `pre > code`, so `pre`
+   plays the part `.mk-table-wrap` plays for tables — a transparent box
+   that bleeds — while `code`, which IS the contentDOM, carries the
+   visible skin and is sized to its content.
+
+   One element cannot do both jobs: with a non-auto width a negative
+   `margin-inline` is not "permission to grow" but a hard shift — the box
+   is over-constrained, the right margin is dropped, and the block ends up
+   flush against the left gutter instead of centred (measured in WebKit
+   and Blink alike). Hence the split.
+
+   Note this widens the WRAP MEASURE, not a scroll: ProseMirror's own
+   sheet sets `pre { white-space: pre-wrap }`, so a long line has never
+   overflowed — it wrapped. The win is fewer wrapped lines.
+
+   `pre` also stays a DIRECT child of `.editor`, which a wrapper nodeView
+   would have broken: focus mode selects `.editor > [data-active]` and
+   focus-typewriter.ts's findBlock matches PRE.
+   ------------------------------------------------------------------ */
 .milkdown .editor pre {
-  background: var(--mk-code-bg) !important;
-  border-left: 3px solid var(--mk-accent);
-  border-radius: 6px;
-  padding: 14px 16px;
   margin: 1.2em 0;
+  margin-inline: calc(-1 * var(--mk-bleed));
+  /* The skin lives on `code` now; this is only a bleeding box. */
+  background: none !important;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  /* Lines wrap, so this never fires — the same safety net the table
+     wrapper has, for anyone who later sets `white-space: pre`. */
   overflow-x: auto;
+  overflow-y: hidden;
   font-size: 0.92em;
   line-height: 1.6;
 }
-.milkdown .editor pre code {
-  background: transparent !important;
+.milkdown .editor pre > code {
+  display: block;
+  /* Content-sized (the widest line, unwrapped), floored at the prose
+     column so a short snippet is pixel-identical to before, capped at the
+     bleeding `pre`, past which lines wrap again. `min(…, 100%)` — not
+     `--mk-column` alone — is what keeps a code block inside a blockquote
+     or list item from overflowing its container. */
+  width: max-content;
+  min-width: min(var(--mk-column), 100%);
+  max-width: 100%;
+  /* Centred; auto collapses to 0 on overflow, so the left edge stays
+     reachable rather than being cropped. */
+  margin: 0 auto;
+  background: var(--mk-code-bg);
   border: 0;
-  padding: 0;
+  border-left: 3px solid var(--mk-accent);
+  border-radius: 6px;
+  padding: 14px 16px;
   color: var(--mk-fg-default);
 }
 
@@ -601,18 +641,120 @@ div[class*="hover:bg-black/5"][class*="dark:hover:bg-white/10"]:hover {
   margin: 0.3em 0;
 }
 
-/* Tables */
-.milkdown .editor table {
-  width: 100%;
-  border-collapse: collapse;
+/* ==================================================================
+   BLEED — see docs/design/08-wide-tables.md.
+
+   The prose column (`--markup-prose-max-width`) is the reading measure
+   for PARAGRAPHS. Block content that has no business being squeezed
+   into it — wide tables, long code lines, big diagrams — may instead
+   "bleed": grow symmetrically past the column, centred, up to 32px
+   from the pane edge, and scroll horizontally past that.
+
+   Three shared custom properties, declared once on the editor and read
+   by every bleedable block:
+
+     --mk-pad     the prose gutter (same expression as .editor padding)
+     --mk-bleed   how far a block may reach past the column, PER SIDE
+     --mk-column  the prose column width — a block's floor, and the cap
+                  on any one part of it (a table cell, say)
+
+   A bleeding block is `margin-inline: calc(-1 * var(--mk-bleed))`, so
+   zeroing the variable (nested contexts, old WebViews) disables the
+   bleed everywhere at once with no per-element reset.
+
+   Pane width is read with container-query units (`100cqw`, `.milkdown`
+   is the container). WKWebView < Safari 16 (macOS 10.15) has no `cqw`:
+   the @supports block never applies there, the defaults below stand,
+   and wide blocks simply stay in the column and scroll.
+   ================================================================== */
+.milkdown {
+  container-type: inline-size;
+}
+.milkdown .editor {
+  --mk-pad: max(24px, calc((100cqw - var(--markup-prose-max-width)) / 2));
+  --mk-bleed: 0px;
+  --mk-column: 100%;
+}
+@supports (width: 1cqw) {
+  .milkdown .editor {
+    --mk-bleed: max(0px, calc(var(--mk-pad) - 32px));
+    --mk-column: min(var(--markup-prose-max-width), calc(100cqw - 48px));
+  }
+}
+/* Nested content belongs to its container, not to the page: bleeding a
+   table out of a blockquote would leave it hanging past the quote's own
+   rule. Zeroing the variable disables the bleed for everything inside. */
+.milkdown .editor :is(blockquote, li, td, th) {
+  --mk-bleed: 0px;
+}
+
+/* ------------------------------------------------------------------
+   Tables. Wrapped by the table-view NodeView in `div.mk-table-wrap`:
+   the wrapper bleeds and scrolls, the table inside is sized to its
+   (capped) content, floored at the prose column, and centred. Auto
+   layout gives columns width in proportion to what's in them — Nord's
+   `table-layout: fixed` handed every column the same width, which is
+   what squeezed CJK text to one character per line.
+   ------------------------------------------------------------------ */
+.milkdown .editor .mk-table-wrap {
+  /* prosemirror-tables' per-cell floor, normally set on the table by its own
+     TableView (which our nodeView replaces). Define it so its rule agrees
+     with ours instead of resolving to nothing. */
+  --default-cell-min-width: 6.5em;
   margin: 1.2em 0;
+  margin-inline: calc(-1 * var(--mk-bleed));
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.milkdown .editor table {
+  table-layout: auto;
+  /* Content-sized, floored at the prose column (small tables look as before),
+     capped at the wrapper (bleed width). Past the cap, columns compress to
+     their min-width and the wrapper scrolls. */
+  width: max-content;
+  /* `min(…, 100%)`: inside a blockquote or list item the wrapper is
+     narrower than the prose column, and an absolute floor there forced a
+     scrollbar onto a table that fits. */
+  min-width: min(var(--mk-column), 100%);
+  max-width: 100%;
+  /* Centred when narrower than the wrapper; auto margins collapse to 0 when
+     wider, so the left edge stays reachable under horizontal scroll. */
+  margin: 0 auto;
+  border-collapse: collapse;
   font-size: 0.95em;
+  overflow: visible;
 }
 .milkdown .editor th,
 .milkdown .editor td {
   text-align: left;
   padding: 8px 12px;
   border-bottom: 1px solid var(--mk-border);
+  vertical-align: top;
+}
+/* Floor per column (border-box, incl. padding ≈ 5 CJK chars). CJK text can
+   break after every character, so without a floor auto layout happily
+   squeezes a column to one character per line instead of overflowing.
+   Measured: raising the floor from 5.5em to 6.5em widened the narrowest
+   column by ~12px and cost the widest ones ~5px each — and 13 columns still
+   fit a 1440px window before the wrapper needs to scroll.
+
+   Scoped through `.mk-table-wrap` for specificity: prosemirror-tables' own
+   sheet (via Nord) carries `.ProseMirror td:not([data-colwidth]):not(...)`
+   at (0,3,1), whose `var(--default-cell-min-width)` is only ever set by ITS
+   TableView — which our nodeView replaces — so it resolves to nothing and
+   zeroes the floor. (0,3,1) here, declared later, wins the cascade; we also
+   define the variable below so that rule computes to the same value. */
+.milkdown .editor .mk-table-wrap :is(td, th) {
+  min-width: 6.5em;
+}
+/* A cell's preferred width is its paragraph's unwrapped length; for CJK that
+   is the whole paragraph on one line. Cap it at the prose column so one
+   essay-length cell can't claim the entire bleed width and crush the other
+   columns. Capping at exactly the column (not less) means the cap never
+   bites on a table that is merely stretched to the column — no text
+   stopping short of the cell edge. */
+.milkdown .editor .mk-table-wrap :is(td, th) > p {
+  max-width: var(--mk-column);
 }
 .milkdown .editor th {
   background: var(--mk-bg-elevated);
