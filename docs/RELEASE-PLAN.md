@@ -1,6 +1,6 @@
 # Markup — Release Plan
 
-> Status: living document · last updated for **v0.6.1**
+> Status: living document · last updated for **v1.1.0**
 > Companion docs: [STATUS.md](./STATUS.md) · [design/03-roadmap.md](./design/03-roadmap.md) · [app-store/MAS-publishing-plan.md](./app-store/MAS-publishing-plan.md)
 
 This is the plan for *shipping* Markup: where it is now, how releases are
@@ -36,10 +36,10 @@ path to 1.0.
 
 ## 2. Versioning & cadence
 
-- **SemVer**, pre-1.0: `0.MINOR.PATCH`.
-  - **PATCH** (`0.5.x`) — bug fixes, packaging, cosmetic polish. No new user-facing features.
-  - **MINOR** (`0.x.0`) — new features or notable behavior changes.
-  - **1.0.0** — see §6 criteria.
+- **SemVer**, post-1.0: `MAJOR.MINOR.PATCH`.
+  - **PATCH** (`1.0.x`) — bug fixes, packaging, cosmetic polish. No new user-facing features.
+  - **MINOR** (`1.x.0`) — new features or notable behavior changes.
+  - **MAJOR** — reserved for a break in the vault format or a paid/licensing change; nothing planned.
 - **Cadence**: ship when there's something worth shipping. Patch releases go out as soon as a fix lands; minors batch a coherent feature set.
 - **One source of version truth must stay in sync**: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (+ `Cargo.lock` via `cargo update -p markup`).
 
@@ -49,13 +49,14 @@ path to 1.0.
 
 This is the flow used since v0.3.0 — keep to it.
 
-1. **Branch + PR.** Feature/fix work on a branch → PR into `main`. Branch protection requires the two CI checks (**Frontend** = lint + tsc + build + tests; **Rust** = build + test) to pass before merge. No direct pushes of feature work to `main`.
-2. **Merge** (merge commit, delete branch).
+1. **Branch + PR.** Feature/fix work on a branch → PR into `main`. Branch protection requires **four** status checks — **Frontend** (typecheck + build), **Rust** (build + test), and **Cross-platform compile** on both `ubuntu-latest` and `windows-latest`. E2E and iOS run but are *not* required. `strict: true`, so the branch must be up to date with `main` before the merge unlocks. No direct pushes of feature work to `main`.
+2. **Merge with `--squash`.** `required_linear_history` is on, so a merge commit is rejected even though the repo setting allows one. `deleteBranchOnMerge` is off — pass `--delete-branch`.
 3. **Bump version** in the three files (§2) + `cargo update -p markup --offline`; write `docs/release-notes-vX.Y.Z.md`.
 4. **Tag** `vX.Y.Z` and push the tag → triggers `.github/workflows/release.yml`.
-5. **Release CI** builds both arches, assembles each DMG with **dmgbuild** (headless icon layout), uploads `Markup_X.Y.Z_apple-silicon.dmg`, `Markup_X.Y.Z_intel.dmg`, `SHA256SUMS`, and creates the GitHub Release.
+5. **Release CI** builds both arches, assembles each DMG with **dmgbuild** (headless icon layout), uploads `Markup_X.Y.Z_apple-silicon.dmg`, `Markup_X.Y.Z_intel.dmg`, `SHA256SUMS`, and creates the GitHub Release. Since v1.1.0 a decoupled `build-desktop`/`release-desktop` pair appends **unsigned** Windows `.exe` and Linux `.deb`/`.AppImage` installers to the same release.
+   **Judge the run per job, not by the overall badge.** Only `release` has `needs: build`; `mas`, `build-desktop` and `release-desktop` are deliberately decoupled, so one of them going red does not mean the macOS release failed. (v1.0.1's run shows FAILURE for exactly this reason — the `mas` job — while the DMGs published fine.)
 6. **Replace the auto-notes** with the hand-written `docs/release-notes-vX.Y.Z.md` (`gh release edit vX.Y.Z --notes-file ...`).
-7. **Verify**: download + mount one DMG; confirm it launches and the installer layout is right.
+7. **Verify**: `gh release view vX.Y.Z --json assets` must list `latest.json` **and both** `.app.tar.gz` files — if the updater signing gate ever evaluates false the workflow skips `latest.json` and exits 0, so the release looks green while every existing user's auto-update silently stops. Then download + mount one DMG; confirm it launches and the installer layout is right.
 
 > Asset naming is deliberate: `apple-silicon` / `intel` (not `arm64`/`x64`) so non-technical users pick the right one.
 
