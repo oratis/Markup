@@ -1,9 +1,9 @@
-# 设计 08 · 宽表格：让表格用上屏幕宽度
+# 设计 08 · 宽内容出血：让表格和代码块用上屏幕宽度
 
-- **日期**: 2026-08-21
+- **日期**: 2026-08-21（表格）／2026-08-22（代码块）
 - **状态**: 已采纳，已实现（见 §6）
-- **触发**: 在 Read 模式读 8 列的竞品对比表，每格被挤成一列两三个字、一行就是一个字；屏幕两侧 60% 的空白却闲着。
-- **一句话**: 正文列宽不动（那是给段落的阅读量度），**表格可以按需"出血"到窗格边缘**；列宽按内容分配而不是平均分；实在放不下再横向滚动，绝不再挤成一字一行。
+- **触发**: 在 Read 模式读 8 列的竞品对比表，每格被挤成一列两三个字、一行就是一个字；屏幕两侧 60% 的空白却闲着。代码块同理：长行在 720px 里折成四行，两侧各空 568px。
+- **一句话**: 正文列宽不动（那是给段落的阅读量度），**宽内容可以按需"出血"到窗格边缘**；表格列宽按内容分配而不是平均分，代码块按最长行定宽；实在放不下再横向滚动或折行，绝不再挤成一字一行。
 
 ---
 
@@ -67,7 +67,7 @@
 }
 ```
 
-兼容性：容器查询单位从 Safari 16 起支持（macOS 11 Big Sur 以上的 WKWebView）。应用最低支持 macOS 10.15，Catalina 顶到 Safari 15.6，**没有 cqw**——用 `@supports (width: 1cqw)` 包住出血部分；不支持时只缺"出血"，自动列宽和横滚照旧。`container-type` 带来的布局隔离（layout containment）会让 `.milkdown` 成为 `position: fixed` 子孙的包含块——查过，`.milkdown` 内只有 ProseMirror 生成的 DOM，没有 fixed 元素。
+兼容性：容器查询单位从 Safari 16 起支持（macOS 11 Big Sur 以上的 WKWebView）。应用最低支持 macOS 10.15，Catalina 顶到 Safari 15.6，**没有 cqw**——用 `@supports (width: 1cqw)` 包住出血部分；不支持时只缺"出血"，自动列宽和横滚照旧。关于 `container-type` 的包含块副作用，早期这份文档写错过，订正如下：`.milkdown` 里**确实有** `position: fixed` 元素（`@milkdown/plugin-cursor` 的拖放指示器），但 WebKit 和 Blink 都**不**把 `container-type` 当作 fixed 定位的包含块——两个引擎实测均不受影响。真正变了的是 `position: absolute`：它现在相对 `.milkdown` 解析。以后要在编辑区里加绝对定位的角标、行手柄、复制按钮，记住这条。
 
 ### 4.3 表格的"内容宽度"怎么定：封顶到正文列宽
 
@@ -95,7 +95,11 @@
 
 ### 4.5 嵌套的表格不出血
 
-引用块、列表项里的表格属于它的容器，不属于页面——出血会让它挂在引用块的竖线外面。`:is(blockquote, li, td, th) .mk-table-wrap` 把出血归零，这类表格仍有自动列宽和自己的滚动条。
+引用块、列表项里的表格属于它的容器，不属于页面——出血会让它挂在引用块的竖线外面。`:is(blockquote, li, td, th)` 把 `--mk-bleed` 归零；因为每个出血元素的外边距都写成 `calc(-1 * var(--mk-bleed))`，归零变量就等于一次性关掉所有出血，不用逐个元素复位。
+
+**归零变量还不够，这里有过一个已发布的 bug。** 嵌套容器比正文列**窄**，而下限写的是绝对值 `min-width: var(--mk-column)`——引用块里 685px 的容器被塞进 720px 的下限，一张本来放得下的小表凭空多出一条滚动条。下限必须写成 `min(var(--mk-column), 100%)`：正文列和"容器自己"取小。代码块的 `code` 盒同理。
+
+原来的嵌套用例测的是**宽**表，宽表在两种写法下都会溢出，所以测试从头到尾都是绿的——回归就是这么漏出去的。补的用例用**小**表，断言 `wrapScrollWidth <= wrapClientWidth`。
 
 ### 4.6 居中与滚动不打架
 
@@ -105,24 +109,91 @@
 
 Read 模式就是 Milkdown 关掉 contenteditable，DOM 相同，所以一套 CSS 两边通用；按 E 切换时表格不跳。自动列宽在编辑时会随输入微调列宽——Typora/Obsidian 同样如此，可接受。
 
-### 4.8 实现落点
+### 4.8 代码块：同一套出血，不用 NodeView
+
+代码块要的是同一件事，但有两处不一样：
+
+**一、它折行，不横滚。** ProseMirror 自己的样式表给 `pre` 设了 `white-space: pre-wrap`，所以长行从来没有溢出过——它是折的。`pre` 上那句 `overflow-x: auto` 一次都没触发过。也就是说，出血对代码块的意义不是"少一条滚动条"，而是**把折行的量度撑宽**：1440px 窗口下，一行 380 字符的代码从 720px / 4 行变成 1332px / 3 行。别把表格那套说辞照搬过来。
+
+**二、一个元素没法既出血又按内容定宽。** 宽度不是 `auto` 时，负的 `margin-inline` 不再是"允许长大"，而是一次硬位移：盒子被过约束，右边距被丢掉，块直接贴到左边沟里（WebKit 和 Blink 实测一致：1440px 窗格下 `left` 落到 32px，比该在的位置偏左 328px）。
+
+好在不用为此写 NodeView——ProseMirror 本来就把代码块渲染成 `pre > code`，两个盒子现成的：
+
+| 元素 | 角色 | 类比 |
+|---|---|---|
+| `pre` | 透明的出血盒，负外边距 + 兜底的 `overflow-x` | `.mk-table-wrap` |
+| `code`（就是 contentDOM） | 可见的皮肤（背景、左侧强调条、圆角、内边距）+ 按内容定宽 | `table` |
+
+```css
+.milkdown .editor pre {
+  margin-inline: calc(-1 * var(--mk-bleed));
+  background: none !important;   /* 皮肤搬走了 */
+  padding: 0;
+  overflow-x: auto;
+}
+.milkdown .editor pre > code {
+  display: block;
+  width: max-content;                          /* 最长的一行 */
+  min-width: min(var(--mk-column), 100%);      /* 短代码原样不动 */
+  max-width: 100%;                             /* 封顶在出血宽度 */
+  margin: 0 auto;                              /* 居中 */
+  background: var(--mk-code-bg);
+  border-left: 3px solid var(--mk-accent);
+  padding: 14px 16px;
+}
+```
+
+两个坑：
+
+- 原来那条 `.milkdown .editor pre code { background: transparent !important }` **必须删掉**，不能靠覆盖。留着它新皮肤算出来是 `rgba(0,0,0,0)`，代码块变成裸字贴在页面背景上——而 `--mk-code-bg`(#f1f0ed) 对白色本来就淡，扫一眼看不出来。
+- **不写 NodeView 是有意的**：包一层 `div` 会让 `pre` 不再是 `.editor` 的直接子元素，而专注模式的选择器是 `.focus-mode .milkdown .editor > [data-active]`、`focus-typewriter.ts` 的 `findBlock` 也认 `PRE`。`pre` 自己就能出血能滚，包一层只有坏处。
+
+**不动 `white-space`。** 改成 `pre` 会把内容藏到滚动条后面，那是行为改动不是修 bug；而且滚动容器一旦在 contenteditable 里变活，`code` 的 `max-width: 100%` 就得改成 `none`，否则文字会从自己的背景底下滚出去。源码模式的 `lineWrap` 设置也不相干——那是 CodeMirror 的。
+
+**已知的代价，说在前面：** 按内容定宽意味着编辑时每敲一个字，盒子会漂移约 4.2–4.6px（在约 72 字符的区间内），而且并排几个代码块会各自宽窄不一、左边缘参差。这和表格是同一个取舍（见 §4.7），先按"同一套"发；真嫌参差，后续可以加一个 `$prose` 装饰做二值吸附（够宽就整块吸到出血宽度，否则回正文列），带滞回避免抖动。
+
+### 4.9 实现落点
 
 - **NodeView** `src/lib/milkdown/table-view.ts`：给 `table` 节点包一层 `div.mk-table-wrap > table > tbody`（contentDOM = tbody）。这和 prosemirror-tables 自带的 `TableView`（columnResizing 用的 `div.tableWrapper`）结构一致，是 prosemirror-tables 认可的形态；`tableEditing`、CellSelection、`keepTableAlignPlugin` 都不依赖 table 是 `.editor` 的直接子元素。不用 `display: block` 的 GitHub 技巧，因为匿名表格盒没法居中、也没法撑满。
-- **CSS** `src/index.css`：`.milkdown` 容器声明；`.mk-table-wrap` 出血 + 横滚；表格 `table-layout: auto; width: max-content; min-width: C; max-width: 100%`；单元格下限；格内 `p` 封顶。
+- **CSS** `src/index.css`：`.milkdown` 容器声明；三个变量声明在 `.milkdown .editor` 上，供所有出血元素共用；`.mk-table-wrap` 出血 + 横滚；表格 `table-layout: auto; width: max-content; min-width: min(C, 100%); max-width: 100%`；单元格下限；格内 `p` 封顶。
 - **注册** `src/components/Editor.tsx`：`.use(tableView)`。
+- **代码块** 纯 CSS，`pre` / `pre > code` 分工（§4.8），无新增 JS。
 
 ## 5. 不在本轮
 
-- **导出 HTML / 预览**：Rust 侧的导出样式已经用 GitHub 式 `display:block; overflow-x:auto`（`commands.rs`），且导出页没有"窗格"概念，不动。
-- **代码块、Mermaid 图的出血**：同一套 `--mk-bleed` 可以复用，等有人抱怨再做。
+- **导出 HTML / 预览**：Rust 侧的导出样式已经用 GitHub 式 `display:block; overflow-x:auto`（`commands.rs`），且导出页没有"窗格"概念，不动。应用内和导出页对宽内容的排布因此是不一致的，暂时接受。
+- **Mermaid 图**：见下一节——它不是 CSS 问题。
+- **代码块的二值吸附**（§4.8 末尾那条已知代价）：先按"同一套"发，看参差是否真的碍眼。
+- **宽表格在 WebKit 上不能用键盘滚动**：溢出的 `.mk-table-wrap` 没有 `tabindex`，Chromium 有可聚焦滚动容器所以看不出来，WebKit（真正出货的引擎）看得出来。这是表格那一轮就有的旧账，单独修，且只该在真的溢出时才加 tab 停靠点。
 - **按表格/按文档的手动开关**：先看自动规则够不够用。
 - **iOS**：原生 Swift 渲染，不走这条链路。
 
+## 5.5 Mermaid：先得有图可出血
+
+`@milkdown/plugin-diagram` **不带 nodeView**。它的 `toDOM` 造的是一个 `div[data-type="diagram"]`，`textContent` 就是 mermaid 源码——所以 Read 和 Edit 里，Mermaid 块都只是一段纯文本（运行时实测：编辑区 0 个 `<svg>`）。真正渲染成 SVG 只发生在**导出/预览的 HTML** 里，走 Rust 侧 `<pre class="mermaid">` + CDN 的 mermaid v11。
+
+给这段纯文本加 `--mk-bleed` 会"生效"——每一项机械检查都过——但用户看到的只是一段更宽的纯文本。比不做更糟：PR 看起来交付了，实际是惰性的。
+
+所以 Mermaid 的出血有前置条件：**先写一个 diagram nodeView 把它渲染成 SVG**，出血才有对象。那是独立一件事，单独一轮做。
+
 ## 6. 验证
+
+**表格**（`e2e/wide-tables.spec.ts`，9 条）
 
 - 8 列中文对比表（本次触发用例）在 1280 / 1440 / 1900px 窗格下的表现；
 - 3 列、一列长备注的表：只小幅出血，备注列在 C 处换行，无右侧留白伪影；
 - 小表格（README 的 5 列对比表）：外观与改前一致，占满正文列；
 - 20 列矩阵：容器内横滚，页面本身不出横向滚动条；
+- 引用块里的宽表不越界；引用块里的**小**表不多出滚动条（§4.5 那条回归的守门用例，已验证：换回旧写法它会红）；
 - Read ↔ Edit 切换不跳版；Edit 模式下点选格子、Tab 跳格、列选区正常；
 - `@supports` 兜底：禁用 cqw 时仍是自动列宽 + 横滚。
+
+**代码块**（`e2e/code-bleed.spec.ts`，7 条）
+
+- 短代码块宽度**恰好**等于正文列，左边缘和段落对齐（三档行为的第一档）；
+- 皮肤仍然上色（守 `background: transparent !important` 那个坑）；
+- 长行出血、左右对称、页面不出横向滚动条，且把 `code` 压回 720px 时高度确实变高——证明"少折几行"是真的；
+- 引用块里的代码块不出血、不多滚动条；
+- Read ↔ Edit 几何一致；
+- 无 cqw 时保持今天的几何；
+- 窄窗格（820px）留在正文列里。

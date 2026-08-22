@@ -201,6 +201,33 @@ test("a table inside a blockquote stays inside it", async ({ page }) => {
   expect(m.wrapRight).toBeLessThanOrEqual(m.quoteRight + 1);
 });
 
+test("a small table inside a blockquote does not gain a scrollbar", async ({ page }) => {
+  // The nested wrapper is NARROWER than the prose column, so flooring the
+  // table at an absolute `--mk-column` overflowed a table that fits and put
+  // a scrollbar on it. The wide-table case above cannot catch that: it
+  // overflows either way. Hence a small table, asserting it does not scroll.
+  await setSourceMarkdown(
+    page,
+    SMALL_TABLE.split("\n")
+      .map((l) => (l ? `> ${l}` : l))
+      .join("\n"),
+  );
+  const m = await page.evaluate(() => {
+    const table = document.querySelector<HTMLTableElement>(".milkdown .editor table");
+    if (!table) throw new Error("no quoted table rendered");
+    const wrap = table.parentElement as HTMLElement;
+    return {
+      wrapScrollWidth: wrap.scrollWidth,
+      wrapClientWidth: wrap.clientWidth,
+      tableWidth: table.getBoundingClientRect().width,
+      wrapWidth: wrap.getBoundingClientRect().width,
+    };
+  });
+
+  expect(m.wrapScrollWidth).toBeLessThanOrEqual(m.wrapClientWidth);
+  expect(m.tableWidth).toBeLessThanOrEqual(m.wrapWidth + 1);
+});
+
 test("without container-query units the table still fits and scrolls", async ({
   page,
 }) => {
