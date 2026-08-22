@@ -162,7 +162,7 @@ Read 模式就是 Milkdown 关掉 contenteditable，DOM 相同，所以一套 CS
 ## 5. 不在本轮
 
 - **导出 HTML / 预览**：Rust 侧的导出样式已经用 GitHub 式 `display:block; overflow-x:auto`（`commands.rs`），且导出页没有"窗格"概念，不动。应用内和导出页对宽内容的排布因此是不一致的，暂时接受。
-- **Mermaid 图**：见下一节——它不是 CSS 问题。
+- **Mermaid 图**：见 §5.5——它不是 CSS 问题，需要先有 nodeView（已由[设计 09](./09-mermaid-in-app.md) 补上）。
 - **代码块的二值吸附**（§4.8 末尾那条已知代价）：先按"同一套"发，看参差是否真的碍眼。
 - **宽表格在 WebKit 上不能用键盘滚动**：溢出的 `.mk-table-wrap` 没有 `tabindex`，Chromium 有可聚焦滚动容器所以看不出来，WebKit（真正出货的引擎）看得出来。这是表格那一轮就有的旧账，单独修，且只该在真的溢出时才加 tab 停靠点。
 - **按表格/按文档的手动开关**：先看自动规则够不够用。
@@ -174,7 +174,7 @@ Read 模式就是 Milkdown 关掉 contenteditable，DOM 相同，所以一套 CS
 
 给这段纯文本加 `--mk-bleed` 会"生效"——每一项机械检查都过——但用户看到的只是一段更宽的纯文本。比不做更糟：PR 看起来交付了，实际是惰性的。
 
-所以 Mermaid 的出血有前置条件：**先写一个 diagram nodeView 把它渲染成 SVG**，出血才有对象。那是独立一件事，单独一轮做。
+所以 Mermaid 的出血有前置条件：**先写一个 diagram nodeView 把它渲染成 SVG**，出血才有对象。那是独立一件事，见 [设计 09](./09-mermaid-in-app.md)——**已经做了**，所以这一节记的是当时的判断，不是现状。
 
 ## 6. 验证
 
