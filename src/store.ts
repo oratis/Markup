@@ -114,6 +114,7 @@ interface AppState {
   reorderTab: (fromId: string, toId: string) => void;
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
+  closeTabsToLeft: (id: string) => void;
   closeAllTabs: () => void;
   toggleTabPinned: (id: string) => void;
   activateNextTab: () => void;
@@ -323,6 +324,23 @@ function removeTabs(state: AppState, victimIds: Set<string>) {
   return { tabs, activeTabId, recentlyClosed };
 }
 
+/**
+ * Close everything on one side of `id`. Pinned tabs on that side survive —
+ * this gesture shouldn't take an anchored doc with it. The pivot always
+ * stays, and takes over as active if the previous active tab went along.
+ */
+function closeSide(state: AppState, id: string, side: "left" | "right") {
+  const idx = state.tabs.findIndex((x) => x.id === id);
+  if (idx < 0) return state;
+  const range = side === "left" ? state.tabs.slice(0, idx) : state.tabs.slice(idx + 1);
+  const victims = range.filter((x) => !x.pinned);
+  if (victims.length === 0) return state;
+  if (!confirmDiscard(victims)) return state;
+  const next = removeTabs(state, new Set(victims.map((x) => x.id)));
+  const activeSurvives = next.tabs.some((x) => x.id === state.activeTabId);
+  return { ...next, activeTabId: activeSurvives ? state.activeTabId : id };
+}
+
 function welcomeTab(): Tab {
   return {
     id: `${SCRATCH_PREFIX}welcome`,
@@ -478,19 +496,9 @@ export const useAppStore = create<AppState>((set) => ({
       };
     }),
 
-  closeTabsToRight: (id) =>
-    set((state) => {
-      const idx = state.tabs.findIndex((t) => t.id === id);
-      if (idx < 0) return state;
-      // Keep pinned tabs that lived to the right of `id` so the user
-      // doesn't lose their anchored ones via this gesture.
-      const victims = state.tabs.slice(idx + 1).filter((t) => !t.pinned);
-      if (victims.length === 0) return state;
-      if (!confirmDiscard(victims)) return state;
-      const next = removeTabs(state, new Set(victims.map((x) => x.id)));
-      const activeSurvives = next.tabs.some((t) => t.id === state.activeTabId);
-      return { ...next, activeTabId: activeSurvives ? state.activeTabId : id };
-    }),
+  closeTabsToRight: (id) => set((state) => closeSide(state, id, "right")),
+
+  closeTabsToLeft: (id) => set((state) => closeSide(state, id, "left")),
 
   closeAllTabs: () =>
     set((state) => {

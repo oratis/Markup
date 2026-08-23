@@ -28,6 +28,7 @@ export type ShortcutId =
   | "settings"
   | "nextTab"
   | "prevTab"
+  | "closeOtherTabs"
   | "reopenClosed"
   | "fmtBold"
   | "fmtItalic"
@@ -70,6 +71,7 @@ export const defaults: Record<ShortcutId, string> = {
   settings: "Mod+,",
   nextTab: "Mod+Alt+]",
   prevTab: "Mod+Alt+[",
+  closeOtherTabs: "Mod+Alt+W",
   reopenClosed: "Mod+Shift+T",
   fmtBold: "Mod+B",
   fmtItalic: "Mod+I",
@@ -113,6 +115,7 @@ export const labels: Record<ShortcutId, string> = {
   settings: "Settings",
   nextTab: "Next Tab",
   prevTab: "Previous Tab",
+  closeOtherTabs: "Close Other Tabs",
   reopenClosed: "Reopen Last Closed Tab",
   fmtBold: "Bold",
   fmtItalic: "Italic",

@@ -22,6 +22,7 @@ export function TabBar() {
   const closeTab = useAppStore((s) => s.closeTab);
   const closeOtherTabs = useAppStore((s) => s.closeOtherTabs);
   const closeTabsToRight = useAppStore((s) => s.closeTabsToRight);
+  const closeTabsToLeft = useAppStore((s) => s.closeTabsToLeft);
   const closeAllTabs = useAppStore((s) => s.closeAllTabs);
   const toggleTabPinned = useAppStore((s) => s.toggleTabPinned);
   const reorderTab = useAppStore((s) => s.reorderTab);
@@ -176,6 +177,11 @@ export function TabBar() {
             },
             { label: "Close", run: () => closeTab(ctx.id) },
             { label: "Close Others", run: () => closeOtherTabs(ctx.id) },
+            {
+              label: "Close to the Left",
+              run: () => closeTabsToLeft(ctx.id),
+              disabled: tabs.findIndex((t) => t.id === ctx.id) === 0,
+            },
             {
               label: "Close to the Right",
               run: () => closeTabsToRight(ctx.id),
