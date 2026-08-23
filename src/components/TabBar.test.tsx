@@ -141,4 +141,21 @@ describe("TabBar", () => {
     fireEvent.contextMenu(aRow, { clientX: 10, clientY: 10 });
     expect(screen.getByText("Close to the Left")).toBeDisabled();
   });
+
+  it("side / others / all closes are disabled when only pinned tabs would be hit", () => {
+    // Pinned tabs always sort to the front, so "everything to my left is
+    // pinned" is the common case, not a corner.
+    useAppStore.setState({
+      tabs: [{ ...makeTab("/a.md", "a.md"), pinned: true }, makeTab("/b.md", "b.md")],
+      activeTabId: "/b.md",
+    });
+    render(<TabBar />);
+    const bRow = screen.getByText("b.md").parentElement!;
+    fireEvent.contextMenu(bRow, { clientX: 10, clientY: 10 });
+    expect(screen.getByText("Close to the Left")).toBeDisabled();
+    expect(screen.getByText("Close Others")).toBeDisabled();
+    expect(screen.getByText("Close to the Right")).toBeDisabled();
+    // "Close All" still has b.md to close.
+    expect(screen.getByText("Close All")).toBeEnabled();
+  });
 });
