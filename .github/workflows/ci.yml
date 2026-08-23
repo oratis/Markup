@@ -175,7 +175,10 @@ jobs:
         run: cargo build --release
 
   cross-platform:
-    name: Cross-platform compile + test (${{ matrix.os }})
+    # NOTE: the name is a required status check in branch protection
+    # ("Cross-platform compile (<os>)") — renaming it would leave every PR
+    # waiting on a check that never reports. It now also runs the tests.
+    name: Cross-platform compile (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     # Guards the cfg(target_os) gating so a macOS-only change can't silently
