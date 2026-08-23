@@ -17,8 +17,19 @@ def body(path):
     t = re.sub(r"<!--.*?-->", "", t, flags=re.S)
     return re.sub(r"^---.*?\n---\n", "", t, flags=re.S)
 
+def count_text(text):
+    """同一口径，但接收正文字符串而非路径。
+
+    给已经自己读过文件、去过 frontmatter 与注释的调用者用（build_html.py 就是）。
+    **不要在别处另写一套数法**——2026-08-04 发现 build_html.py 正是这样漏掉了
+    Markdown 记号那一步，与 README 的总字数差了 11 148 字（234 920 对 223 772），
+    而这个差额恰好就是本文件开头记的那笔「全书合计近一万字」。
+    """
+    return len(re.sub(r"\s", "", MARKS.sub("", text)))
+
+
 def count(path):
-    return len(re.sub(r"\s", "", MARKS.sub("", body(path))))
+    return count_text(body(path))
 
 def sections(path):
     return len(re.findall(r"^## ", body(path), flags=re.M))
