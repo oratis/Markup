@@ -41,7 +41,14 @@ export default defineConfig({
           if (id.includes("@milkdown") || id.includes("prosemirror")) return "milkdown";
           if (id.includes("@codemirror") || id.includes("@lezer")) return "codemirror";
           if (id.includes("katex")) return "katex";
-          if (id.includes("mermaid")) return "mermaid";
+          // Deliberately NOT grouping mermaid. It splits itself — its entry
+          // is ~238 kB and pulls each diagram type (flowchart, sequence,
+          // gantt, mindmap, …) through one of 23 `import()` calls. Naming a
+          // chunk here flattened all of them into a single 3.12 MB chunk
+          // that the milkdown chunk then imported STATICALLY, so index.html
+          // modulepreloaded it: 63% of eager JS, for a renderer that most
+          // documents never touch. Leaving it alone restores per-diagram
+          // lazy loading (eager JS 4.95 MB → 2.09 MB).
           return undefined;
         },
       },
