@@ -63,15 +63,16 @@ async function tableMetrics(page: Page) {
   });
 }
 
-/** Put `markdown` on the clipboard and paste it at the caret. */
-async function pasteMarkdown(page: Page, markdown: string) {
-  await page.evaluate((md) => navigator.clipboard.writeText(md), markdown);
-  await page.locator(".ProseMirror").click();
-  await page.keyboard.press("ControlOrMeta+v");
-  await expect(page.locator(".milkdown .editor table")).toBeVisible();
-}
-
-/** Replace the whole document by typing into source mode, then come back. */
+/**
+ * Replace the whole document by typing into source mode, then come back.
+ *
+ * Deliberately NOT a clipboard paste at a clicked caret: clicking the centre
+ * of the editor lands wherever the welcome document happens to put it — and
+ * that moves with async layout (the mermaid diagram, font loading). When it
+ * landed inside a blockquote the table nested there and `tableMetrics`
+ * measured the quote's content box (685px) instead of the prose column
+ * (720px). Source mode makes the table the only top-level node, every time.
+ */
 async function setSourceMarkdown(page: Page, markdown: string) {
   await page.keyboard.press("ControlOrMeta+/");
   const cm = page.locator(".cm-content");
@@ -83,8 +84,7 @@ async function setSourceMarkdown(page: Page, markdown: string) {
   await expect(page.locator(".milkdown .editor table")).toBeVisible();
 }
 
-test.beforeEach(async ({ context, page }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+test.beforeEach(async ({ page }) => {
   await installTauriMock(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
@@ -97,18 +97,12 @@ test.beforeEach(async ({ context, page }) => {
     "contenteditable",
     "true",
   );
-  // The welcome document contains a mermaid block, and it renders to SVG
-  // asynchronously — which changes the document height. `pasteMarkdown`
-  // clicks the CENTRE of the editor to place the caret, so pasting before
-  // the diagram settles can drop the table inside a blockquote or list item
-  // and measure that container instead of the prose column. Wait it out.
-  await expect(page.locator(".milkdown .editor .mk-diagram-wrap svg")).toBeVisible();
 });
 
 test("a wide table bleeds past the prose column without overflowing the pane", async ({
   page,
 }) => {
-  await pasteMarkdown(page, WIDE_TABLE);
+  await setSourceMarkdown(page, WIDE_TABLE);
   const m = await tableMetrics(page);
 
   expect(m.wrapClass).toContain("mk-table-wrap");
@@ -124,7 +118,7 @@ test("a wide table bleeds past the prose column without overflowing the pane", a
 test("wide-table columns are sized by content, none squeezed to a sliver", async ({
   page,
 }) => {
-  await pasteMarkdown(page, WIDE_TABLE);
+  await setSourceMarkdown(page, WIDE_TABLE);
   const { columnWidths } = await tableMetrics(page);
 
   expect(columnWidths).toHaveLength(8);
@@ -136,7 +130,7 @@ test("wide-table columns are sized by content, none squeezed to a sliver", async
 });
 
 test("a small table still fills exactly the prose column", async ({ page }) => {
-  await pasteMarkdown(page, SMALL_TABLE);
+  await setSourceMarkdown(page, SMALL_TABLE);
   const m = await tableMetrics(page);
 
   expect(Math.round(m.tableWidth)).toBe(Math.round(m.column));
@@ -147,7 +141,7 @@ test("a small table still fills exactly the prose column", async ({ page }) => {
 test("a table too wide even for the bleed scrolls inside its wrapper", async ({
   page,
 }) => {
-  await pasteMarkdown(page, MANY_COLUMNS);
+  await setSourceMarkdown(page, MANY_COLUMNS);
   const m = await tableMetrics(page);
 
   // Wrapper overflows → its own horizontal scrollbar…
@@ -160,7 +154,7 @@ test("a table too wide even for the bleed scrolls inside its wrapper", async ({
 test("read mode renders the table with the same geometry as edit mode", async ({
   page,
 }) => {
-  await pasteMarkdown(page, WIDE_TABLE);
+  await setSourceMarkdown(page, WIDE_TABLE);
   const edit = await tableMetrics(page);
 
   // Esc only leaves edit mode when focus is outside the editable surface —
@@ -179,8 +173,6 @@ test("read mode renders the table with the same geometry as edit mode", async ({
 });
 
 test("a table inside a blockquote stays inside it", async ({ page }) => {
-  // Via source mode: pasting `> |…|` at a caret inside an existing paragraph
-  // does not nest, and this test is about the nested case specifically.
   await setSourceMarkdown(
     page,
     WIDE_TABLE.split("\n")
@@ -240,7 +232,7 @@ test("without container-query units the table still fits and scrolls", async ({
   // macOS 10.15's WebView has no `cqw`, so the @supports block never applies
   // and the wrapper keeps its declared defaults. Reproduce that state
   // directly — Chromium always supports cqw, so it cannot be feature-tested.
-  await pasteMarkdown(page, WIDE_TABLE);
+  await setSourceMarkdown(page, WIDE_TABLE);
   await page.evaluate(() => {
     const wrap = document.querySelector<HTMLElement>(".mk-table-wrap");
     if (!wrap) throw new Error("no wrapper");
@@ -260,7 +252,7 @@ test("without container-query units the table still fits and scrolls", async ({
 
 test("a narrow pane falls back to the prose column with a scroll", async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 900 });
-  await pasteMarkdown(page, WIDE_TABLE);
+  await setSourceMarkdown(page, WIDE_TABLE);
   const m = await tableMetrics(page);
 
   // No room to bleed: the wrapper stays within the prose column (+ the 32px
