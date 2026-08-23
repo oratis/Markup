@@ -273,6 +273,56 @@ function pushClosed(stack: string[], paths: Array<string | null | undefined>): s
   return next.slice(0, RECENTLY_CLOSED_MAX);
 }
 
+/** How many filenames a batch confirmation spells out before summarising. */
+const CONFIRM_NAME_MAX = 5;
+
+/**
+ * One prompt for a whole batch — the batch closes only if it returns true.
+ *
+ * Only path-backed dirty tabs can actually lose work; a scratch buffer has
+ * no on-disk version to diverge from (and never flips to "dirty" — see
+ * `updateActiveContent`). Single-victim batches keep the exact wording the
+ * one-tab close has always used.
+ */
+function confirmDiscard(victims: Tab[]): boolean {
+  const dirty = victims.filter((v) => v.status === "dirty" && v.path);
+  if (dirty.length === 0) return true;
+  if (dirty.length === 1) return window.confirm(t("tab.confirmClose", dirty[0].name));
+  const shown = dirty.slice(0, CONFIRM_NAME_MAX).map((d) => d.name);
+  const rest = dirty.length - shown.length;
+  const lines = rest > 0 ? [...shown, t("tab.confirmCloseMore", rest)] : shown;
+  return window.confirm(t("tab.confirmCloseMany", dirty.length, lines.join("\n")));
+}
+
+/**
+ * Remove `victimIds` from the strip in one transaction: record the closed
+ * paths for ⌘⇧T and land the active tab somewhere sane.
+ *
+ * Callers own the confirm gate and the pinned filter — this is the shared
+ * mechanics, not the policy.
+ */
+function removeTabs(state: AppState, victimIds: Set<string>) {
+  const closed = state.tabs.filter((x) => victimIds.has(x.id)).map((x) => x.path);
+  const firstIdx = state.tabs.findIndex((x) => victimIds.has(x.id));
+  const tabs = state.tabs.filter((x) => !victimIds.has(x.id));
+  const recentlyClosed = pushClosed(state.recentlyClosed, closed);
+  if (tabs.length === 0) {
+    return {
+      tabs: [welcomeTab()],
+      activeTabId: `${SCRATCH_PREFIX}welcome` as string | null,
+      recentlyClosed,
+    };
+  }
+  // If the active tab went with the batch, land on the survivor just left of
+  // the leftmost removed slot — the rule single-tab close has always used, so
+  // the eye doesn't jump across the strip.
+  const activeTabId =
+    state.activeTabId && victimIds.has(state.activeTabId)
+      ? tabs[Math.min(Math.max(0, firstIdx - 1), tabs.length - 1)].id
+      : state.activeTabId;
+  return { tabs, activeTabId, recentlyClosed };
+}
+
 function welcomeTab(): Tab {
   return {
     id: `${SCRATCH_PREFIX}welcome`,
@@ -383,26 +433,12 @@ export const useAppStore = create<AppState>((set) => ({
 
   closeTab: (id) =>
     set((state) => {
-      const idx = state.tabs.findIndex((t) => t.id === id);
-      if (idx < 0) return state;
-      const target = state.tabs[idx];
-      // Confirm if dirty (and we're closing a real file, not a scratch buffer)
-      if (target.status === "dirty" && target.path) {
-        const ok = window.confirm(t("tab.confirmClose", target.name));
-        if (!ok) return state;
-      }
-      const tabs = state.tabs.filter((t) => t.id !== id);
-      const recentlyClosed = pushClosed(state.recentlyClosed, [target.path]);
-      if (tabs.length === 0) {
-        return {
-          tabs: [welcomeTab()],
-          activeTabId: `${SCRATCH_PREFIX}welcome`,
-          recentlyClosed,
-        };
-      }
-      const activeTabId =
-        state.activeTabId === id ? tabs[Math.max(0, idx - 1)].id : state.activeTabId;
-      return { tabs, activeTabId, recentlyClosed };
+      const target = state.tabs.find((t) => t.id === id);
+      if (!target) return state;
+      // An explicit single close names its target, so it closes pinned tabs
+      // too. The bulk gestures below are the ones that sweep past them.
+      if (!confirmDiscard([target])) return state;
+      return removeTabs(state, new Set([id]));
     }),
 
   setActiveTab: (id) => set({ activeTabId: id }),
@@ -429,14 +465,12 @@ export const useAppStore = create<AppState>((set) => ({
       const keep = state.tabs.find((t) => t.id === id);
       if (!keep) return state;
       // Pinned tabs survive "close others" — they're explicitly anchored.
-      const closed = state.tabs
-        .filter((t) => t.id !== id && !t.pinned)
-        .map((t) => t.path);
-      const tabs = state.tabs.filter((t) => t.id === id || t.pinned);
+      const victims = state.tabs.filter((t) => t.id !== id && !t.pinned);
+      if (victims.length === 0) return state;
+      if (!confirmDiscard(victims)) return state;
       return {
-        tabs,
+        ...removeTabs(state, new Set(victims.map((x) => x.id))),
         activeTabId: keep.id,
-        recentlyClosed: pushClosed(state.recentlyClosed, closed),
       };
     }),
 
@@ -444,44 +478,24 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => {
       const idx = state.tabs.findIndex((t) => t.id === id);
       if (idx < 0) return state;
-      const head = state.tabs.slice(0, idx + 1);
       // Keep pinned tabs that lived to the right of `id` so the user
       // doesn't lose their anchored ones via this gesture.
-      const right = state.tabs.slice(idx + 1);
-      const pinnedRight = right.filter((t) => t.pinned);
-      const closed = right.filter((t) => !t.pinned).map((t) => t.path);
-      const tabs = [...head, ...pinnedRight];
-      const activeStillVisible = tabs.some((t) => t.id === state.activeTabId);
-      return {
-        tabs,
-        activeTabId: activeStillVisible ? state.activeTabId : id,
-        recentlyClosed: pushClosed(state.recentlyClosed, closed),
-      };
+      const victims = state.tabs.slice(idx + 1).filter((t) => !t.pinned);
+      if (victims.length === 0) return state;
+      if (!confirmDiscard(victims)) return state;
+      const next = removeTabs(state, new Set(victims.map((x) => x.id)));
+      const activeSurvives = next.tabs.some((t) => t.id === state.activeTabId);
+      return { ...next, activeTabId: activeSurvives ? state.activeTabId : id };
     }),
 
   closeAllTabs: () =>
     set((state) => {
-      const dirty = state.tabs.find((x) => x.status === "dirty" && x.path && !x.pinned);
-      if (dirty) {
-        const ok = window.confirm(t("tab.confirmClose", dirty.name));
-        if (!ok) return state;
-      }
-      const pinned = state.tabs.filter((t) => t.pinned);
-      const closed = state.tabs.filter((t) => !t.pinned).map((t) => t.path);
-      const recentlyClosed = pushClosed(state.recentlyClosed, closed);
-      if (pinned.length === 0) {
-        return {
-          tabs: [welcomeTab()],
-          activeTabId: `${SCRATCH_PREFIX}welcome`,
-          recentlyClosed,
-        };
-      }
-      const stillActive = pinned.some((t) => t.id === state.activeTabId);
-      return {
-        tabs: pinned,
-        activeTabId: stillActive ? state.activeTabId : pinned[0].id,
-        recentlyClosed,
-      };
+      const victims = state.tabs.filter((t) => !t.pinned);
+      if (victims.length === 0) return state;
+      // One prompt for the whole batch, naming every doc that would lose
+      // changes — this used to name only the first and drop the rest.
+      if (!confirmDiscard(victims)) return state;
+      return removeTabs(state, new Set(victims.map((x) => x.id)));
     }),
 
   toggleTabPinned: (id) =>
