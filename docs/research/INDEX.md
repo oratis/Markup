@@ -9,6 +9,13 @@
 | 03 | [Mac 框架对比](./03-mac-framework-comparison.md) | Tauri / Electron / SwiftUI / RN macOS 四方案 | Tauri 2 全面胜出；Expo 已劝退；签名走 Developer ID + notarytool |
 | 04 | [性能策略](./04-performance-strategies.md) | 大文件、增量解析、搜索、启动、内存 | 每条性能目标在 Tauri 路线下都能达到；Electron 仅在内存这一项无法达标 |
 
+## 后续追加调研
+
+| # | 报告 | 范围 | 关键结论 |
+|---|------|------|----------|
+| 05 | [Spike 结果](./05-spike-results.md) | 0.1 阶段技术验证 | 见报告 |
+| 06 | [长文与书籍写作能力](./06-longform-writing.md) | Scrivener / Ulysses / Obsidian Longform / iA Writer / Pandoc·mdBook 工具链 | 离"能写一本书"只差"作品"这一层抽象；卡片墙与高保真校读已由 Canvas 和 reader-first 渲染覆盖 → [design/07-writing-mode.md](../design/07-writing-mode.md) |
+
 ## 共识技术栈
 
 ```
