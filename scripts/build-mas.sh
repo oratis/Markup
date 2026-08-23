@@ -28,8 +28,9 @@
 #   MAS_PROFILE="$HOME/markup_mas.provisionprofile" \
 #   ./scripts/build-mas.sh
 #
-# OUTPUT: src-tauri/target/release/bundle/macos/Markup.pkg  (upload via
-#   Transporter.app or `xcrun altool --upload-app -f Markup.pkg -t macos …`).
+# OUTPUT: src-tauri/target/universal-apple-darwin/release/bundle/macos/Markup.pkg
+#   (upload via Transporter.app, or
+#   `xcrun altool --upload-app -f Markup.pkg -t macos …`).
 
 set -euo pipefail
 
@@ -112,6 +113,12 @@ productbuild \
 
 echo "==> 5/5 Done"
 echo "    Package: $PKG"
+
+# Hand the path to CI instead of making release.yml hardcode a second
+# copy of it — that copy went stale the moment this build went universal.
+if [ -n "${GITHUB_ENV:-}" ]; then
+  echo "MAS_PKG_PATH=$PKG" >> "$GITHUB_ENV"
+fi
 echo ""
 echo "Next: upload to App Store Connect, then submit for review:"
 echo "  • Transporter.app  (drag $PKG in), or"
