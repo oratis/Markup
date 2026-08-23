@@ -388,6 +388,16 @@ jobs:
         run: |
           set -euo pipefail
           : "${MAS_INSTALLER_IDENTITY:?set the MAS_INSTALLER_IDENTITY secret}"
+          # A secret pasted with a trailing newline would (a) make `grep -F`
+          # below treat the blank second line as an empty pattern that matches
+          # everything, silently passing the assertion, and (b) still reach
+          # codesign/productbuild verbatim and fail there. Catch it here.
+          for v in MAS_APP_IDENTITY MAS_INSTALLER_IDENTITY; do
+            if [[ "${!v}" =~ (^[[:space:]]|[[:space:]]$) ]]; then
+              echo "::error::$v has leading/trailing whitespace or a newline — re-save the secret without it."
+              exit 1
+            fi
+          done
           KEYCHAIN_PATH="$RUNNER_TEMP/markup-mas.keychain-db"
           KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
           echo "$MAS_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/mas-cert.p12"
