@@ -1374,6 +1374,9 @@ export function App() {
           return;
         }
         if (e.key === "Escape" && !readMode && !sourceMode && !isEditableTarget) {
+          // A live tab selection is the more recent state — Esc drops that
+          // first (TabBar owns the clearing); the next Esc returns to Read.
+          if (useAppStore.getState().selectedTabIds.length > 0) return;
           e.preventDefault();
           setReadMode(true);
           return;

@@ -5,7 +5,7 @@ import {
   subscribe as subscribeBookmarks,
   toggleBookmark,
 } from "../lib/bookmarks";
-import { useAppStore } from "../store";
+import { liveSelection, useAppStore } from "../store";
 
 const DRAG_MIME = "application/x-markup-tab";
 
@@ -45,14 +45,28 @@ export function TabBar() {
   const [anchorId, setAnchorId] = useState<string | null>(null);
 
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
+  // What a "Close N Tabs" would really remove — never counts pinned tabs.
+  const live = useMemo(
+    () => liveSelection({ tabs, selectedTabIds: selectedIds }),
+    [tabs, selectedIds],
+  );
 
   // Esc drops the selection. One of the three guards that make it safe for
   // ⌘W to close a selection instead of the active tab — see
-  // docs/design/10-close-many-tabs.md §3 (辩题二).
+  // docs/design/10-close-many-tabs.md §3 (辩题二). Esc inside an input (the
+  // find bar, the palette) belongs to that input, not to the strip.
   useEffect(() => {
     if (selectedIds.length === 0) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") clearTabSelection();
+      if (e.key !== "Escape") return;
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA")
+      ) {
+        return;
+      }
+      clearTabSelection();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -134,7 +148,10 @@ export function TabBar() {
               // (without moving the active doc), a plain click does what it
               // always did — activate, and drop any selection.
               if (e.shiftKey) {
-                selectTabRange(anchorId ?? activeTabId, tab.id);
+                // The anchor may have been closed since it was set; fall
+                // back to the active tab rather than selecting one tab.
+                const anchorLive = anchorId && tabs.some((t) => t.id === anchorId);
+                selectTabRange(anchorLive ? anchorId : activeTabId, tab.id);
                 return;
               }
               if (e.metaKey || e.ctrlKey) {
@@ -187,14 +204,12 @@ export function TabBar() {
           y={ctx.y}
           onClose={() => setCtx(null)}
           items={[
-            ...(selected.has(ctx.id) && selectedIds.length > 0
+            ...(selected.has(ctx.id) && live.length > 0
               ? [
                   {
                     label:
-                      selectedIds.length === 1
-                        ? "Close 1 Tab"
-                        : `Close ${selectedIds.length} Tabs`,
-                    run: () => closeTabs(selectedIds),
+                      live.length === 1 ? "Close 1 Tab" : `Close ${live.length} Tabs`,
+                    run: () => closeTabs(live),
                   },
                   { label: "Clear Selection", run: () => clearTabSelection() },
                 ]

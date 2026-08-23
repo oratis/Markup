@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAppStore } from "./store";
+import { liveSelection, useAppStore } from "./store";
 
 function reset() {
   // Re-create the store's initial state by closing all tabs except welcome
@@ -713,6 +713,31 @@ describe("app store", () => {
       useAppStore.getState().setActiveTab("/2.md");
       useAppStore.getState().closeSelectedOrActive();
       expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/1.md", "/3.md"]);
+    });
+
+    it("pinning a selected tab drops it from the selection", () => {
+      openN(3);
+      useAppStore.getState().toggleTabSelection("/2.md");
+      useAppStore.getState().toggleTabSelection("/3.md");
+      useAppStore.getState().toggleTabPinned("/2.md");
+      expect(useAppStore.getState().selectedTabIds).toEqual(["/3.md"]);
+    });
+
+    it("⌘W never goes dead: a selection of only pinned tabs falls back to the active tab", () => {
+      openN(3);
+      useAppStore.getState().setActiveTab("/3.md");
+      // Force the bad state directly — the store itself no longer produces it.
+      useAppStore.getState().toggleTabPinned("/1.md");
+      useAppStore.setState({ selectedTabIds: ["/1.md"] });
+      useAppStore.getState().closeSelectedOrActive();
+      expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/1.md", "/2.md"]);
+    });
+
+    it("liveSelection counts only tabs a bulk close would remove", () => {
+      openN(3);
+      useAppStore.getState().toggleTabPinned("/1.md");
+      useAppStore.setState({ selectedTabIds: ["/1.md", "/2.md", "/gone.md"] });
+      expect(liveSelection(useAppStore.getState())).toEqual(["/2.md"]);
     });
 
     it("clearTabSelection empties it", () => {

@@ -293,6 +293,17 @@ function pushClosed(stack: string[], paths: Array<string | null | undefined>): s
   return next.slice(0, RECENTLY_CLOSED_MAX);
 }
 
+/** The selected tab ids that a bulk close would actually remove: present on
+ * the strip and not pinned. Exported for the strip, which labels its
+ * "Close N Tabs" item from it so the count can't lie. */
+export function liveSelection(
+  state: Pick<AppState, "tabs" | "selectedTabIds">,
+): string[] {
+  return state.selectedTabIds.filter((id) =>
+    state.tabs.some((x) => x.id === id && !x.pinned),
+  );
+}
+
 /** How many filenames a batch confirmation spells out before summarising. */
 const CONFIRM_NAME_MAX = 5;
 
@@ -544,11 +555,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   closeSelectedOrActive: () => {
     const s = get();
     // A selection the user can't see must not steer ⌘W — the strip can be
-    // switched off entirely. The selection can't outlive its tabs either
-    // (every close clears it), but a stale id would silently close nothing.
-    const live = s.showTabBar
-      ? s.selectedTabIds.filter((id) => s.tabs.some((x) => x.id === id))
-      : [];
+    // switched off entirely. Only ids that would actually close count:
+    // pinned tabs never do, and a stale id (shouldn't happen — every close
+    // clears the selection) must fall through to the active tab rather
+    // than turn ⌘W into a dead key.
+    const live = s.showTabBar ? liveSelection(s) : [];
     if (live.length > 0) {
       s.closeTabs(live);
       return;
@@ -597,7 +608,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       const tabs = next.pinned
         ? [...others.filter((t) => t.pinned), next, ...others.filter((t) => !t.pinned)]
         : [...others.filter((t) => t.pinned), ...others.filter((t) => !t.pinned), next];
-      return { tabs };
+      // A pinned tab can't be selected (it's exempt from bulk closes), so
+      // pinning a selected one drops it from the selection — otherwise
+      // "Close N Tabs" would overcount and ⌘W would close nothing.
+      const selectedTabIds = next.pinned
+        ? state.selectedTabIds.filter((x) => x !== id)
+        : state.selectedTabIds;
+      return { tabs, selectedTabIds };
     }),
 
   activateNextTab: () =>

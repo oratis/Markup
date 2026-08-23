@@ -235,6 +235,38 @@ describe("TabBar multi-select", () => {
     expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/a.md"]);
   });
 
+  it("Esc inside an input leaves the selection alone", () => {
+    threeTabs();
+    render(
+      <>
+        <TabBar />
+        <input aria-label="probe" />
+      </>,
+    );
+    fireEvent.click(row("b.md"), { metaKey: true });
+    fireEvent.keyDown(screen.getByLabelText("probe"), { key: "Escape" });
+    expect(useAppStore.getState().selectedTabIds).toEqual(["/b.md"]);
+  });
+
+  it("⇧-click falls back to the active tab when the anchor was closed", () => {
+    useAppStore.setState({
+      tabs: [
+        makeTab("/a.md", "a.md"),
+        makeTab("/b.md", "b.md"),
+        makeTab("/c.md", "c.md"),
+        makeTab("/d.md", "d.md"),
+      ],
+      activeTabId: "/b.md",
+      selectedTabIds: [],
+    });
+    render(<TabBar />);
+    fireEvent.click(row("a.md"), { metaKey: true }); // anchor = a
+    fireEvent.mouseDown(row("a.md"), { button: 1 }); // …and close it
+    fireEvent.click(row("d.md"), { shiftKey: true });
+    // Anchor is gone → range runs from the active tab (b) to d.
+    expect(useAppStore.getState().selectedTabIds).toEqual(["/b.md", "/c.md", "/d.md"]);
+  });
+
   it("right-clicking outside the selection clears it first", () => {
     threeTabs();
     render(<TabBar />);
