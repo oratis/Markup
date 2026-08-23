@@ -8,6 +8,8 @@
     已清    —— `- [x]`
     待核    —— `- [ ]`，真正还需要动手的
     成书前  —— `- [ ]` 且带 **【成书前】** 标记，只能等定稿或主编拍板
+
+缩进的子条目（`  - [ ]`）一样计入——一条裂成几条时子条目就是这么写的。
 """
 import re, glob, os, sys
 
@@ -16,12 +18,17 @@ PRESS = "【成书前"   # 兼容「【成书前】」与「【成书前·主编
 def scan():
     rows = []
     for f in sorted(glob.glob("**/*.md", recursive=True)):
+        # 提纲/ 里的欠账区块是写作规范的示例，不是书稿欠账
+        if f.startswith(("提纲/", "tools/")):
+            continue
         t = open(f, encoding="utf-8").read()
         done = todo = press = 0
         for m in re.finditer(r"<!--\s*欠账:(.*?)-->", t, flags=re.S):
             blk = m.group(1)
-            done += len(re.findall(r"^- \[x\]", blk, flags=re.M))
-            for item in re.findall(r"^- \[ \]\s*(.*)$", blk, flags=re.M):
+            # 允许缩进：清账时一条常裂成「父条目已清 + 子条目未清」，
+            # 子条目缩进写在父条目下面。只数行首的话，这些会被漏成「待核 0」。
+            done += len(re.findall(r"^[ \t]*- \[x\]", blk, flags=re.M))
+            for item in re.findall(r"^[ \t]*- \[ \]\s*(.*)$", blk, flags=re.M):
                 if PRESS in item: press += 1
                 else: todo += 1
         if done or todo or press:

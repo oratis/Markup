@@ -185,8 +185,11 @@ def parse(path):
     debts = []
     for dm in re.finditer(r"<!--\s*欠账:(.*?)-->", body, flags=re.S):
         blk = dm.group(1)
-        for item in re.findall(r"^- \[([ x])\]\s*(.*?)(?=\n- \[|\n*\Z)", blk, flags=re.S | re.M):
-            debts.append((item[0] == "x", re.sub(r"\s+", " ", item[1]).strip()))
+        # 缩进的子条目（清账时从父条目裂出来的）单独成项，否则它们会被折进
+        # 父条目的文字里，一个 ○ 藏在一个 ✓ 后面，篇头的「N 未清」就数不到它。
+        for ind, mark, text in re.findall(
+                r"^([ \t]*)- \[([ x])\]\s*(.*?)(?=\n[ \t]*- \[|\n*\Z)", blk, flags=re.S | re.M):
+            debts.append((mark == "x", re.sub(r"\s+", " ", text).strip(), bool(ind)))
     body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
     words = count_text(body)   # 先数字数：章标题算正文，与 README／measure.count 同口径
     body = re.sub(r"^\s*#\s+.*?\n", "", body, count=1)  # 章标题由 chh 单独渲染，去掉正文里那份
@@ -208,9 +211,11 @@ def build(outpath):
 
     for anchor, kind, era, title, path in items:
         fm, body, debts, n = parse(path)
+        if kind == "appendix":
+            debts = []   # 写作规范里的欠账区块是示例，不是书稿欠账
         secs = len(re.findall(r"^## ", body, flags=re.M))
-        open_n = sum(1 for d, _ in debts if not d)
-        done_n = sum(1 for d, _ in debts if d)
+        open_n = sum(1 for d, *_ in debts if not d)
+        done_n = sum(1 for d, *_ in debts if d)
         if kind != "appendix":
             tot_words += n; tot_open += open_n; tot_done += done_n
 
@@ -230,8 +235,8 @@ def build(outpath):
         dl = ""
         if debts:
             rows = "".join(
-                f'<li class="{"d" if d else "o"}"><span class="mk">{"✓" if d else "○"}</span>'
-                f'<span>{inline(t, linkmap)}</span></li>' for d, t in debts)
+                f'<li class="{"d" if d else "o"}{" sub" if sub else ""}"><span class="mk">{"✓" if d else "○"}</span>'
+                f'<span>{inline(t, linkmap)}</span></li>' for d, t, sub in debts)
             dl = (f'<details class="debt"><summary>本篇欠账（{done_n} 清 / {open_n} 未清）</summary>'
                   f'<ul>{rows}</ul></details>')
 
@@ -359,6 +364,7 @@ details.debt li{display:flex;gap:.55rem;margin:.5rem 0;line-height:1.7;align-ite
 details.debt li.d{color:var(--dim)}
 details.debt li.d .mk{color:#4e9a51}
 details.debt li.o .mk{color:var(--mark)}
+details.debt li.sub{margin-left:1.4rem}
 .mk{flex:none;font-size:.8rem;line-height:1.7}
 html[data-d="off"] details.debt{display:none}
 
