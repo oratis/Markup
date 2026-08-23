@@ -47,6 +47,12 @@ export interface VaultFile {
 interface AppState {
   tabs: Tab[];
   activeTabId: string | null;
+  /** Ids of tabs marked for a multi-tab close (⌘-click / ⇧-click on the
+   * strip). Never holds pinned tabs — they're exempt from every bulk
+   * gesture, so letting them in would make the "Close N Tabs" count lie.
+   * Cleared by any close and by a plain click. See
+   * docs/design/10-close-many-tabs.md §4.2. */
+  selectedTabIds: string[];
   vaultRoot: string | null;
   vaultFiles: VaultFile[];
   sourceMode: boolean;
@@ -110,12 +116,25 @@ interface AppState {
   /** Open fetched text (e.g. a GitHub file) as a new unsaved buffer. */
   openScratchWithContent: (name: string, content: string) => void;
   closeTab: (id: string) => void;
+  /** Close an explicit set of tabs in one transaction. Pinned tabs in the
+   * set are skipped, like every other bulk gesture. */
+  closeTabs: (ids: string[]) => void;
   setActiveTab: (id: string) => void;
   reorderTab: (fromId: string, toId: string) => void;
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
   closeTabsToLeft: (id: string) => void;
   closeAllTabs: () => void;
+  /** What ⌘W / File ▸ Close Tab does: closes the selection when the user
+   * marked one, otherwise just the active tab. Lives here (not in App) so
+   * the dispatch is testable — it's the riskiest path in this feature. */
+  closeSelectedOrActive: () => void;
+  /** Add/remove one tab from the selection. Pinned tabs are ignored. */
+  toggleTabSelection: (id: string) => void;
+  /** Add every tab between `anchorId` and `toId` (inclusive) to the
+   * selection, skipping pinned. A null/unknown anchor selects `toId` alone. */
+  selectTabRange: (anchorId: string | null, toId: string) => void;
+  clearTabSelection: () => void;
   toggleTabPinned: (id: string) => void;
   activateNextTab: () => void;
   activatePrevTab: () => void;
@@ -297,7 +316,8 @@ function confirmDiscard(victims: Tab[]): boolean {
 
 /**
  * Remove `victimIds` from the strip in one transaction: record the closed
- * paths for ⌘⇧T and land the active tab somewhere sane.
+ * paths for ⌘⇧T, land the active tab somewhere sane, and drop the selection
+ * (it could only have referred to tabs that are now gone).
  *
  * Callers own the confirm gate and the pinned filter — this is the shared
  * mechanics, not the policy.
@@ -312,6 +332,7 @@ function removeTabs(state: AppState, victimIds: Set<string>) {
       tabs: [welcomeTab()],
       activeTabId: `${SCRATCH_PREFIX}welcome` as string | null,
       recentlyClosed,
+      selectedTabIds: [] as string[],
     };
   }
   // If the active tab went with the batch, land on the survivor just left of
@@ -321,7 +342,7 @@ function removeTabs(state: AppState, victimIds: Set<string>) {
     state.activeTabId && victimIds.has(state.activeTabId)
       ? tabs[Math.min(Math.max(0, firstIdx - 1), tabs.length - 1)].id
       : state.activeTabId;
-  return { tabs, activeTabId, recentlyClosed };
+  return { tabs, activeTabId, recentlyClosed, selectedTabIds: [] as string[] };
 }
 
 /**
@@ -353,9 +374,10 @@ function welcomeTab(): Tab {
   };
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   tabs: [welcomeTab()],
   activeTabId: `${SCRATCH_PREFIX}welcome`,
+  selectedTabIds: [],
   vaultRoot: null,
   vaultFiles: [],
   sourceMode: false,
@@ -459,6 +481,15 @@ export const useAppStore = create<AppState>((set) => ({
       return removeTabs(state, new Set([id]));
     }),
 
+  closeTabs: (ids) =>
+    set((state) => {
+      const wanted = new Set(ids);
+      const victims = state.tabs.filter((x) => wanted.has(x.id) && !x.pinned);
+      if (victims.length === 0) return state;
+      if (!confirmDiscard(victims)) return state;
+      return removeTabs(state, new Set(victims.map((x) => x.id)));
+    }),
+
   setActiveTab: (id) => set({ activeTabId: id }),
 
   reorderTab: (fromId, toId) =>
@@ -509,6 +540,51 @@ export const useAppStore = create<AppState>((set) => ({
       if (!confirmDiscard(victims)) return state;
       return removeTabs(state, new Set(victims.map((x) => x.id)));
     }),
+
+  closeSelectedOrActive: () => {
+    const s = get();
+    // A selection the user can't see must not steer ⌘W — the strip can be
+    // switched off entirely. The selection can't outlive its tabs either
+    // (every close clears it), but a stale id would silently close nothing.
+    const live = s.showTabBar
+      ? s.selectedTabIds.filter((id) => s.tabs.some((x) => x.id === id))
+      : [];
+    if (live.length > 0) {
+      s.closeTabs(live);
+      return;
+    }
+    if (s.activeTabId) s.closeTab(s.activeTabId);
+  },
+
+  toggleTabSelection: (id) =>
+    set((state) => {
+      const target = state.tabs.find((x) => x.id === id);
+      // Pinned tabs are exempt from bulk closes, so they never join a
+      // selection — see docs/design/10-close-many-tabs.md §3 (辩题五).
+      if (!target || target.pinned) return state;
+      return {
+        selectedTabIds: state.selectedTabIds.includes(id)
+          ? state.selectedTabIds.filter((x) => x !== id)
+          : [...state.selectedTabIds, id],
+      };
+    }),
+
+  selectTabRange: (anchorId, toId) =>
+    set((state) => {
+      const to = state.tabs.findIndex((x) => x.id === toId);
+      if (to < 0) return state;
+      const from = anchorId ? state.tabs.findIndex((x) => x.id === anchorId) : -1;
+      const start = from < 0 ? to : Math.min(from, to);
+      const end = from < 0 ? to : Math.max(from, to);
+      const merged = [...state.selectedTabIds];
+      for (const x of state.tabs.slice(start, end + 1)) {
+        if (!x.pinned && !merged.includes(x.id)) merged.push(x.id);
+      }
+      return { selectedTabIds: merged };
+    }),
+
+  clearTabSelection: () =>
+    set((state) => (state.selectedTabIds.length === 0 ? state : { selectedTabIds: [] })),
 
   toggleTabPinned: (id) =>
     set((state) => {
@@ -642,6 +718,9 @@ export const useAppStore = create<AppState>((set) => ({
           t.id === id ? { ...t, id: path, path, name, mtimeMs, status: "saved" } : t,
         ),
         activeTabId: path,
+        // The tab's id just changed (scratch:* → its path); move any
+        // selection entry with it so it can't strand.
+        selectedTabIds: state.selectedTabIds.map((x) => (x === id ? path : x)),
       };
     }),
 

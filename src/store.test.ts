@@ -18,6 +18,7 @@ function reset() {
     recentFiles: [],
     recentlyClosed: [],
     recentVaults: [],
+    selectedTabIds: [],
   });
 }
 
@@ -557,6 +558,168 @@ describe("app store", () => {
       useAppStore.getState().setActiveTab("/c.md");
       useAppStore.getState().closeTabsToRight("/a.md");
       expect(useAppStore.getState().activeTabId).toBe("/a.md");
+    });
+  });
+
+  describe("closeTabs (an explicit set)", () => {
+    // Opens n tabs named /1.md … /n.md, left to right.
+    function openN(n: number) {
+      const { openLoadedFile } = useAppStore.getState();
+      for (let i = 1; i <= n; i++) {
+        openLoadedFile({ path: `/${i}.md`, content: "", mtime_ms: 1 });
+      }
+    }
+
+    it("removes exactly the listed tabs", () => {
+      openN(4);
+      useAppStore.getState().closeTabs(["/1.md", "/3.md"]);
+      expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/2.md", "/4.md"]);
+    });
+
+    it("skips pinned tabs in the batch", () => {
+      openN(3);
+      useAppStore.getState().toggleTabPinned("/2.md");
+      useAppStore.getState().closeTabs(["/1.md", "/2.md", "/3.md"]);
+      expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/2.md"]);
+    });
+
+    it("lands the active tab left of the leftmost closed slot", () => {
+      openN(4);
+      useAppStore.getState().setActiveTab("/3.md");
+      useAppStore.getState().closeTabs(["/2.md", "/3.md"]);
+      expect(useAppStore.getState().activeTabId).toBe("/1.md");
+    });
+
+    it("keeps the active tab when it isn't in the batch", () => {
+      openN(3);
+      useAppStore.getState().setActiveTab("/1.md");
+      useAppStore.getState().closeTabs(["/2.md", "/3.md"]);
+      expect(useAppStore.getState().activeTabId).toBe("/1.md");
+    });
+
+    it("falls back to a fresh welcome scratch when it empties the strip", () => {
+      openN(2);
+      useAppStore.getState().closeTabs(["/1.md", "/2.md"]);
+      const s = useAppStore.getState();
+      expect(s.tabs).toHaveLength(1);
+      expect(s.tabs[0].path).toBeNull();
+      expect(s.activeTabId).toBe(s.tabs[0].id);
+    });
+
+    it("on an empty / unknown set is a no-op", () => {
+      openN(2);
+      useAppStore.getState().closeTabs([]);
+      useAppStore.getState().closeTabs(["/nope.md"]);
+      expect(useAppStore.getState().tabs).toHaveLength(2);
+    });
+
+    it("asks before discarding unsaved work in the set", () => {
+      openN(2);
+      useAppStore.getState().setActiveTab("/1.md");
+      useAppStore.getState().updateActiveContent("edited");
+      const spy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      useAppStore.getState().closeTabs(["/1.md", "/2.md"]);
+      expect(spy).toHaveBeenCalledOnce();
+      expect(useAppStore.getState().tabs).toHaveLength(2);
+      spy.mockRestore();
+    });
+  });
+
+  describe("tab selection", () => {
+    function openN(n: number) {
+      const { openLoadedFile } = useAppStore.getState();
+      for (let i = 1; i <= n; i++) {
+        openLoadedFile({ path: `/${i}.md`, content: "", mtime_ms: 1 });
+      }
+    }
+
+    it("toggleTabSelection adds then removes", () => {
+      openN(2);
+      useAppStore.getState().toggleTabSelection("/1.md");
+      expect(useAppStore.getState().selectedTabIds).toEqual(["/1.md"]);
+      useAppStore.getState().toggleTabSelection("/1.md");
+      expect(useAppStore.getState().selectedTabIds).toEqual([]);
+    });
+
+    it("refuses pinned tabs — they're exempt from every bulk close", () => {
+      openN(2);
+      useAppStore.getState().toggleTabPinned("/1.md");
+      useAppStore.getState().toggleTabSelection("/1.md");
+      expect(useAppStore.getState().selectedTabIds).toEqual([]);
+    });
+
+    it("selectTabRange covers the span between anchor and target", () => {
+      openN(4);
+      useAppStore.getState().selectTabRange("/2.md", "/4.md");
+      expect(useAppStore.getState().selectedTabIds).toEqual(["/2.md", "/3.md", "/4.md"]);
+    });
+
+    it("selectTabRange works backwards and skips pinned tabs", () => {
+      openN(4);
+      useAppStore.getState().toggleTabPinned("/3.md"); // pinned sorts to the front
+      // Order is now /3, /1, /2, /4 — this range walks all four backwards,
+      // and the pinned one must not join the selection.
+      useAppStore.getState().selectTabRange("/4.md", "/3.md");
+      expect(useAppStore.getState().selectedTabIds).toEqual(["/1.md", "/2.md", "/4.md"]);
+    });
+
+    it("selectTabRange with no anchor selects just the target", () => {
+      openN(3);
+      useAppStore.getState().selectTabRange(null, "/2.md");
+      expect(useAppStore.getState().selectedTabIds).toEqual(["/2.md"]);
+    });
+
+    it("any close clears the selection", () => {
+      openN(3);
+      const s = useAppStore.getState();
+      s.toggleTabSelection("/1.md");
+      s.toggleTabSelection("/2.md");
+      expect(useAppStore.getState().selectedTabIds).toHaveLength(2);
+      useAppStore.getState().closeTab("/3.md");
+      expect(useAppStore.getState().selectedTabIds).toEqual([]);
+    });
+
+    it("Save As carries the selection across the tab's id change", () => {
+      const { newScratchTab, toggleTabSelection, setActivePathAndName } =
+        useAppStore.getState();
+      newScratchTab();
+      const scratchId = useAppStore.getState().activeTabId as string;
+      toggleTabSelection(scratchId);
+      setActivePathAndName("/saved.md", "saved.md", 1);
+      expect(useAppStore.getState().selectedTabIds).toEqual(["/saved.md"]);
+    });
+
+    it("closeSelectedOrActive closes the selection when there is one", () => {
+      openN(3);
+      useAppStore.getState().setActiveTab("/3.md");
+      useAppStore.getState().toggleTabSelection("/1.md");
+      useAppStore.getState().closeSelectedOrActive();
+      expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/2.md", "/3.md"]);
+    });
+
+    it("closeSelectedOrActive ignores a selection the strip isn't showing", () => {
+      openN(3);
+      useAppStore.getState().setActiveTab("/2.md");
+      useAppStore.getState().toggleTabSelection("/1.md");
+      useAppStore.setState({ showTabBar: false });
+      useAppStore.getState().closeSelectedOrActive();
+      // Closed the active tab, not the invisible selection.
+      expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/1.md", "/3.md"]);
+      useAppStore.setState({ showTabBar: true });
+    });
+
+    it("closeSelectedOrActive falls back to the active tab", () => {
+      openN(3);
+      useAppStore.getState().setActiveTab("/2.md");
+      useAppStore.getState().closeSelectedOrActive();
+      expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/1.md", "/3.md"]);
+    });
+
+    it("clearTabSelection empties it", () => {
+      openN(2);
+      useAppStore.getState().toggleTabSelection("/1.md");
+      useAppStore.getState().clearTabSelection();
+      expect(useAppStore.getState().selectedTabIds).toEqual([]);
     });
   });
 });

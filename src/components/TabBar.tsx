@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   getBookmarks,
   isBookmarked,
@@ -24,8 +24,13 @@ export function TabBar() {
   const closeTabsToRight = useAppStore((s) => s.closeTabsToRight);
   const closeTabsToLeft = useAppStore((s) => s.closeTabsToLeft);
   const closeAllTabs = useAppStore((s) => s.closeAllTabs);
+  const closeTabs = useAppStore((s) => s.closeTabs);
   const toggleTabPinned = useAppStore((s) => s.toggleTabPinned);
   const reorderTab = useAppStore((s) => s.reorderTab);
+  const selectedIds = useAppStore((s) => s.selectedTabIds);
+  const toggleTabSelection = useAppStore((s) => s.toggleTabSelection);
+  const selectTabRange = useAppStore((s) => s.selectTabRange);
+  const clearTabSelection = useAppStore((s) => s.clearTabSelection);
 
   // Subscribe so star indicators refresh on bookmark toggle. The
   // returned array reference is stable as the bookmarks store mutates
@@ -35,6 +40,23 @@ export function TabBar() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [ctx, setCtx] = useState<CtxState | null>(null);
+  // Anchor for ⇧-click ranges. Pure pointer state — it never needs to leave
+  // this component, unlike the selection itself (App reads that for ⌘W).
+  const [anchorId, setAnchorId] = useState<string | null>(null);
+
+  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  // Esc drops the selection. One of the three guards that make it safe for
+  // ⌘W to close a selection instead of the active tab — see
+  // docs/design/10-close-many-tabs.md §3 (辩题二).
+  useEffect(() => {
+    if (selectedIds.length === 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") clearTabSelection();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedIds.length, clearTabSelection]);
 
   if (tabs.length <= 1) return null;
 
@@ -44,9 +66,17 @@ export function TabBar() {
     <div className="flex items-stretch border-b border-black/5 dark:border-white/10 overflow-x-auto no-scrollbar bg-canvas-light dark:bg-canvas-dark">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTabId;
+        const isSelected = selected.has(tab.id);
         const indicator = tab.status === "dirty" ? "●" : "";
         const isDragging = draggingId === tab.id;
         const isOver = overId === tab.id && draggingId && draggingId !== tab.id;
+        // A selected tab stays at full opacity — the marking has to be
+        // obvious enough that nobody forgets a selection is live.
+        const tone = isActive
+          ? "bg-canvas-light dark:bg-canvas-dark text-ink-light dark:text-ink-dark"
+          : isSelected
+            ? ""
+            : "opacity-60 hover:opacity-90";
         return (
           <div
             key={tab.id}
@@ -80,6 +110,9 @@ export function TabBar() {
             }}
             onContextMenu={(e) => {
               e.preventDefault();
+              // Right-clicking outside the selection moves focus to that tab,
+              // so the menu never describes tabs the user isn't pointing at.
+              if (!isSelected) clearTabSelection();
               setCtx({ id: tab.id, x: e.clientX, y: e.clientY });
             }}
             onMouseDown={(e) => {
@@ -90,14 +123,29 @@ export function TabBar() {
                 closeTab(tab.id);
               }
             }}
-            className={`group titlebar-no-drag relative flex items-center gap-2 pl-3 pr-1 py-1.5 text-[12px] cursor-pointer border-r border-black/5 dark:border-white/10 select-none ${
-              isActive
-                ? "bg-canvas-light dark:bg-canvas-dark text-ink-light dark:text-ink-dark"
-                : "opacity-60 hover:opacity-90"
+            data-selected={isSelected ? "true" : undefined}
+            className={`group titlebar-no-drag relative flex items-center gap-2 pl-3 pr-1 py-1.5 text-[12px] cursor-pointer border-r border-black/5 dark:border-white/10 select-none ${tone} ${
+              isSelected ? "bg-blue-500/10 ring-1 ring-inset ring-blue-500/60" : ""
             } ${isDragging ? "opacity-30" : ""} ${
               isOver ? "ring-2 ring-blue-500/50 ring-inset" : ""
             }`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={(e) => {
+              // ⇧ extends a range from the anchor, ⌘/Ctrl toggles one tab
+              // (without moving the active doc), a plain click does what it
+              // always did — activate, and drop any selection.
+              if (e.shiftKey) {
+                selectTabRange(anchorId ?? activeTabId, tab.id);
+                return;
+              }
+              if (e.metaKey || e.ctrlKey) {
+                toggleTabSelection(tab.id);
+                setAnchorId(tab.id);
+                return;
+              }
+              clearTabSelection();
+              setAnchorId(tab.id);
+              setActiveTab(tab.id);
+            }}
           >
             {tab.pinned && (
               <span aria-label="Pinned" title="Pinned" className="text-[10px] opacity-70">
@@ -139,6 +187,18 @@ export function TabBar() {
           y={ctx.y}
           onClose={() => setCtx(null)}
           items={[
+            ...(selected.has(ctx.id) && selectedIds.length > 0
+              ? [
+                  {
+                    label:
+                      selectedIds.length === 1
+                        ? "Close 1 Tab"
+                        : `Close ${selectedIds.length} Tabs`,
+                    run: () => closeTabs(selectedIds),
+                  },
+                  { label: "Clear Selection", run: () => clearTabSelection() },
+                ]
+              : []),
             {
               label: tabs.find((t) => t.id === ctx.id)?.pinned ? "Unpin" : "Pin",
               run: () => toggleTabPinned(ctx.id),
@@ -238,7 +298,7 @@ function ContextMenu({
         style={{ left: x, top: y }}
         // flex-col so the panel's max-content width is the widest item, not
         // the sum of them — inline-block buttons made it grow with the item
-        // count (8 items measured 684px wide).
+        // count (~700px before this feature added two more entries).
         className="absolute flex flex-col min-w-[160px] py-1 rounded-md shadow-2xl bg-canvas-light dark:bg-canvas-dark border border-black/10 dark:border-white/15"
         onClick={(e) => e.stopPropagation()}
       >

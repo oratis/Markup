@@ -181,7 +181,6 @@ export function App() {
   const setVault = useAppStore((s) => s.setVault);
   const setVaultFiles = useAppStore((s) => s.setVaultFiles);
   const openLoadedFile = useAppStore((s) => s.openLoadedFile);
-  const closeTab = useAppStore((s) => s.closeTab);
   const newScratchTab = useAppStore((s) => s.newScratchTab);
   const setSourceMode = useAppStore((s) => s.setSourceMode);
   const toggleSourceMode = useAppStore((s) => s.toggleSourceMode);
@@ -1140,11 +1139,11 @@ export function App() {
         case "open_recent":
           setShowRecentOpen(true);
           break;
-        case "close_tab": {
-          const a = useAppStore.getState().activeTabId;
-          if (a) closeTab(a);
+        case "close_tab":
+          // Closes the marked selection when there is one, else the active
+          // tab. See docs/design/10-close-many-tabs.md §3 (辩题二).
+          useAppStore.getState().closeSelectedOrActive();
           break;
-        }
         case "save": {
           const a = useAppStore.getState().activeTabId;
           if (a) {
@@ -1615,6 +1614,19 @@ export function App() {
         run: () => {
           const cur = useAppStore.getState().activeTabId;
           if (cur) useAppStore.getState().closeTabsToRight(cur);
+        },
+      },
+      {
+        id: "close_selected_tabs",
+        label: "Close Selected Tabs",
+        hint: "⌘-click / ⇧-click tabs to select",
+        run: () => {
+          const st = useAppStore.getState();
+          if (st.selectedTabIds.length === 0) {
+            showToast(tr("toast.noTabSelection"));
+            return;
+          }
+          st.closeTabs(st.selectedTabIds);
         },
       },
       {

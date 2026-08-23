@@ -23,6 +23,29 @@ the toolbar — search syntax, navigation, and Canvas.
 - **Open a single file** — `⌘O`, drag a `.md` / `.markdown` / `.html` /
   `.canvas` file onto the window, or double-click it in Finder.
 
+## Closing tabs
+
+One at a time: the `×` on the tab, middle-click, or `⌘W`.
+
+Several at once — right-click any tab:
+
+| Item | Closes |
+|---|---|
+| **Close Others** (`⌘⌥W`) | everything except that tab |
+| **Close to the Left / Right** | everything on that side |
+| **Close All** | everything |
+| **Close N Tabs** | the tabs you marked (see below) |
+
+To mark a set, **⌘-click** tabs one by one, or **⇧-click** to extend a range
+from the last tab you clicked. Marked tabs get a blue outline; `⌘W` then closes
+the whole marked set. A plain click or `Esc` clears the marking.
+
+Pinned tabs (right-click → **Pin**) sit out of all of this — no bulk gesture
+closes them, and they can't be marked. Unpin first.
+
+Anything with unsaved changes asks once for the whole batch, and `⌘⇧T` reopens
+closed tabs one at a time.
+
 ## Search
 
 Two complementary tools:

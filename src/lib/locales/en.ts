@@ -112,6 +112,7 @@ export const en = {
   "toast.copiedPlainText": "Copied as plain text",
   "toast.copiedHtml": "Copied as HTML",
   "toast.savedAll": "Saved {0} files",
+  "toast.noTabSelection": "No tabs are selected",
   "toast.saveAllFailed": "Saved {0}, {1} failed",
   "toast.tableSizeBad": "Format: rows x cols (e.g. 3x4)",
   "toast.reloaded": "Reloaded from disk",
