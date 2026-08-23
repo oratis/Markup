@@ -108,8 +108,8 @@ importers:
         specifier: ^2.10.1
         version: 2.10.1
       katex:
-        specifier: ^0.16.11
-        version: 0.16.45
+        specifier: ^0.17.0
+        version: 0.17.0
       marked:
         specifier: ^18.0.5
         version: 18.0.5
