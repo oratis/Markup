@@ -466,7 +466,11 @@ export const useAppStore = create<AppState>((set) => ({
       if (!keep) return state;
       // Pinned tabs survive "close others" — they're explicitly anchored.
       const victims = state.tabs.filter((t) => t.id !== id && !t.pinned);
-      if (victims.length === 0) return state;
+      // Nothing to close (everything else is pinned) still lands you on the
+      // tab you pointed at — the gesture has always done that.
+      if (victims.length === 0) {
+        return state.activeTabId === keep.id ? state : { activeTabId: keep.id };
+      }
       if (!confirmDiscard(victims)) return state;
       return {
         ...removeTabs(state, new Set(victims.map((x) => x.id))),

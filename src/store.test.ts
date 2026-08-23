@@ -483,6 +483,30 @@ describe("app store", () => {
       expect(popRecentlyClosed()).toBe("/c.md");
     });
 
+    it("closeOtherTabs still activates the kept tab when everything else is pinned", () => {
+      openDirty(["/a.md", "/b.md", "/c.md"], []);
+      useAppStore.getState().toggleTabPinned("/a.md");
+      useAppStore.getState().toggleTabPinned("/b.md");
+      useAppStore.getState().setActiveTab("/a.md");
+      useAppStore.getState().closeOtherTabs("/c.md");
+      const s = useAppStore.getState();
+      expect(s.tabs).toHaveLength(3);
+      expect(s.activeTabId).toBe("/c.md");
+    });
+
+    it("closeAllTabs lands on the pinned tab nearest the closed ones", () => {
+      openDirty(["/a.md", "/b.md", "/c.md", "/d.md"], []);
+      useAppStore.getState().toggleTabPinned("/a.md");
+      useAppStore.getState().toggleTabPinned("/b.md"); // strip: a* b* c d
+      useAppStore.getState().setActiveTab("/c.md");
+      useAppStore.getState().closeAllTabs();
+      const s = useAppStore.getState();
+      expect(s.tabs.map((t) => t.id)).toEqual(["/a.md", "/b.md"]);
+      // The left neighbour of the first closed slot — same rule as every
+      // other close, so the eye doesn't jump to the far end of the strip.
+      expect(s.activeTabId).toBe("/b.md");
+    });
+
     it("closeTabsToRight lands the active tab on the pivot when it went with the batch", () => {
       openDirty(["/a.md", "/b.md", "/c.md"], []);
       useAppStore.getState().setActiveTab("/c.md");
