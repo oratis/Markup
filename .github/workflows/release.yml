@@ -66,13 +66,13 @@ jobs:
       # signature production used by the auto-updater (latest.json).
       HAS_UPDATER_SIGNING: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -266,13 +266,13 @@ jobs:
           - os: windows-latest
             bundles: nsis
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -349,7 +349,7 @@ jobs:
       # build job. "true" iff the MAS signing identity is wired.
       HAS_MAS_SIGNING: ${{ secrets.MAS_APP_IDENTITY != '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: ${{ env.HAS_MAS_SIGNING == 'true' }}
 
       - uses: pnpm/action-setup@v6
@@ -357,7 +357,7 @@ jobs:
         with:
           version: 10
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         if: ${{ env.HAS_MAS_SIGNING == 'true' }}
         with:
           node-version: 22
@@ -382,14 +382,42 @@ jobs:
           MAS_CERT_P12_BASE64: ${{ secrets.MAS_CERT_P12_BASE64 }}
           MAS_CERT_P12_PASSWORD: ${{ secrets.MAS_CERT_P12_PASSWORD }}
           MAS_PROVISION_PROFILE_BASE64: ${{ secrets.MAS_PROVISION_PROFILE_BASE64 }}
+          # Only used to assert the imported keychain actually satisfies them.
+          MAS_APP_IDENTITY: ${{ secrets.MAS_APP_IDENTITY }}
+          MAS_INSTALLER_IDENTITY: ${{ secrets.MAS_INSTALLER_IDENTITY }}
         run: |
           set -euo pipefail
+          : "${MAS_INSTALLER_IDENTITY:?set the MAS_INSTALLER_IDENTITY secret}"
+          # A secret pasted with a trailing newline would (a) make `grep -F`
+          # below treat the blank second line as an empty pattern that matches
+          # everything, silently passing the assertion, and (b) still reach
+          # codesign/productbuild verbatim and fail there. Catch it here.
+          for v in MAS_APP_IDENTITY MAS_INSTALLER_IDENTITY; do
+            if [[ "${!v}" =~ (^[[:space:]]|[[:space:]]$) ]]; then
+              echo "::error::$v has leading/trailing whitespace or a newline — re-save the secret without it."
+              exit 1
+            fi
+          done
           KEYCHAIN_PATH="$RUNNER_TEMP/markup-mas.keychain-db"
           KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
           echo "$MAS_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/mas-cert.p12"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          # Both MAS certs are issued by the WWDR G3 intermediate, which —
+          # unlike the Developer ID chain the `build` job relies on — is NOT in
+          # SystemCACertificates.keychain; it normally lives only in a
+          # developer's login keychain. A brand-new keychain therefore can't
+          # build a trust chain unless the .p12 happens to bundle it, and
+          # `find-identity -v` then hides the identity ("0 valid identities
+          # found") rather than reporting anything actionable.
+          if curl -fsSL --retry 3 -o "$RUNNER_TEMP/wwdr-g3.cer" \
+               https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer; then
+            security import "$RUNNER_TEMP/wwdr-g3.cer" -t cert -f x509 -A -k "$KEYCHAIN_PATH" || true
+            rm -f "$RUNNER_TEMP/wwdr-g3.cer"
+          else
+            echo "::warning::could not fetch AppleWWDRCAG3.cer — falling back to the chain inside the .p12"
+          fi
           security import "$RUNNER_TEMP/mas-cert.p12" \
             -P "$MAS_CERT_P12_PASSWORD" \
             -A -t cert -f pkcs12 \
@@ -403,7 +431,25 @@ jobs:
           PROFILE="$RUNNER_TEMP/markup_mas.provisionprofile"
           echo "$MAS_PROVISION_PROFILE_BASE64" | base64 --decode > "$PROFILE"
           echo "MAS_PROFILE=$PROFILE" >> "$GITHUB_ENV"
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # Fail here, not 9 minutes later inside codesign. Checking both
+          # policies matters: installer certs are not codesigning-policy certs,
+          # so under `-p codesigning` alone a .p12 missing the app cert and one
+          # missing the installer cert produce identical output.
+          CODESIGN_IDS="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")"
+          ALL_IDS="$(security find-identity -v "$KEYCHAIN_PATH")"
+          echo "--- codesigning identities ---"; echo "$CODESIGN_IDS"
+          echo "--- all identities ---";         echo "$ALL_IDS"
+          ok=1
+          if ! grep -qF -- "$MAS_APP_IDENTITY" <<<"$CODESIGN_IDS"; then
+            echo "::error::MAS_APP_IDENTITY is not a valid codesigning identity in the imported keychain. Re-export MAS_CERT_P12_BASE64 from Keychain Access -> My Certificates (NOT the Certificates category, which omits private keys), selecting both certs *with* their keys; then confirm MAS_APP_IDENTITY matches the cert common name exactly, with no trailing newline."
+            ok=0
+          fi
+          if ! grep -qF -- "$MAS_INSTALLER_IDENTITY" <<<"$ALL_IDS"; then
+            echo "::error::MAS_INSTALLER_IDENTITY is not a valid identity in the imported keychain. One .p12 must carry both the Apple Distribution and the 3rd Party Mac Developer Installer identities."
+            ok=0
+          fi
+          [ "$ok" = 1 ]
 
       - name: Build signed MAS .pkg
         if: ${{ env.HAS_MAS_SIGNING == 'true' }}
@@ -417,7 +463,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: mas-pkg
-          path: src-tauri/target/release/bundle/macos/Markup.pkg
+          # Exported by build-mas.sh so the two can't drift (they did once,
+          # when the MAS build went universal and this path did not).
+          path: ${{ env.MAS_PKG_PATH }}
           retention-days: 7
           if-no-files-found: error
 
@@ -432,7 +480,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download both DMG artifacts
         uses: actions/download-artifact@v8
