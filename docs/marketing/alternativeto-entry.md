@@ -66,6 +66,8 @@ Tag Markup as an alternative to:
   native, not Electron. Say "native (Tauri/Rust)", don't claim "no webview".
 - Add a screenshot or two from `marketing/MarkupScreenshots-mac/` during submission.
 - Re-list platforms to include Windows/Linux the day those builds ship. CI already
-  compile-checks both via the `cross-platform` job in `.github/workflows/ci.yml`;
-  the remaining shipping gates (bundling/signing) are tracked in
+  compile-checks both via the `cross-platform` job in `.github/workflows/ci.yml`, and
+  `.github/workflows/cross-platform-bundle.yml` (on demand) produces unsigned
+  .deb/.AppImage/NSIS installers for validation; the remaining shipping gates
+  (Windows code-signing, a real release lane) are tracked in
   `docs/CROSS-PLATFORM-HARDENING.md`.
