@@ -82,6 +82,33 @@ fn paths_from_argv(argv: &[String]) -> Vec<String> {
         .collect()
 }
 
+#[cfg(all(test, any(target_os = "windows", target_os = "linux")))]
+mod argv_tests {
+    use super::paths_from_argv;
+
+    #[test]
+    fn keeps_existing_markdown_only_and_skips_argv0() {
+        let dir = std::env::temp_dir().join(format!("markup-argv-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let md = dir.join("note.md");
+        std::fs::write(&md, b"# hi").unwrap();
+        let txt = dir.join("note.txt");
+        std::fs::write(&txt, b"nope").unwrap();
+        let md_str = md.to_string_lossy().into_owned();
+
+        let argv = vec![
+            md_str.clone(),                                          // argv[0] — skipped even though real .md
+            md_str.clone(),                                          // kept
+            txt.to_string_lossy().into_owned(),                     // not markdown — skipped
+            dir.join("missing.md").to_string_lossy().into_owned(),  // doesn't exist — skipped
+        ];
+        // Exactly one entry: argv[0] dropped by skip(1), only the existing .md kept.
+        assert_eq!(paths_from_argv(&argv), vec![md_str]);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = tracing_subscriber::fmt()
