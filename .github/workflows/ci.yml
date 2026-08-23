@@ -17,7 +17,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
@@ -57,7 +57,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
@@ -93,7 +93,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Pin a Swift 6 toolchain so Swift Testing (`import Testing`) is available
       # regardless of the runner image's default Xcode.
@@ -127,7 +127,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
@@ -175,19 +175,23 @@ jobs:
         run: cargo build --release
 
   cross-platform:
+    # NOTE: the name is a required status check in branch protection
+    # ("Cross-platform compile (<os>)") — renaming it would leave every PR
+    # waiting on a check that never reports. It now also runs the tests.
     name: Cross-platform compile (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     # Guards the cfg(target_os) gating so a macOS-only change can't silently
-    # break the Windows/Linux build (GTM §9 "提前搭 CI 矩阵"). Compile + link
-    # only (--debug --no-bundle); real installers are the on-demand
+    # break the Windows/Linux build (GTM §9 "提前搭 CI 矩阵"), and runs the Rust
+    # suite there so platform-specific logic is tested, not just compiled.
+    # Compile + link via --debug --no-bundle; real installers are the on-demand
     # cross-platform-bundle workflow.
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
@@ -224,3 +228,10 @@ jobs:
 
       - name: tauri build (compile + link only)
         run: pnpm tauri build --debug --no-bundle
+
+      # Run the Rust suite on Win/Linux too, so platform-specific logic
+      # (argv file-open, the Linux token-file fallback) is tested where it
+      # actually runs — not just compiled.
+      - name: Cargo test
+        working-directory: src-tauri
+        run: cargo test

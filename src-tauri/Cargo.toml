@@ -1,6 +1,6 @@
 [package]
 name = "markup"
-version = "1.0.1"
+version = "1.1.0"
 description = "High-performance Markdown editor for macOS"
 authors = ["appkon"]
 edition = "2021"
@@ -46,7 +46,11 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Markdown parser (Rust-side, for indexing snippets and exports)
-comrak = { version = "0.52", default-features = false, features = ["syntect"] }
+# 0.54 split the highlighter backend out of `syntect`: pick one explicitly.
+# `syntect-onig` is what 0.52's bare `syntect` pulled in implicitly (the C
+# Oniguruma engine) — same behaviour, same syntax coverage. `syntect-fancy`
+# is the pure-Rust alternative if the C build ever becomes a problem.
+comrak = { version = "0.54", default-features = false, features = ["syntect-onig"] }
 
 # HTML sanitiser for the export/preview pipeline. comrak runs with unsafe_
 # (raw HTML passthrough), so the rendered body is cleaned of <script>, event
