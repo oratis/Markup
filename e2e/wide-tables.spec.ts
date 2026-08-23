@@ -63,10 +63,18 @@ async function tableMetrics(page: Page) {
   });
 }
 
-/** Put `markdown` on the clipboard and paste it at the caret. */
+/**
+ * Put `markdown` on the clipboard and paste it in place of the whole
+ * document. Select-all first: a click only *focuses* the editor, and where
+ * the caret lands depends on layout (font loading, the async diagram) — in
+ * a list item or blockquote the table measures that container (685px), not
+ * the prose column (720px). Replacing the document makes the table a
+ * top-level block regardless.
+ */
 async function pasteMarkdown(page: Page, markdown: string) {
   await page.evaluate((md) => navigator.clipboard.writeText(md), markdown);
   await page.locator(".ProseMirror").click();
+  await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.press("ControlOrMeta+v");
   await expect(page.locator(".milkdown .editor table")).toBeVisible();
 }
@@ -97,11 +105,10 @@ test.beforeEach(async ({ context, page }) => {
     "contenteditable",
     "true",
   );
-  // The welcome document contains a mermaid block, and it renders to SVG
-  // asynchronously — which changes the document height. `pasteMarkdown`
-  // clicks the CENTRE of the editor to place the caret, so pasting before
-  // the diagram settles can drop the table inside a blockquote or list item
-  // and measure that container instead of the prose column. Wait it out.
+  // The welcome document contains a mermaid block that renders to SVG
+  // asynchronously. `pasteMarkdown` replaces the whole document, so the
+  // caret position no longer matters — but let the diagram settle anyway so
+  // no in-flight render races the replacement.
   await expect(page.locator(".milkdown .editor .mk-diagram-wrap svg")).toBeVisible();
 });
 
