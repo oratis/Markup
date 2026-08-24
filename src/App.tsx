@@ -1376,7 +1376,11 @@ export function App() {
         if (e.key === "Escape" && !readMode && !sourceMode && !isEditableTarget) {
           // A live tab selection is the more recent state — Esc drops that
           // first (TabBar owns the clearing); the next Esc returns to Read.
-          if (useAppStore.getState().selectedTabIds.length > 0) return;
+          // Only while the strip is visible, though: with showTabBar off the
+          // selection is retained but hidden (design 10 §4.2), TabBar isn't
+          // mounted to clear it, and deferring here would leave Esc dead.
+          const st = useAppStore.getState();
+          if (st.showTabBar && st.selectedTabIds.length > 0) return;
           e.preventDefault();
           setReadMode(true);
           return;

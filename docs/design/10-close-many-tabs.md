@@ -187,7 +187,7 @@ removeTabs(state, victimIds) → { tabs, activeTabId, recentlyClosed, selectedTa
 | 普通点击标签页 | 清空并激活 |
 | Esc（焦点不在输入框里） | 清空；编辑态下 App 的"Esc 回阅读"先让路，下一次 Esc 才回阅读。输入框（查找栏、命令面板）里的 Esc 归输入框 |
 | 把已经固定的标签页选中 | 进不来（辩题五） |
-| 标签条被设置整个关掉（`showTabBar: false`） | 选择集留着，但 ⌘W 不认它——看不见的选择不许指挥破坏性操作 |
+| 标签条被设置整个关掉（`showTabBar: false`） | 选择集留着，但 ⌘W 不认它——看不见的选择不许指挥破坏性操作。**Esc 也不认它**：清选择集的监听挂在 TabBar 上，strip 隐藏时它不在场，App 的 Esc 守卫只在 strip 可见时才让位，否则 Esc 会变成死键 |
 
 ⇧ 连选的锚点（anchor）留在 TabBar 的局部状态里——它纯粹是指针交互的概念，不该进全局 store。锚点失效时退回当前激活页。
 
