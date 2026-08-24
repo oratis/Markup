@@ -45,6 +45,55 @@ describe("eventToShortcut", () => {
     expect(eventToShortcut(ke({ key: "/", metaKey: true }))).toBe("Mod+/");
     expect(eventToShortcut(ke({ key: ",", metaKey: true }))).toBe("Mod+,");
   });
+
+  it("names the physical key when macOS composes an Alt combo", () => {
+    // ⌥W arrives as "∑", ⌥] as "‘", ⌥T as "†" — the physical key still says
+    // which key it was.
+    expect(
+      eventToShortcut(ke({ key: "∑", code: "KeyW", metaKey: true, altKey: true })),
+    ).toBe("Mod+Alt+W");
+    expect(
+      eventToShortcut(
+        ke({ key: "‘", code: "BracketRight", metaKey: true, altKey: true }),
+      ),
+    ).toBe("Mod+Alt+]");
+    expect(
+      eventToShortcut(ke({ key: "†", code: "KeyT", metaKey: true, altKey: true })),
+    ).toBe("Mod+Alt+T");
+    expect(
+      eventToShortcut(
+        ke({ key: "Ω", code: "KeyZ", metaKey: true, shiftKey: true, altKey: true }),
+      ),
+    ).toBe("Mod+Shift+Alt+Z");
+  });
+
+  it("names the physical key when an Alt combo is a dead key", () => {
+    expect(
+      eventToShortcut(ke({ key: "Dead", code: "KeyE", metaKey: true, altKey: true })),
+    ).toBe("Mod+Alt+E");
+  });
+
+  it("leaves ASCII Alt combos alone so AltGr layouts keep typing", () => {
+    // Ctrl+Alt+Q is "@" on a German layout; the typed character must win.
+    expect(
+      eventToShortcut(ke({ key: "@", code: "KeyQ", ctrlKey: true, altKey: true })),
+    ).toBe("Mod+Alt+@");
+  });
+
+  it("matches a composed ⌘⌥W against the Close Other Tabs default", () => {
+    expect(
+      matches(
+        ke({ key: "∑", code: "KeyW", metaKey: true, altKey: true }),
+        "closeOtherTabs",
+      ),
+    ).toBe(true);
+    expect(
+      matches(
+        ke({ key: "w", code: "KeyW", metaKey: true, altKey: true }),
+        "closeOtherTabs",
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("override + matches", () => {

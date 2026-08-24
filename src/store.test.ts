@@ -417,6 +417,42 @@ describe("app store", () => {
     });
   });
 
+  describe("closeTabsToLeft", () => {
+    // Opens n tabs named /1.md … /n.md, left to right.
+    function openN(n: number) {
+      const { openLoadedFile } = useAppStore.getState();
+      for (let i = 1; i <= n; i++) {
+        openLoadedFile({ path: `/${i}.md`, content: "", mtime_ms: 1 });
+      }
+    }
+
+    it("removes everything before the pivot, pivot included", () => {
+      openN(4);
+      useAppStore.getState().closeTabsToLeft("/3.md");
+      expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/3.md", "/4.md"]);
+    });
+
+    it("keeps pinned tabs on the left", () => {
+      openN(3);
+      useAppStore.getState().toggleTabPinned("/1.md"); // pinned tabs sort to the front
+      useAppStore.getState().closeTabsToLeft("/3.md");
+      expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/1.md", "/3.md"]);
+    });
+
+    it("on the first tab is a no-op", () => {
+      openN(2);
+      useAppStore.getState().closeTabsToLeft("/1.md");
+      expect(useAppStore.getState().tabs).toHaveLength(2);
+    });
+
+    it("activates the pivot when the active tab went with the batch", () => {
+      openN(3);
+      useAppStore.getState().setActiveTab("/1.md");
+      useAppStore.getState().closeTabsToLeft("/3.md");
+      expect(useAppStore.getState().activeTabId).toBe("/3.md");
+    });
+  });
+
   describe("batch close asks before discarding unsaved work", () => {
     // Opens every path in `paths` and leaves `dirtyPaths` with unsaved edits.
     function openDirty(paths: string[], dirtyPaths: string[]) {
@@ -505,6 +541,15 @@ describe("app store", () => {
       // The left neighbour of the first closed slot — same rule as every
       // other close, so the eye doesn't jump to the far end of the strip.
       expect(s.activeTabId).toBe("/b.md");
+    });
+
+    it("closeTabsToLeft asks too, and cancelling keeps every tab", () => {
+      openDirty(["/a.md", "/b.md"], ["/a.md"]);
+      const spy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      useAppStore.getState().closeTabsToLeft("/b.md");
+      expect(spy).toHaveBeenCalledOnce();
+      expect(useAppStore.getState().tabs).toHaveLength(2);
+      spy.mockRestore();
     });
 
     it("closeTabsToRight lands the active tab on the pivot when it went with the batch", () => {

@@ -28,6 +28,7 @@ export type ShortcutId =
   | "settings"
   | "nextTab"
   | "prevTab"
+  | "closeOtherTabs"
   | "reopenClosed"
   | "fmtBold"
   | "fmtItalic"
@@ -70,6 +71,7 @@ export const defaults: Record<ShortcutId, string> = {
   settings: "Mod+,",
   nextTab: "Mod+Alt+]",
   prevTab: "Mod+Alt+[",
+  closeOtherTabs: "Mod+Alt+W",
   reopenClosed: "Mod+Shift+T",
   fmtBold: "Mod+B",
   fmtItalic: "Mod+I",
@@ -113,6 +115,7 @@ export const labels: Record<ShortcutId, string> = {
   settings: "Settings",
   nextTab: "Next Tab",
   prevTab: "Previous Tab",
+  closeOtherTabs: "Close Other Tabs",
   reopenClosed: "Reopen Last Closed Tab",
   fmtBold: "Bold",
   fmtItalic: "Italic",
@@ -208,10 +211,39 @@ export function subscribe(cb: () => void): () => void {
   };
 }
 
+const CODE_PUNCTUATION: Record<string, string> = {
+  BracketLeft: "[",
+  BracketRight: "]",
+  Minus: "-",
+  Equal: "=",
+  Slash: "/",
+  Backslash: "\\",
+  Semicolon: ";",
+  Quote: "'",
+  Comma: ",",
+  Period: ".",
+  Backquote: "`",
+};
+
+/** The key name for a physical key (`KeyboardEvent.code`), or null if it
+ * isn't one a shortcut binds. */
+function keyNameFromCode(code: string): string | null {
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  return CODE_PUNCTUATION[code] ?? null;
+}
+
 /**
  * Convert a KeyboardEvent → "Mod+Shift+X"-style string.
  * Returns null for events that aren't valid shortcuts (no modifiers, or
  * just a modifier).
+ *
+ * With Alt held, macOS composes the key through the Option layer before the
+ * event reaches us: ⌥W arrives as `key: "∑"`, ⌥] as `"‘"`, ⌥E as a dead key.
+ * None of those can ever equal a binding like "Mod+Alt+W", so for composed
+ * (non-ASCII or dead) keys the name comes from the physical key instead.
+ * Plain ASCII keys are left alone on purpose — AltGr layouts type real
+ * characters through Ctrl+Alt and must keep doing so.
  */
 export function eventToShortcut(e: KeyboardEvent): string | null {
   const parts: string[] = [];
@@ -221,8 +253,10 @@ export function eventToShortcut(e: KeyboardEvent): string | null {
   const k = e.key;
   if (k === "Meta" || k === "Control" || k === "Shift" || k === "Alt") return null;
   if (parts.length === 0) return null;
+  const composed = k === "Dead" || (k.length === 1 && k.charCodeAt(0) > 0x7f);
+  const physical = e.altKey && composed ? keyNameFromCode(e.code ?? "") : null;
   // Normalise letters to uppercase, keep punctuation as-is.
-  parts.push(k.length === 1 ? k.toUpperCase() : k);
+  parts.push(physical ?? (k.length === 1 ? k.toUpperCase() : k));
   return parts.join("+");
 }
 

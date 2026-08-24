@@ -22,6 +22,7 @@ export function TabBar() {
   const closeTab = useAppStore((s) => s.closeTab);
   const closeOtherTabs = useAppStore((s) => s.closeOtherTabs);
   const closeTabsToRight = useAppStore((s) => s.closeTabsToRight);
+  const closeTabsToLeft = useAppStore((s) => s.closeTabsToLeft);
   const closeAllTabs = useAppStore((s) => s.closeAllTabs);
   const toggleTabPinned = useAppStore((s) => s.toggleTabPinned);
   const reorderTab = useAppStore((s) => s.reorderTab);
@@ -36,6 +37,8 @@ export function TabBar() {
   const [ctx, setCtx] = useState<CtxState | null>(null);
 
   if (tabs.length <= 1) return null;
+
+  const ctxIdx = ctx ? tabs.findIndex((t) => t.id === ctx.id) : -1;
 
   return (
     <div className="flex items-stretch border-b border-black/5 dark:border-white/10 overflow-x-auto no-scrollbar bg-canvas-light dark:bg-canvas-dark">
@@ -175,13 +178,29 @@ export function TabBar() {
               disabled: !tabs.find((t) => t.id === ctx.id)?.path,
             },
             { label: "Close", run: () => closeTab(ctx.id) },
-            { label: "Close Others", run: () => closeOtherTabs(ctx.id) },
+            {
+              label: "Close Others",
+              run: () => closeOtherTabs(ctx.id),
+              disabled: !tabs.some((t) => t.id !== ctx.id && !t.pinned),
+            },
+            // Pinned tabs sit out of every bulk close, so an item is greyed
+            // out when nothing on that side would actually go — not merely
+            // when there is nothing on that side.
+            {
+              label: "Close to the Left",
+              run: () => closeTabsToLeft(ctx.id),
+              disabled: !tabs.slice(0, ctxIdx).some((t) => !t.pinned),
+            },
             {
               label: "Close to the Right",
               run: () => closeTabsToRight(ctx.id),
-              disabled: tabs.findIndex((t) => t.id === ctx.id) === tabs.length - 1,
+              disabled: !tabs.slice(ctxIdx + 1).some((t) => !t.pinned),
             },
-            { label: "Close All", run: () => closeAllTabs() },
+            {
+              label: "Close All",
+              run: () => closeAllTabs(),
+              disabled: !tabs.some((t) => !t.pinned),
+            },
           ]}
         />
       )}

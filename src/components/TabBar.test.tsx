@@ -114,4 +114,48 @@ describe("TabBar", () => {
     const ids = useAppStore.getState().tabs.map((t) => t.id);
     expect(ids).toEqual(["/b.md", "/c.md", "/a.md"]);
   });
+
+  it("the context menu can close everything to the left", () => {
+    useAppStore.setState({
+      tabs: [
+        makeTab("/a.md", "a.md"),
+        makeTab("/b.md", "b.md"),
+        makeTab("/c.md", "c.md"),
+      ],
+      activeTabId: "/a.md",
+    });
+    render(<TabBar />);
+    const cRow = screen.getByText("c.md").parentElement!;
+    fireEvent.contextMenu(cRow, { clientX: 10, clientY: 10 });
+    fireEvent.click(screen.getByText("Close to the Left"));
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/c.md"]);
+  });
+
+  it("Close to the Left is disabled on the first tab", () => {
+    useAppStore.setState({
+      tabs: [makeTab("/a.md", "a.md"), makeTab("/b.md", "b.md")],
+      activeTabId: "/a.md",
+    });
+    render(<TabBar />);
+    const aRow = screen.getByText("a.md").parentElement!;
+    fireEvent.contextMenu(aRow, { clientX: 10, clientY: 10 });
+    expect(screen.getByText("Close to the Left")).toBeDisabled();
+  });
+
+  it("side / others / all closes are disabled when only pinned tabs would be hit", () => {
+    // Pinned tabs always sort to the front, so "everything to my left is
+    // pinned" is the common case, not a corner.
+    useAppStore.setState({
+      tabs: [{ ...makeTab("/a.md", "a.md"), pinned: true }, makeTab("/b.md", "b.md")],
+      activeTabId: "/b.md",
+    });
+    render(<TabBar />);
+    const bRow = screen.getByText("b.md").parentElement!;
+    fireEvent.contextMenu(bRow, { clientX: 10, clientY: 10 });
+    expect(screen.getByText("Close to the Left")).toBeDisabled();
+    expect(screen.getByText("Close Others")).toBeDisabled();
+    expect(screen.getByText("Close to the Right")).toBeDisabled();
+    // "Close All" still has b.md to close.
+    expect(screen.getByText("Close All")).toBeEnabled();
+  });
 });

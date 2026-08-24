@@ -1404,6 +1404,12 @@ export function App() {
         else useAppStore.getState().activateNextTab();
         return;
       }
+      if (matchesShortcut(e, "closeOtherTabs")) {
+        e.preventDefault();
+        const cur = useAppStore.getState().activeTabId;
+        if (cur) useAppStore.getState().closeOtherTabs(cur);
+        return;
+      }
       if (matchesShortcut(e, "reopenClosed")) {
         e.preventDefault();
         reopenLastClosed();
@@ -1585,6 +1591,31 @@ export function App() {
         id: "close_all_tabs",
         label: "Close All Tabs",
         run: () => useAppStore.getState().closeAllTabs(),
+      },
+      {
+        id: "close_other_tabs",
+        label: "Close Other Tabs",
+        shortcut: "⌘⌥W",
+        run: () => {
+          const cur = useAppStore.getState().activeTabId;
+          if (cur) useAppStore.getState().closeOtherTabs(cur);
+        },
+      },
+      {
+        id: "close_tabs_left",
+        label: "Close Tabs to the Left",
+        run: () => {
+          const cur = useAppStore.getState().activeTabId;
+          if (cur) useAppStore.getState().closeTabsToLeft(cur);
+        },
+      },
+      {
+        id: "close_tabs_right",
+        label: "Close Tabs to the Right",
+        run: () => {
+          const cur = useAppStore.getState().activeTabId;
+          if (cur) useAppStore.getState().closeTabsToRight(cur);
+        },
       },
       {
         id: "next_tab",
