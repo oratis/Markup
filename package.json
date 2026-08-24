@@ -47,7 +47,7 @@
     "@milkdown/theme-nord": "^7.21.2",
     "@milkdown/transformer": "^7.21.2",
     "@milkdown/utils": "^7.21.2",
-    "@prosemirror-adapter/react": "^0.5.3",
+    "@prosemirror-adapter/react": "^0.5.5",
     "@tanstack/react-virtual": "^3.14.4",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.2",
