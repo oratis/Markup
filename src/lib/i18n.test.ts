@@ -21,6 +21,14 @@ describe("i18n", () => {
     expect(t("status.error", "ENOENT")).toBe("Error: ENOENT");
   });
 
+  it("t() doesn't expand $-patterns inside an argument", () => {
+    setLocale("en");
+    // `$&` / `$'` are special to String.replace with a string replacement;
+    // a filename is allowed to contain them.
+    expect(t("status.error", "x$&y")).toBe("Error: x$&y");
+    expect(t("status.error", "a$'b")).toBe("Error: a$'b");
+  });
+
   it("getLocale reflects the currently active value", () => {
     setLocale("zh");
     expect(getLocale()).toBe("zh");

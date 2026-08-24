@@ -218,6 +218,9 @@ export const en = {
 
   // misc
   "tab.confirmClose": '"{0}" has unsaved changes that will be lost. Close anyway?',
+  "tab.confirmCloseMany":
+    "{0} tabs have unsaved changes that will be lost:\n\n{1}\n\nClose them all anyway?",
+  "tab.confirmCloseMore": "…and {0} more",
 
   // onboarding
   "onboard.title": "Markup",

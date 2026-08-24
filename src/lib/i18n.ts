@@ -57,7 +57,10 @@ export function t(key: keyof Strings, ...args: (string | number)[]): string {
   const dict = dicts[effective()];
   let s = dict[key] ?? en[key] ?? key;
   for (let i = 0; i < args.length; i++) {
-    s = s.replace(`{${i}}`, String(args[i]));
+    // Function replacer: a string replacement would expand `$&`, `$'` etc.
+    // inside the argument, and filenames flow through here.
+    const arg = String(args[i]);
+    s = s.replace(`{${i}}`, () => arg);
   }
   return s;
 }

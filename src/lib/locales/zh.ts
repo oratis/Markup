@@ -216,6 +216,9 @@ export const zh: Strings = {
 
   // misc
   "tab.confirmClose": "「{0}」有未保存的修改，关闭后会丢失。确认关闭吗？",
+  "tab.confirmCloseMany":
+    "有 {0} 个标签页存在未保存的修改，关闭后会丢失：\n\n{1}\n\n确认全部关闭吗？",
+  "tab.confirmCloseMore": "……还有 {0} 个",
 
   // onboarding
   "onboard.title": "Markup",

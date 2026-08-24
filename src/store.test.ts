@@ -416,4 +416,102 @@ describe("app store", () => {
       expect(tab?.kind).toBe("canvas");
     });
   });
+
+  describe("batch close asks before discarding unsaved work", () => {
+    // Opens every path in `paths` and leaves `dirtyPaths` with unsaved edits.
+    function openDirty(paths: string[], dirtyPaths: string[]) {
+      const s = useAppStore.getState();
+      for (const p of paths) s.openLoadedFile({ path: p, content: "v1", mtime_ms: 1 });
+      for (const p of dirtyPaths) {
+        useAppStore.getState().setActiveTab(p);
+        useAppStore.getState().updateActiveContent("edited");
+      }
+    }
+
+    it("closeOtherTabs asks, and cancelling keeps every tab", () => {
+      openDirty(["/a.md", "/b.md", "/c.md"], ["/b.md"]);
+      const spy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      useAppStore.getState().closeOtherTabs("/a.md");
+      expect(spy).toHaveBeenCalledOnce();
+      expect(useAppStore.getState().tabs).toHaveLength(3);
+      spy.mockRestore();
+    });
+
+    it("closeTabsToRight asks, and cancelling keeps every tab", () => {
+      openDirty(["/a.md", "/b.md"], ["/b.md"]);
+      const spy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      useAppStore.getState().closeTabsToRight("/a.md");
+      expect(spy).toHaveBeenCalledOnce();
+      expect(useAppStore.getState().tabs).toHaveLength(2);
+      spy.mockRestore();
+    });
+
+    it("names every unsaved doc in the batch, not just the first", () => {
+      openDirty(["/a.md", "/b.md", "/c.md"], ["/a.md", "/b.md", "/c.md"]);
+      const spy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      useAppStore.getState().closeAllTabs();
+      const message = String(spy.mock.calls[0][0]);
+      expect(message).toContain("a.md");
+      expect(message).toContain("b.md");
+      expect(message).toContain("c.md");
+      spy.mockRestore();
+    });
+
+    it("asks once per batch, not once per dirty tab", () => {
+      openDirty(["/a.md", "/b.md", "/c.md"], ["/a.md", "/b.md", "/c.md"]);
+      const spy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      useAppStore.getState().closeAllTabs();
+      expect(spy).toHaveBeenCalledOnce();
+      spy.mockRestore();
+    });
+
+    it("stays silent when nothing in the batch is dirty", () => {
+      openDirty(["/a.md", "/b.md", "/c.md"], []);
+      const spy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      useAppStore.getState().closeOtherTabs("/a.md");
+      expect(spy).not.toHaveBeenCalled();
+      expect(useAppStore.getState().tabs).toHaveLength(1);
+      spy.mockRestore();
+    });
+
+    it("a batch close stacks recentlyClosed left to right, so ⌘⇧T walks back in order", () => {
+      openDirty(["/a.md", "/b.md", "/c.md"], []);
+      useAppStore.getState().closeAllTabs();
+      const { popRecentlyClosed } = useAppStore.getState();
+      expect(popRecentlyClosed()).toBe("/a.md");
+      expect(popRecentlyClosed()).toBe("/b.md");
+      expect(popRecentlyClosed()).toBe("/c.md");
+    });
+
+    it("closeOtherTabs still activates the kept tab when everything else is pinned", () => {
+      openDirty(["/a.md", "/b.md", "/c.md"], []);
+      useAppStore.getState().toggleTabPinned("/a.md");
+      useAppStore.getState().toggleTabPinned("/b.md");
+      useAppStore.getState().setActiveTab("/a.md");
+      useAppStore.getState().closeOtherTabs("/c.md");
+      const s = useAppStore.getState();
+      expect(s.tabs).toHaveLength(3);
+      expect(s.activeTabId).toBe("/c.md");
+    });
+
+    it("closeAllTabs lands on the pinned tab nearest the closed ones", () => {
+      openDirty(["/a.md", "/b.md", "/c.md", "/d.md"], []);
+      useAppStore.getState().toggleTabPinned("/a.md");
+      useAppStore.getState().toggleTabPinned("/b.md"); // strip: a* b* c d
+      useAppStore.getState().setActiveTab("/c.md");
+      useAppStore.getState().closeAllTabs();
+      const s = useAppStore.getState();
+      expect(s.tabs.map((t) => t.id)).toEqual(["/a.md", "/b.md"]);
+      // The left neighbour of the first closed slot — same rule as every
+      // other close, so the eye doesn't jump to the far end of the strip.
+      expect(s.activeTabId).toBe("/b.md");
+    });
+
+    it("closeTabsToRight lands the active tab on the pivot when it went with the batch", () => {
+      openDirty(["/a.md", "/b.md", "/c.md"], []);
+      useAppStore.getState().setActiveTab("/c.md");
+      useAppStore.getState().closeTabsToRight("/a.md");
+      expect(useAppStore.getState().activeTabId).toBe("/a.md");
+    });
+  });
 });

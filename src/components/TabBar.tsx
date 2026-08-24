@@ -217,7 +217,10 @@ function ContextMenu({
     >
       <div
         style={{ left: x, top: y }}
-        className="absolute min-w-[160px] py-1 rounded-md shadow-2xl bg-canvas-light dark:bg-canvas-dark border border-black/10 dark:border-white/15"
+        // flex-col so the panel's max-content width is the widest item, not
+        // the sum of them — inline-block buttons made it grow with the item
+        // count (8 items measured 684px wide).
+        className="absolute flex flex-col min-w-[160px] py-1 rounded-md shadow-2xl bg-canvas-light dark:bg-canvas-dark border border-black/10 dark:border-white/15"
         onClick={(e) => e.stopPropagation()}
       >
         {items.map((it) => (
