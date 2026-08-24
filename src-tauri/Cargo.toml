@@ -59,7 +59,7 @@ comrak = { version = "0.54", default-features = false, features = ["syntect-onig
 ammonia = "4"
 
 # Security-scoped bookmark persistence (base64-encode the bookmark blob)
-base64 = "0.22"
+base64 = "0.23"
 
 # B301: extract GitHub repo zipballs into a local vault working copy.
 # Deflate-only — GitHub zipballs never use the other methods.
