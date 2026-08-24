@@ -182,11 +182,12 @@ removeTabs(state, victimIds) → { tabs, activeTabId, recentlyClosed, selectedTa
 |---|---|
 | 任何关闭动作 | 清空 |
 | Save As（`setActivePathAndName`，标签页 id 从 `scratch:*` 变成路径） | 跟着改 id，不清空 |
-| 拖拽换序、固定/取消固定 | id 不变，无需处理 |
+| 拖拽换序、取消固定 | id 不变，无需处理 |
+| **固定**一个已选中的标签页 | 从选择集里剔掉——固定页进不了选择集，已经在里面的也不能留，否则「Close N Tabs」的 N 会多数一个、⌘W 会变死键（见 §9） |
 | 普通点击标签页 | 清空并激活 |
-| Esc | 清空 |
+| Esc（焦点不在输入框里） | 清空；编辑态下 App 的"Esc 回阅读"先让路，下一次 Esc 才回阅读。输入框（查找栏、命令面板）里的 Esc 归输入框 |
 | 把已经固定的标签页选中 | 进不来（辩题五） |
-| 标签条被设置整个关掉（`showTabBar: false`） | 选择集留着，但 ⌘W 不认它——看不见的选择不许指挥破坏性操作 |
+| 标签条被设置整个关掉（`showTabBar: false`） | 选择集留着，但 ⌘W 不认它——看不见的选择不许指挥破坏性操作。**Esc 也不认它**：清选择集的监听挂在 TabBar 上，strip 隐藏时它不在场，App 的 Esc 守卫只在 strip 可见时才让位，否则 Esc 会变成死键 |
 
 ⇧ 连选的锚点（anchor）留在 TabBar 的局部状态里——它纯粹是指针交互的概念，不该进全局 store。锚点失效时退回当前激活页。
 
@@ -196,13 +197,13 @@ removeTabs(state, victimIds) → { tabs, activeTabId, recentlyClosed, selectedTa
 |---|---|
 | 点击 | 激活，清空选择集（不变） |
 | ⌘/Ctrl + 点击 | 在选择集里增删这一个；不改变激活页；固定页无反应 |
-| ⇧ + 点击 | 从锚点到这里的整段加入选择集（跳过固定页） |
+| ⇧ + 点击 | 从锚点到这里的整段加入选择集（跳过固定页）；锚点已被关掉则从激活页起算 |
 | 中键 | 关掉这一个（不变） |
 | Esc | 清空选择集 |
 
 选中但非激活的标签页：内描边 + 淡蓝底（`ring-1 ring-inset ring-blue-500/60` + `bg-blue-500/10`），并挂 `data-selected="true"` 供测试断言。辩题二的第 1 道闸要求它一眼可辨，所以不用"稍微亮一点"这种表达。
 
-右键菜单：**点在选中的标签页上**时，顶部多两条——「Close N Tabs」（N 是真实会关掉的数量）和「Clear Selection」；**点在没选中的标签页上**时，先清空选择集再弹常规菜单（Finder 的行为，避免菜单说的和用户看的不是一回事）。常规菜单里补上「Close to the Left」。
+右键菜单：**点在选中的标签页上**时，顶部多两条——「Close N Tabs」（N 取自 `liveSelection()`：在 strip 上且非固定的，所以是真实会关掉的数量）和「Clear Selection」；**点在没选中的标签页上**时，先清空选择集再弹常规菜单（Finder 的行为，避免菜单说的和用户看的不是一回事）。常规菜单里补上「Close to the Left」。
 
 ### 4.4 一次批量，一个诚实的确认
 
@@ -230,7 +231,9 @@ confirmDiscard(victims): boolean
 
 其余批量动作只上命令面板 + 右键菜单：「Close Tabs to the Left」「Close Tabs to the Right」「Close Selected Tabs」，加上原有的「Close All Tabs」。理由是它们要么天然需要一个轴心（先得有激活页/选择集），要么本来就是指针场景——占一个全局键位不划算。
 
-⌘W（原生菜单 File ▸ Close Tab）改成走 `closeSelectedOrActive()`：有选择集关选择集，没有就关当前页（辩题二）。
+⌘W（原生菜单 File ▸ Close Tab）改成走 `closeSelectedOrActive()`：有选择集关选择集，没有就关当前页（辩题二）。"有"的定义同样是 `liveSelection()` 非空——只剩固定页或悬空 id 的选择集不算，退回关当前页，⌘W 永远不会变成死键。
+
+`⌘⌥W` 还牵出一个既有问题：`eventToShortcut` 只看 `e.key`，而 macOS 的 Option 层会先把字母合成成符号（⌥W → `∑`，⌥] → `‘`，⌥E → 死键），所以 `Mod+Alt+*` 这一整类绑定——包括既有的 ⌘⌥S / ⌘⌥T / ⌘⌥B / ⌘⌥] / ⌘⌥[——在 macOS 上可能从来没匹配上过；仓库里没有任何测试用真实的合成字符验过它们。修法是 Alt 按下且 `e.key` 是合成字符（非 ASCII 或 `Dead`）时改从 `e.code` 取键名；纯 ASCII 的 Alt 组合不动，AltGr 布局照旧打字。**没能在真机上验证**（本轮没有授权驱动应用），所以这条以合成事件的单元测试为准——真机上按一次 ⌘⌥T 切主题就能一锤定音：改前就能切，补丁是惰性的；改前不能切，补丁顺手把五个老绑定也救活了。
 
 ---
 
@@ -267,7 +270,7 @@ confirmDiscard(victims): boolean
 
 ## 8. 验证
 
-单元 / 组件测试（Vitest，本轮新增 36 条，全套 1047 条通过）：
+单元 / 组件测试（Vitest，三个 PR 合计新增 53 条，全套 1064 条通过）：
 
 **store（`src/store.test.ts`）**
 - `closeTabs` 关掉给定的一批，跳过固定页，激活页落到第一个被关的左邻；
@@ -277,8 +280,11 @@ confirmDiscard(victims): boolean
 - **回归**：`closeAllTabs` 有多个脏文档时，确认文案里出现的是**全部**名字，不是第一个；
 - 一个批次只问一次；批次里没有脏文档时一声不吭；
 - 批量关闭按 strip 顺序压 `recentlyClosed`，连续 `popRecentlyClosed()` 从左到右；
-- `closeSelectedOrActive()` 有选择集时关选择集、为空时关当前页；关掉标签条（`showTabBar: false`）时无视选择集；
-- 选择集：`toggleTabSelection` 拒绝固定页、`selectTabRange` 跳过固定页、任何关闭后清空、Save As 后 id 跟着迁移。
+- `closeSelectedOrActive()` 有选择集时关选择集、为空时关当前页；关掉标签条（`showTabBar: false`）时无视选择集；选择集里只剩固定页时退回关当前页；
+- 选择集：`toggleTabSelection` 拒绝固定页、`selectTabRange` 跳过固定页、任何关闭后清空、Save As 后 id 跟着迁移、固定一个已选中的页会把它剔出选择集、`liveSelection()` 只数真会被关的；
+- `closeOtherTabs` 其余全是固定页时仍把轴心页激活（改前行为）；`closeAllTabs` 落到离被关位置最近的固定页；
+- `t()` 不展开文件名里的 `$&` / `$'`（既有 bug，确认文案现在会列一串文件名，顺手修）；
+- `eventToShortcut`：∑/KeyW、‘/BracketRight、†/KeyT、Dead/KeyE 落到 `Mod+Alt+W/]/T/E`，@/KeyQ（AltGr）保持原样。
 
 **TabBar（`src/components/TabBar.test.tsx`）**
 - ⌘ 点切换选中态且不改变激活页；
@@ -287,8 +293,30 @@ confirmDiscard(victims): boolean
 - Esc 清空选择集；
 - 选中的标签页带 `data-selected="true"`；
 - 在选中的标签页上右键出现「Close N Tabs」，点它关掉的正是那 N 个；
-- 在未选中的标签页上右键先清空选择集。
+- 在未选中的标签页上右键先清空选择集；
+- 输入框里的 Esc 不碰选择集；锚点被关掉后 ⇧ 点从激活页起算；
+- Close Others / to the Left / to the Right / All 在只会碰到固定页时置灰。
 
 **真机 smoke**（dev server + 浏览器，非 Tauri 壳）：⌘N 开到 4 个标签页 → ⌘点第 2、4 个，两者拿到 `data-selected="true"`，实测样式是 10% 蓝底 + `inset 0 0 0 1px` 蓝色描边、`opacity: 1`，未选中的仍是透明 + `opacity: .6` → 右键选中项，菜单首条是「Close 2 Tabs」→ 点它，4 个标签页变 2 个，激活页落到被关那个的左邻。§5 那个宽度 bug 也是在这一轮里量出来的。
 
 没有加 e2e：这一轮的行为全部落在 DOM 事件和 store 上，Playwright 层面能多验的只有"⌘W 走原生菜单"，而那条路径在 e2e 里也是 mock 的（`e2e/tauri-mock.ts` 不带真实菜单），加了也验不到真东西。
+
+---
+
+## 9. Review 之后改了什么
+
+落地后三个独立的对抗式 review（每个 PR 一个，任务是"证明它不对"）抓到的，按严重度：
+
+| 发现 | 严重度 | 处理 |
+|---|---|---|
+| ⌘点选中 b → Pin → ⌘W：`closeSelectedOrActive` 只查"还在不在"不查 pinned，`closeTabs` 过滤掉固定页后一个受害者都没有，`return state`——连当前页都不关，选择集也不清，**⌘W 从此是死键** | bug | `toggleTabPinned` 固定时剔出选择集；`closeSelectedOrActive` 改用 `liveSelection()`，空了退回关当前页 |
+| 同一根因：「Close N Tabs」的 N 从 `selectedTabIds.length` 来，选 1 固定 + 2 非固定显示 3 实关 2——正是辩题五要防的"计数撒谎" | bug | 标签和 run 都改用 `liveSelection()` |
+| `Mod+Alt+W` 在 macOS 上可能永远匹配不上（Option 合成），既有的五个 ⌘⌥ 绑定同病 | bug（未在真机证实） | `eventToShortcut` 对合成键改从 `e.code` 取名，见 §4.6 |
+| Esc 双击：清选择集的同时把编辑器翻回阅读模式，削弱了辩题二的第 2 道闸 | 行为偏差 | App 那一支看到选择集非空先让路；TabBar 的监听跳过输入框 |
+| `closeOtherTabs` 其余全是固定页时不再激活轴心页（改前会） | 行为回退 | 补回 |
+| `closeAllTabs` 的落点从"第一个固定页"变成"最后一个固定页" | 行为变化 | **保留**——这是 §4.1 的统一规则（最左被关位置的左邻），补测试钉住 |
+| `t()` 用字符串替换值，文件名里的 `$&` 会被展开成 `{1}` | 既有 nit | 换函数替换值 |
+| ⇧ 连选的锚点被关掉后 `??` 不会退回激活页 | nit | 点击时核对锚点还在不在 |
+| Close to the Left 只在第一个标签页上置灰，但固定页永远排最前，"左边全是固定页"是常态 | nit | 四条批量项都按"是否真有非固定页会被关"置灰 |
+
+§4.2 那张生命周期表原本写着"固定/取消固定 | id 不变，无需处理"——错了。危险的不是 id，是 `pinned` 这个标志：它决定一个 id 还算不算"会被关的"。表已改。

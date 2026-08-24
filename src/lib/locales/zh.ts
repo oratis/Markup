@@ -113,6 +113,7 @@ export const zh: Strings = {
   "toast.copiedPlainText": "已作为纯文本复制",
   "toast.copiedHtml": "已作为 HTML 复制",
   "toast.savedAll": "已保存 {0} 个文件",
+  "toast.noTabSelection": "没有选中的标签页",
   "toast.saveAllFailed": "已保存 {0}，{1} 个失败",
   "toast.tableSizeBad": "格式：行 x 列（例如 3x4）",
   "toast.reloaded": "已从磁盘重新加载",

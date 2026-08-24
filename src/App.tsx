@@ -181,7 +181,6 @@ export function App() {
   const setVault = useAppStore((s) => s.setVault);
   const setVaultFiles = useAppStore((s) => s.setVaultFiles);
   const openLoadedFile = useAppStore((s) => s.openLoadedFile);
-  const closeTab = useAppStore((s) => s.closeTab);
   const newScratchTab = useAppStore((s) => s.newScratchTab);
   const setSourceMode = useAppStore((s) => s.setSourceMode);
   const toggleSourceMode = useAppStore((s) => s.toggleSourceMode);
@@ -1140,11 +1139,11 @@ export function App() {
         case "open_recent":
           setShowRecentOpen(true);
           break;
-        case "close_tab": {
-          const a = useAppStore.getState().activeTabId;
-          if (a) closeTab(a);
+        case "close_tab":
+          // Closes the marked selection when there is one, else the active
+          // tab. See docs/design/10-close-many-tabs.md §3 (辩题二).
+          useAppStore.getState().closeSelectedOrActive();
           break;
-        }
         case "save": {
           const a = useAppStore.getState().activeTabId;
           if (a) {
@@ -1375,6 +1374,13 @@ export function App() {
           return;
         }
         if (e.key === "Escape" && !readMode && !sourceMode && !isEditableTarget) {
+          // A live tab selection is the more recent state — Esc drops that
+          // first (TabBar owns the clearing); the next Esc returns to Read.
+          // Only while the strip is visible, though: with showTabBar off the
+          // selection is retained but hidden (design 10 §4.2), TabBar isn't
+          // mounted to clear it, and deferring here would leave Esc dead.
+          const st = useAppStore.getState();
+          if (st.showTabBar && st.selectedTabIds.length > 0) return;
           e.preventDefault();
           setReadMode(true);
           return;
@@ -1615,6 +1621,19 @@ export function App() {
         run: () => {
           const cur = useAppStore.getState().activeTabId;
           if (cur) useAppStore.getState().closeTabsToRight(cur);
+        },
+      },
+      {
+        id: "close_selected_tabs",
+        label: "Close Selected Tabs",
+        hint: "⌘-click / ⇧-click tabs to select",
+        run: () => {
+          const st = useAppStore.getState();
+          if (st.selectedTabIds.length === 0) {
+            showToast(tr("toast.noTabSelection"));
+            return;
+          }
+          st.closeTabs(st.selectedTabIds);
         },
       },
       {

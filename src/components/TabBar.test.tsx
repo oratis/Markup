@@ -16,8 +16,21 @@ function makeTab(id: string, name: string, status: Tab["status"] = "saved"): Tab
 }
 
 beforeEach(() => {
-  useAppStore.setState({ tabs: [], activeTabId: null });
+  useAppStore.setState({ tabs: [], activeTabId: null, selectedTabIds: [] });
 });
+
+/** The clickable row for a tab, by its display name. */
+function row(name: string): HTMLElement {
+  return screen.getByText(name).parentElement as HTMLElement;
+}
+
+function threeTabs() {
+  useAppStore.setState({
+    tabs: [makeTab("/a.md", "a.md"), makeTab("/b.md", "b.md"), makeTab("/c.md", "c.md")],
+    activeTabId: "/a.md",
+    selectedTabIds: [],
+  });
+}
 
 describe("TabBar", () => {
   it("renders nothing for a single-tab state (no tab strip needed)", () => {
@@ -157,5 +170,109 @@ describe("TabBar", () => {
     expect(screen.getByText("Close to the Right")).toBeDisabled();
     // "Close All" still has b.md to close.
     expect(screen.getByText("Close All")).toBeEnabled();
+  });
+});
+
+describe("TabBar multi-select", () => {
+  it("⌘-click marks a tab without moving the active doc", () => {
+    threeTabs();
+    render(<TabBar />);
+    fireEvent.click(row("b.md"), { metaKey: true });
+    const s = useAppStore.getState();
+    expect(s.selectedTabIds).toEqual(["/b.md"]);
+    expect(s.activeTabId).toBe("/a.md");
+  });
+
+  it("⌘-click again unmarks it", () => {
+    threeTabs();
+    render(<TabBar />);
+    fireEvent.click(row("b.md"), { metaKey: true });
+    fireEvent.click(row("b.md"), { metaKey: true });
+    expect(useAppStore.getState().selectedTabIds).toEqual([]);
+  });
+
+  it("⇧-click extends a range from the last plain-clicked tab", () => {
+    threeTabs();
+    render(<TabBar />);
+    fireEvent.click(row("a.md"));
+    fireEvent.click(row("c.md"), { shiftKey: true });
+    expect(useAppStore.getState().selectedTabIds).toEqual(["/a.md", "/b.md", "/c.md"]);
+  });
+
+  it("a plain click drops the selection", () => {
+    threeTabs();
+    render(<TabBar />);
+    fireEvent.click(row("b.md"), { metaKey: true });
+    fireEvent.click(row("c.md"));
+    const s = useAppStore.getState();
+    expect(s.selectedTabIds).toEqual([]);
+    expect(s.activeTabId).toBe("/c.md");
+  });
+
+  it("marks selected tabs in the DOM", () => {
+    threeTabs();
+    render(<TabBar />);
+    fireEvent.click(row("b.md"), { metaKey: true });
+    expect(row("b.md")).toHaveAttribute("data-selected", "true");
+    expect(row("c.md")).not.toHaveAttribute("data-selected");
+  });
+
+  it("Esc drops the selection", () => {
+    threeTabs();
+    render(<TabBar />);
+    fireEvent.click(row("b.md"), { metaKey: true });
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(useAppStore.getState().selectedTabIds).toEqual([]);
+  });
+
+  it("right-clicking a selected tab offers to close the whole selection", () => {
+    threeTabs();
+    render(<TabBar />);
+    fireEvent.click(row("b.md"), { metaKey: true });
+    fireEvent.click(row("c.md"), { metaKey: true });
+    fireEvent.contextMenu(row("b.md"), { clientX: 10, clientY: 10 });
+    fireEvent.click(screen.getByText("Close 2 Tabs"));
+    expect(useAppStore.getState().tabs.map((t) => t.id)).toEqual(["/a.md"]);
+  });
+
+  it("Esc inside an input leaves the selection alone", () => {
+    threeTabs();
+    render(
+      <>
+        <TabBar />
+        <input aria-label="probe" />
+      </>,
+    );
+    fireEvent.click(row("b.md"), { metaKey: true });
+    fireEvent.keyDown(screen.getByLabelText("probe"), { key: "Escape" });
+    expect(useAppStore.getState().selectedTabIds).toEqual(["/b.md"]);
+  });
+
+  it("⇧-click falls back to the active tab when the anchor was closed", () => {
+    useAppStore.setState({
+      tabs: [
+        makeTab("/a.md", "a.md"),
+        makeTab("/b.md", "b.md"),
+        makeTab("/c.md", "c.md"),
+        makeTab("/d.md", "d.md"),
+      ],
+      activeTabId: "/b.md",
+      selectedTabIds: [],
+    });
+    render(<TabBar />);
+    fireEvent.click(row("a.md"), { metaKey: true }); // anchor = a
+    fireEvent.mouseDown(row("a.md"), { button: 1 }); // …and close it
+    fireEvent.click(row("d.md"), { shiftKey: true });
+    // Anchor is gone → range runs from the active tab (b) to d.
+    expect(useAppStore.getState().selectedTabIds).toEqual(["/b.md", "/c.md", "/d.md"]);
+  });
+
+  it("right-clicking outside the selection clears it first", () => {
+    threeTabs();
+    render(<TabBar />);
+    fireEvent.click(row("b.md"), { metaKey: true });
+    fireEvent.contextMenu(row("c.md"), { clientX: 10, clientY: 10 });
+    expect(useAppStore.getState().selectedTabIds).toEqual([]);
+    expect(screen.queryByText(/Close \d+ Tabs?/)).toBeNull();
   });
 });
