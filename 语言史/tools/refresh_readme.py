@@ -45,9 +45,11 @@ pat = r"\| 篇 \| 字数 \| 节 \|\n\|[-|: ]+\|\n(?:\|.*\n)+"
 assert re.search(pat, readme), "看板表未匹配——README 结构变了，先看一眼"
 new = re.sub(pat, table + "\n", readme, count=1)
 
-pat2 = r"当前正文字数：约 \*\*[\d,\s]+ / [\d,\s]+\*\*"   # 目标数带千位逗号，[\d\s] 配不上
-assert re.search(pat2, new), "总字数那一行未匹配——先看一眼 README 是不是被改过"
-new = re.sub(pat2, f"当前正文字数：约 **{tot:,} / {TARGET:,}**", new, count=1)
+# 两侧都可能带千分位逗号——旧版这里漏了右边那个逗号，于是这一行静静地过期了半年
+new, n = re.subn(r"当前正文字数：约 \*\*[\d,\s]+ / [\d,\s]+\*\*",
+                 f"当前正文字数：约 **{tot:,} / {TARGET:,}**", new, count=1)
+if not n:
+    sys.exit("没找到「当前正文字数」那一行——README 的措辞变了，改这里的正则")
 
 open("README.md", "w", encoding="utf-8").write(new)
 print(f"看板已刷新：{len([r for r in rows if r[1].count('|') > 2])} 篇，合计 {tot:,} 字（目标 {TARGET:,}）")
