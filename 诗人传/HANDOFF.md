@@ -133,6 +133,7 @@ python3 tools/merge_blocks.py      # 从各章人物/年表块重建人物谱与
 python3 tools/xref_check.py        # 跨章一致性 + 注释块完整性
 python3 tools/debt_report.py       # 欠账三档快照；--why 按「为什么没清」分桶
 python3 tools/press_list.py        # 抽全书【成书前】条目 → 提纲/主编待决.md
+python3 tools/refresh_refs.py      # 重刷《参考资料》里各章系年依据那张表，同样不要手写
 python3 tools/build_html.py        # 单文件 HTML 阅读稿 → ../当时明月-全书.html（不进 git）
 ```
 
