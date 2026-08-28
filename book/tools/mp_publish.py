@@ -172,6 +172,17 @@ def main():
                  "48001 的两种可能：①用的是小程序的 AppID（素材/草稿是公众号专属接口）；"
                  "②公众号未通过微信认证。都走不通的话，退回手工粘贴 html/ 里的文件。")
 
+    # 封面是硬前提：草稿接口要 thumb_media_id，没有封面一篇也建不成。
+    # 与其让 24 篇挨个抛 FileNotFoundError，不如在这里一次说清楚。
+    missing = [m for m in idx if not os.path.exists(f"{outdir}/{m['cover']}")]
+    if missing:
+        sys.exit(f"缺 {len(missing)} 张封面（第 "
+                 + "、".join(str(m["seq"]) for m in missing[:8])
+                 + ("…" if len(missing) > 8 else "") + " 篇）。\n\n"
+                 f"草稿接口要 thumb_media_id，没有封面建不了草稿。先出封面：\n\n"
+                 f"    ARK_API_KEY=你的key python3 tools/gen_covers.py {outdir}\n\n"
+                 f"画面描述在 meta/cover_prompts.json；只补某几张就传序号。")
+
     state_path = f"{outdir}/meta/_mp_state.json"
     state = json.load(open(state_path, encoding="utf-8")) if os.path.exists(state_path) else {}
 
