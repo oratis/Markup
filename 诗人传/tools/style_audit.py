@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 """文风体检。在 诗人传/ 下运行。
 
-量五个东西，都是《写作规范》里有明文额度、而且机器数得准的：
+量六个东西，都是《写作规范》里有明文额度、而且机器数得准的：
 
     粗体占比   `**` 内非空白字符 ÷ 正文非空白字符。小说里粗体几乎不该出现，>3% 就报。
     教辅腔     规范第 16 条禁语表（表达了 / 抒发了 / 体现了 / 意境 / 千古名句 …），一处就报。
     「我们」   规范第 7 条：全章 ≤3。那是史话的声音，不是小说的。
     破折号     全角破折号占正文字符的千分比。姊妹书去模板轮把它从 4.9‰ 压到 3.0‰，超过 4‰ 报。
     字数 / 节  规范第 26、2 条：正文 8 000–11 000（序终 3 500–5 000）、六到九节。上下限都查。
+    过程词     章末「本章诗作编年」里的「本轮」「见欠账」「复核未通过」一类。**那张表是要印的**，
+               2026-08-28 清账轮有四章把清账过程写进了「系年依据」栏，公众号版整段带了出去。
 
 **这些数是用来定位问题的，不是用来拉平的。**
 
@@ -20,7 +22,13 @@
 import re, glob, os, sys, statistics
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from measure import prose, count, sections   # 一律量正文（去章末编年表），与 count() 同口径
+from measure import prose, body, count, sections  # 一律量正文（去章末编年表），与 count() 同口径
+
+# 清账过程的话，不是书里的话。章末的「本章诗作编年」**是要印进书里的**
+# （它就是这一章的年谱），公众号版也整篇带出去——所以它里面不能留这些记号。
+# 欠账区块随便写，那一块是 HTML 注释，不进书。
+PROCESS = ["本轮", "上一轮", "见欠账", "复核未通过", "复核通过", "待核实",
+           "须核", "主控", "下一位", "待定"]
 
 PROLOGUE = "序章-年谱.md"
 EPILOGUE = "终章-江月何年初照人.md"
@@ -50,8 +58,13 @@ def audit(path):
     opener = paras[0] if paras else ""
     bare_open = bool(re.match(r"^[^。]{0,12}[0-9一二三四五六七八九十○〇]+\s?年[^。]{0,16}。$", opener)) or \
                 bool(re.match(r"^[^，。]{1,8}，[^，。]{1,8}。$", opener))
+    # 编年表里的过程词。b 是 prose()（已去表），这里要另取表那一段。
+    full = body(path)
+    i = full.find("\n## 本章诗作编年")
+    chron = full[i:] if i != -1 else ""
+    process = sorted({w for w in PROCESS if w in chron})
     return {
-        "xref": xref, "legend": legend, "bare_open": bare_open,
+        "xref": xref, "legend": legend, "bare_open": bare_open, "process": process,
         "words": count(path),
         "secs": sections(path),
         "bold": bold * 100 / max(1, chars),
@@ -95,6 +108,8 @@ def main():
         if a["xref"]: tips.append(f"章号互指 {a['xref']} 处")
         if a["legend"] > 2: tips.append(f"「后来的人说」式引出 {a['legend']} 次（≤2）")
         if a["bare_open"]: tips.append("开场疑似「年份，地点。」裸句")
+        if a["process"]:
+            tips.append("编年表留了清账过程词（那张表要印进书里）：" + "、".join(a["process"]))
         front = "序章" in f or "终章" in f
         floor = 3500 if front else 8000
         ceil = 5000 if front else 11000
