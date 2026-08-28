@@ -13,20 +13,47 @@ import re, glob, os, sys
 
 PRESS = "【成书前"   # 兼容「【成书前】」与「【成书前·主编事项…】」两种写法
 
+
+def items(blk):
+    """把一个欠账块拆成条目，**每条连它的缩进续行一起**。
+
+    条目长这样——理由、出处、检索路线都写在续行里：
+
+        - [ ] 弟弟之名无考；《勉爱行》系年须核朱谱
+              —— 诗题已定位于《全唐诗》卷三九一……**纸本不可及**
+
+    只读第一行会漏掉整条理由。2026-08-28 那一轮 `--why` 就是这么把 41 条已经
+    写明了原因的条目报成「没写明为什么没清」的——**报表自己造出来的欠账**，
+    姊妹书在同一个地方栽过两次。
+    """
+    out, cur = [], None
+    for line in blk.splitlines():
+        m = re.match(r"^- \[([ xX])\]\s*(.*)$", line)
+        if m:
+            if cur:
+                out.append(cur)
+            cur = [m.group(1).lower() == "x", m.group(2)]
+        elif cur is not None and line.strip():
+            cur[1] += "\n" + line.strip()
+    if cur:
+        out.append(cur)
+    return out
+
+
 def scan():
     rows = []
     for f in sorted(glob.glob("**/*.md", recursive=True)):
         t = open(f, encoding="utf-8").read()
         done = todo = press = 0
         for m in re.finditer(r"<!--\s*欠账:(.*?)-->", t, flags=re.S):
-            blk = m.group(1)
-            done += len(re.findall(r"^- \[x\]", blk, flags=re.M))
-            for item in re.findall(r"^- \[ \]\s*(.*)$", blk, flags=re.M):
-                if PRESS in item: press += 1
+            for checked, text in items(m.group(1)):
+                if checked: done += 1
+                elif PRESS in text: press += 1
                 else: todo += 1
         if done or todo or press:
             rows.append((os.path.basename(f), done, todo, press))
     return rows
+
 
 def key(n):
     m = re.match(r"(\d+)", n)
@@ -35,8 +62,12 @@ def key(n):
 BUCKETS = [
     ("成书前·主编定夺", ["【成书前"]),
     ("复核未通过（上一轮打错了勾）", ["复核未通过", "複核未通過"]),
-    ("纸本不可及（近人年谱/方志，网上无全文）", ["纸本", "年谱", "年譜", "校注", "笺注", "箋注", "无电子", "無電子", "未能取得电子"]),
-    ("已试过检索、确实查不到", ["检索路线", "檢索路線", "试过", "已取", "未检得", "未檢得", "查不到"]),
+    ("纸本不可及（近人年谱/方志，网上无全文）", ["纸本", "年谱", "年譜", "校注", "笺注", "箋注",
+                                    "汇解", "彙解", "集解", "无电子", "無電子", "未能取得电子",
+                                    "未上库", "未上庫", "不在库", "不在庫", "不在维基文库", "不在維基文庫"]),
+    ("已试过检索、确实查不到", ["检索路线", "檢索路線", "试过", "已取", "未检得", "未檢得", "查不到",
+                       "零命中", "通检", "通檢", "逐卷", "无一手", "無一手", "皆无", "皆無",
+                       "未见", "未見", "无确据", "無確據", "两说", "兩說", "无考", "無考"]),
 ]
 
 
@@ -54,23 +85,26 @@ def why(argv):
         t = open(f, encoding="utf-8").read()
         # 该章清过没有？一条勾都没有的，它的条目还是初稿原样，
         # 「没写明原因」是理所当然，不该混进「清过却没留路线」那一档。
-        cleared_here = sum(len(re.findall(r"^- \[x\]", m, flags=re.M))
-                           for m in re.findall(r"<!--\s*欠账:(.*?)-->", t, flags=re.S))
+        cleared_here = sum(1 for blk in re.findall(r"<!--\s*欠账:(.*?)-->", t, flags=re.S)
+                           for checked, _ in items(blk) if checked)
         for m in re.finditer(r"<!--\s*欠账:(.*?)-->", t, flags=re.S):
-            for item in re.findall(r"^- \[ \]\s*(.*)$", m.group(1), flags=re.M):
+            for checked, item in items(m.group(1)):
+                if checked:
+                    continue
                 hit = None
                 for name, keys in BUCKETS:
                     if any(k in item for k in keys):
                         hit = name
                         break
+                head = item.split("\n")[0][:80]
                 if hit:
                     tally[hit] += 1
                     if len(samples[hit]) < 2:
-                        samples[hit].append((os.path.basename(f), item[:80]))
+                        samples[hit].append((os.path.basename(f), head))
                 elif cleared_here:
-                    other.append((os.path.basename(f), item[:80]))
+                    other.append((os.path.basename(f), head))
                 else:
-                    untouched.append((os.path.basename(f), item[:80]))
+                    untouched.append((os.path.basename(f), head))
     tot = sum(tally.values()) + len(other) + len(untouched)
     print(f"未打勾的 {tot} 条，按「为什么没清」分：\n")
     for name, _ in BUCKETS:
@@ -106,6 +140,7 @@ def main():
     print(f"\n合计 {tot} 条：已清 {D}（{D/tot*100:.0f}%）· 待核 {T} · 成书前 {P}")
     if T == 0:
         print("待核为 0 —— 剩下的只等定稿或主编拍板。")
+
 
 if __name__ == "__main__":
     main()
