@@ -77,6 +77,34 @@ def audit(path):
     }
 
 
+STARS = 78          # 上一次核定的正文重构星号数（2026-08-28 两轮合并后复核）
+
+
+def stars():
+    """正文里的重构星号 `\*`。**这是这本书的命门**——星号是书名，任何批量改动之后先数它。
+
+    要命的是「正文」怎么算。2026-08-28 合并那天先报成 80，查下来是把
+    `第*卷*/_卷细纲.md` 也数进去了——两卷细纲里各有一个 `\*`，而细纲是工作底稿、
+    不是正文（`_manuscript.md` 的 `ignore` 里写着）。**所以这里按 `_manuscript.md`
+    的篇目清单数，不按目录里有什么 .md 数。**
+    """
+    try:
+        raw = open("_manuscript.md", encoding="utf-8").read()
+    except OSError:
+        return None, 0
+    slugs = re.findall(r"\[\[(.+?)\]\]", raw)
+    paths = {os.path.basename(p)[:-3]: p for p in glob.glob("**/*.md", recursive=True)}
+    n = 0
+    for sl in slugs:
+        if sl not in paths:
+            continue
+        t = open(paths[sl], encoding="utf-8").read()
+        t = re.sub(r"^---.*?\n---\n", "", t, flags=re.S)
+        t = re.sub(r"<!--.*?-->", "", t, flags=re.S)
+        n += len(re.findall(r"\\\*", t))
+    return n, len(slugs)
+
+
 def chnum(p):
     m = re.match(r"(\d+)", os.path.basename(p))
     return int(m.group(1)) if m else None
@@ -128,6 +156,10 @@ def main():
           f" · 「不是X是Y」合计 {sum(r['neg'] for r in rows)}")
     print(f"章首「年份，地点。」独立成行：{stamps}/{len(rows)} 篇"
           + ("  ← 超过 15 篇就是模板，不是场景（§1 反模板条款）" if stamps > 15 else ""))
+    n, total = stars()
+    if n is not None:
+        print(f"正文重构星号 `\\*`：{n}（按 _manuscript.md 的 {total} 篇篇目清单数）"
+              + ("" if n == STARS else f"  ← 上一次核定是 {STARS}，**批量改动之后先查这一项**"))
 
 
 if __name__ == "__main__":
