@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   getBookmarks,
   isBookmarked,
@@ -37,12 +37,28 @@ export function TabBar() {
   // in place + replaces; subscribe re-emits to trigger a render.
   useSyncExternalStore(subscribeBookmarks, getBookmarks);
 
+  const stripRef = useRef<HTMLDivElement | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [ctx, setCtx] = useState<CtxState | null>(null);
   // Anchor for ⇧-click ranges. Pure pointer state — it never needs to leave
   // this component, unlike the selection itself (App reads that for ⌘W).
   const [anchorId, setAnchorId] = useState<string | null>(null);
+
+  // Keep the active tab visible. A file opened from Finder or the sidebar is
+  // appended to the right of the strip, which scrolls — without this the tab
+  // switches but the eye still lands on the old, still-visible one.
+  useEffect(() => {
+    if (!activeTabId) return;
+    // Matched by dataset rather than a selector: tab ids are file paths, and
+    // quoting one safely for querySelector needs CSS.escape.
+    const el = Array.from(stripRef.current?.children ?? []).find(
+      (c): c is HTMLElement =>
+        c instanceof HTMLElement && c.dataset.tabId === activeTabId,
+    );
+    // jsdom has no scrollIntoView; the guard keeps component tests running.
+    el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [activeTabId]);
 
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
   // What a "Close N Tabs" would really remove — never counts pinned tabs.
@@ -77,7 +93,10 @@ export function TabBar() {
   const ctxIdx = ctx ? tabs.findIndex((t) => t.id === ctx.id) : -1;
 
   return (
-    <div className="flex items-stretch border-b border-black/5 dark:border-white/10 overflow-x-auto no-scrollbar bg-canvas-light dark:bg-canvas-dark">
+    <div
+      ref={stripRef}
+      className="flex items-stretch border-b border-black/5 dark:border-white/10 overflow-x-auto no-scrollbar bg-canvas-light dark:bg-canvas-dark"
+    >
       {tabs.map((tab) => {
         const isActive = tab.id === activeTabId;
         const isSelected = selected.has(tab.id);
@@ -137,6 +156,7 @@ export function TabBar() {
                 closeTab(tab.id);
               }
             }}
+            data-tab-id={tab.id}
             data-selected={isSelected ? "true" : undefined}
             className={`group titlebar-no-drag relative flex items-center gap-2 pl-3 pr-1 py-1.5 text-[12px] cursor-pointer border-r border-black/5 dark:border-white/10 select-none ${tone} ${
               isSelected ? "bg-blue-500/10 ring-1 ring-inset ring-blue-500/60" : ""

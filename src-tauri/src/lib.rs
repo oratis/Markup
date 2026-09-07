@@ -29,6 +29,7 @@ use commands_vault::{
 };
 use commands_window::new_window;
 use recent::{clear_recent_files, list_recent_files, push_recent_file};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{Emitter, Manager, State};
 // RunEvent::Opened (the Finder open-document event) only exists on macOS.
@@ -43,10 +44,47 @@ use vault::VaultState;
 #[derive(Default)]
 struct PendingOpenFiles(Mutex<Vec<String>>);
 
+/// Flipped the first time a webview drains the buffer above, which it does
+/// straight after registering its "open-files" listener. Until then an emitted
+/// event has nobody to hear it, so opens have to be buffered. After it, they
+/// must NOT be — a buffered path outlives the open that produced it and gets
+/// re-opened by the next window that mounts (⌘N), landing the user on a file
+/// they opened ten minutes ago.
+#[derive(Default)]
+struct FrontendReady(AtomicBool);
+
 #[tauri::command]
-fn take_pending_files(state: State<PendingOpenFiles>) -> Vec<String> {
+fn take_pending_files(state: State<PendingOpenFiles>, ready: State<FrontendReady>) -> Vec<String> {
+    ready.0.store(true, Ordering::SeqCst);
     let mut v = state.0.lock().unwrap_or_else(|e| e.into_inner());
     std::mem::take(&mut *v)
+}
+
+/// Buffer `paths` for the frontend to drain, or emit them if it is already
+/// listening. Never both: see `FrontendReady`.
+fn deliver_open_files(app: &tauri::AppHandle, paths: Vec<String>) {
+    let listening = app
+        .try_state::<FrontendReady>()
+        .is_some_and(|r| r.0.load(Ordering::SeqCst));
+    if !listening {
+        if let Some(state) = app.try_state::<PendingOpenFiles>() {
+            if let Ok(mut v) = state.0.lock() {
+                v.extend(paths.iter().cloned());
+            }
+        }
+    }
+    // Bring the window forward: the OS activates the app on an open-document
+    // event, but a minimized window stays minimized and the user sees nothing
+    // change. Best-effort — a headless/no-window state is not an error here.
+    if let Some(win) = app
+        .get_webview_window("main")
+        .or_else(|| app.webview_windows().into_values().next())
+    {
+        let _ = win.unminimize();
+        let _ = win.show();
+        let _ = win.set_focus();
+    }
+    let _ = app.emit("open-files", paths);
 }
 
 /// True for paths we treat as openable Markdown documents.
@@ -127,8 +165,8 @@ pub fn run() {
     // Markdown file passed on the second instance's argv.
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-        // Focus the primary window, falling back to any open window — the user
-        // may have closed "main" while keeping a secondary window (w0/w1/…) open.
+        // Focusing the window is deliver_open_files' job below, but a second
+        // instance with no file to open still means "come to the front".
         if let Some(win) = app
             .get_webview_window("main")
             .or_else(|| app.webview_windows().into_values().next())
@@ -139,12 +177,7 @@ pub fn run() {
         if paths.is_empty() {
             return;
         }
-        if let Some(state) = app.try_state::<PendingOpenFiles>() {
-            if let Ok(mut v) = state.0.lock() {
-                v.extend(paths.iter().cloned());
-            }
-        }
-        let _ = app.emit("open-files", paths);
+        deliver_open_files(app, paths);
     }));
 
     builder
@@ -160,6 +193,7 @@ pub fn run() {
         .manage(VaultState::new())
         .manage(WriteScope::new())
         .manage(PendingOpenFiles::default())
+        .manage(FrontendReady::default())
         .setup(|app| {
             let menu = menu::build(app.handle())?;
             app.set_menu(menu)?;
@@ -236,12 +270,7 @@ pub fn run() {
                 if paths.is_empty() {
                     return;
                 }
-                if let Some(state) = _handle.try_state::<PendingOpenFiles>() {
-                    if let Ok(mut v) = state.0.lock() {
-                        v.extend(paths.iter().cloned());
-                    }
-                }
-                let _ = _handle.emit("open-files", paths);
+                deliver_open_files(_handle, paths);
             }
         });
 }

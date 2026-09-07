@@ -39,6 +39,40 @@ describe("app store", () => {
     expect(s.tabs.find((t) => t.id === "scratch:welcome")).toBeUndefined();
   });
 
+  it("opens in the background without stealing focus when activate is false", () => {
+    const { openLoadedFile } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "a", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "b", mtime_ms: 1 }, { activate: false });
+    const s = useAppStore.getState();
+    expect(s.tabs.map((t) => t.id)).toEqual(["/a.md", "/b.md"]);
+    expect(s.activeTabId).toBe("/a.md");
+  });
+
+  it("a background open still takes focus when it drops the welcome tab", () => {
+    // Nothing else could hold `activeTabId` — leaving it on the dropped
+    // welcome tab would render an empty editor.
+    const { openLoadedFile } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "a", mtime_ms: 1 }, { activate: false });
+    const s = useAppStore.getState();
+    expect(s.tabs.map((t) => t.id)).toEqual(["/a.md"]);
+    expect(s.activeTabId).toBe("/a.md");
+  });
+
+  it("a background open of an already-open file leaves focus alone", () => {
+    const { openLoadedFile } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "a", mtime_ms: 1 });
+    openLoadedFile({ path: "/b.md", content: "b", mtime_ms: 1 });
+    openLoadedFile({ path: "/a.md", content: "a", mtime_ms: 1 }, { activate: false });
+    expect(useAppStore.getState().activeTabId).toBe("/b.md");
+  });
+
+  it("ignores setActiveTab for an id that names no open tab", () => {
+    const { openLoadedFile, setActiveTab } = useAppStore.getState();
+    openLoadedFile({ path: "/a.md", content: "a", mtime_ms: 1 });
+    setActiveTab("/deleted-since-last-launch.md");
+    expect(useAppStore.getState().activeTabId).toBe("/a.md");
+  });
+
   it("does not duplicate when opening the same path twice", () => {
     const { openLoadedFile } = useAppStore.getState();
     openLoadedFile({ path: "/a.md", content: "1", mtime_ms: 1 });
