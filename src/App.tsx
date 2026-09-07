@@ -34,6 +34,7 @@ import { useLargeFileGuard } from "./hooks/useLargeFileGuard";
 import { usePinnedTabsSync } from "./hooks/usePinnedTabsSync";
 import { useScrollMemory } from "./hooks/useScrollMemory";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
+import { useStartupTabs } from "./hooks/useStartupTabs";
 import { useSettingsPersistence } from "./hooks/useSettingsPersistence";
 import { useUiPrefPersistence } from "./hooks/useUiPrefPersistence";
 import { useWindowFileDrop } from "./hooks/useWindowFileDrop";
@@ -103,7 +104,6 @@ import {
 import { buildParagraphLink } from "./lib/paragraph-link";
 import { trimTrailingWhitespace } from "./lib/save-prep";
 import { createSaveScheduler, planSaveFinalize } from "./lib/save-scheduler";
-import { readSession } from "./lib/session";
 import { parseSettings, serializeSettings } from "./lib/settings-io";
 import { shiftAllHeadings } from "./lib/shift-headings";
 import { resetAll as resetAllShortcuts } from "./lib/shortcuts";
@@ -124,7 +124,6 @@ import {
   listRecentFilesNative,
   listVaultFiles,
   listenMenu,
-  listenOpenFiles,
   listenVaultChanged,
   listenVaultIndexProgress,
   openFileDialog,
@@ -139,7 +138,6 @@ import {
   renameFile,
   renderHtml,
   restoreVault,
-  takePendingFiles,
   writeFile,
 } from "./lib/tauri";
 import { applyTemplate, dailyNotePath } from "./lib/template";
@@ -302,26 +300,8 @@ export function App() {
     // + pubkey configured to actually upgrade — see lib/updater.ts).
     // Skipped in the MAS build — the App Store owns updates there.
     if (!IS_MAS_BUILD) checkForUpdates();
-    // Restore previously-open tabs. Runs async — failures are silent
-    // (file may have been deleted / moved since the last session).
-    const sess = readSession();
-    if (sess.open.length > 0) {
-      Promise.all(sess.open.map((p) => readFile(p).catch(() => null))).then((all) => {
-        let restored = 0;
-        for (const loaded of all) {
-          if (loaded) {
-            openLoadedFile(loaded);
-            restored += 1;
-          }
-        }
-        if (sess.active) {
-          useAppStore.getState().setActiveTab(sess.active);
-        }
-        if (restored > 0) {
-          showToast(tr("toast.sessionRestored", restored));
-        }
-      });
-    }
+    // Tab session restore + OS file opens live in useStartupTabs (below) —
+    // they have to be ordered against each other, not raced.
     // NOTE: auto-reopen of the last vault on launch was reverted — it
     // regressed manual "Open Vault". Vault persistence across launches
     // (esp. under the App Sandbox) needs Rust-side security-scoped
@@ -342,35 +322,13 @@ export function App() {
     return () => unlisten?.();
   }, []);
 
-  // macOS "open with Markup" — opens .md files double-clicked in Finder
-  // (or `open file.md`). Drains the cold-start buffer once, then listens
-  // for live opens while the app stays running.
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    const openPaths = async (paths: string[]) => {
-      for (const p of paths) {
-        try {
-          const loaded = await readFile(p);
-          openLoadedFile(loaded);
-          pushRecentFile(p);
-        } catch (e) {
-          console.warn("open-file failed:", p, e);
-        }
-      }
-    };
-    listenOpenFiles(openPaths).then((u) => {
-      unlisten = u;
-    });
-    takePendingFiles()
-      .then((paths) => {
-        if (paths.length) openPaths(paths);
-      })
-      .catch(() => {});
-    return () => {
-      if (unlisten) unlisten();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Startup document flow: files the OS handed us (Finder double-click /
+  // "Open With"), live opens while the app runs, and last session's tabs —
+  // ordered so the file the user asked for is the one on screen.
+  useStartupTabs({
+    onRestored: (n) => showToast(tr("toast.sessionRestored", n)),
+    onOpened: pushRecentFile,
+  });
 
   // Open Markdown / Canvas / HTML files dragged onto the window (works with
   // or without a vault — the dropped files open as tabs directly).

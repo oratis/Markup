@@ -111,7 +111,10 @@ interface AppState {
   customCss: string;
 
   // tab ops
-  openLoadedFile: (loaded: LoadedFile) => void;
+  /** Open a file as a tab and focus it. `activate: false` opens it in the
+   * background — used by session restore, which must never pull focus away
+   * from a file the user just asked for. */
+  openLoadedFile: (loaded: LoadedFile, opts?: { activate?: boolean }) => void;
   newScratchTab: () => void;
   /** Open fetched text (e.g. a GitHub file) as a new unsaved buffer. */
   openScratchWithContent: (name: string, content: string) => void;
@@ -236,6 +239,11 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const SCRATCH_PREFIX = "scratch:";
 
+/** The scratch buffer the app boots with. Exported so startup code can tell
+ * "nobody has opened anything yet" from "the user is already reading
+ * something" — session restore must not steal focus from the latter. */
+export const WELCOME_TAB_ID = `${SCRATCH_PREFIX}welcome`;
+
 const WELCOME_MD = `# Welcome to Markup
 
 A high-performance Markdown editor for macOS.
@@ -341,7 +349,7 @@ function removeTabs(state: AppState, victimIds: Set<string>) {
   if (tabs.length === 0) {
     return {
       tabs: [welcomeTab()],
-      activeTabId: `${SCRATCH_PREFIX}welcome` as string | null,
+      activeTabId: WELCOME_TAB_ID as string | null,
       recentlyClosed,
       selectedTabIds: [] as string[],
     };
@@ -375,7 +383,7 @@ function closeSide(state: AppState, id: string, side: "left" | "right") {
 
 function welcomeTab(): Tab {
   return {
-    id: `${SCRATCH_PREFIX}welcome`,
+    id: WELCOME_TAB_ID,
     path: null,
     name: "Welcome",
     content: WELCOME_MD,
@@ -387,7 +395,7 @@ function welcomeTab(): Tab {
 
 export const useAppStore = create<AppState>((set, get) => ({
   tabs: [welcomeTab()],
-  activeTabId: `${SCRATCH_PREFIX}welcome`,
+  activeTabId: WELCOME_TAB_ID,
   selectedTabIds: [],
   vaultRoot: null,
   vaultFiles: [],
@@ -423,11 +431,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   dailyNotesTemplate: DEFAULT_SETTINGS.dailyNotesTemplate,
   customCss: DEFAULT_SETTINGS.customCss,
 
-  openLoadedFile: (loaded) =>
+  openLoadedFile: (loaded, opts) =>
     set((state) => {
+      const activate = opts?.activate !== false;
       const id = loaded.path;
       const existing = state.tabs.find((t) => t.id === id);
-      if (existing) return { activeTabId: id };
+      if (existing) return activate ? { activeTabId: id } : state;
       const kind: TabKind = isCanvasPath(loaded.path)
         ? "canvas"
         : isHtmlPath(loaded.path)
@@ -445,9 +454,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
       // Drop the welcome scratch tab if it's still untouched & only tab
       const keep = state.tabs.filter(
-        (t) => t.id !== `${SCRATCH_PREFIX}welcome` || state.tabs.length > 1,
+        (t) => t.id !== WELCOME_TAB_ID || state.tabs.length > 1,
       );
-      return { tabs: [...keep, tab], activeTabId: id };
+      const tabs = [...keep, tab];
+      // A background open leaves focus where it is — unless that would leave
+      // `activeTabId` pointing at the welcome tab we just dropped (which
+      // renders as an empty editor).
+      const activeTabId =
+        activate || !tabs.some((t) => t.id === state.activeTabId)
+          ? id
+          : state.activeTabId;
+      return { tabs, activeTabId };
     }),
 
   newScratchTab: () =>
@@ -501,7 +518,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       return removeTabs(state, new Set(victims.map((x) => x.id)));
     }),
 
-  setActiveTab: (id) => set({ activeTabId: id }),
+  // Ignore ids that name no open tab. Session restore can hand us the path of
+  // a file that has since been deleted or moved; pointing `activeTabId` at it
+  // would blank the editor instead of leaving the user where they were.
+  setActiveTab: (id) =>
+    set((state) => (state.tabs.some((t) => t.id === id) ? { activeTabId: id } : state)),
 
   reorderTab: (fromId, toId) =>
     set((state) => {
