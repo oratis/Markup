@@ -11,6 +11,7 @@ import { HtmlView } from "./components/HtmlView";
 import { Onboarding } from "./components/Onboarding";
 import { PropertiesEditor } from "./components/PropertiesEditor";
 import { QuickOpen } from "./components/QuickOpen";
+import { OpenTabsDialog } from "./components/OpenTabsDialog";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import { Resizer } from "./components/Resizer";
 import { Ribbon } from "./components/Ribbon";
@@ -198,6 +199,7 @@ export function App() {
   const [startupSession] = useState(readSession);
 
   const [showQuickOpen, setShowQuickOpen] = useState(false);
+  const [showOpenTabs, setShowOpenTabs] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchInitialQuery, setSearchInitialQuery] = useState("");
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -785,6 +787,10 @@ export function App() {
 
   const handleEditorChange = useCallback(
     (md: string) => {
+      const mode = useAppStore.getState();
+      // Milkdown can emit normalized Markdown after loading a document.
+      // Viewing/switching tabs must never modify or autosave the source file.
+      if (mode.readMode && !mode.sourceMode) return;
       updateActiveContent(md);
       const state = useAppStore.getState();
       const active = state.activeTabId
@@ -1342,6 +1348,11 @@ export function App() {
         setShowQuickOpen(true);
         return;
       }
+      if (matchesShortcut(e, "openTabs")) {
+        e.preventDefault();
+        setShowOpenTabs(true);
+        return;
+      }
       if (matchesShortcut(e, "commandPalette")) {
         e.preventDefault();
         setShowCommandPalette(true);
@@ -1601,8 +1612,16 @@ export function App() {
   const isDark = resolveTheme(theme) === "dark";
 
   // Build commands for the palette
+  const openTabsTitle = tr("openTabs.title");
+  const openTabsHint = tr("openTabs.commandHint");
   const commands: Command[] = useMemo(() => {
     const base: Command[] = [
+      {
+        id: "open_tabs",
+        label: openTabsTitle,
+        hint: openTabsHint,
+        run: () => setShowOpenTabs(true),
+      },
       { id: "new_file", label: "New File", shortcut: "⌘N", run: newScratchTab },
       {
         id: "new_file_in_vault",
@@ -1617,7 +1636,9 @@ export function App() {
       {
         id: "close_all_tabs",
         label: "Close All Tabs",
-        run: () => useAppStore.getState().closeAllTabs(),
+        run: () => {
+          void useAppStore.getState().closeAllTabs();
+        },
       },
       {
         id: "close_other_tabs",
@@ -3012,6 +3033,8 @@ export function App() {
     tabs,
     githubVault,
     pullLatestGitHub,
+    openTabsTitle,
+    openTabsHint,
   ]);
 
   // Recent-file picker uses CommandPalette wrapped with file commands
@@ -3039,7 +3062,7 @@ export function App() {
       {showToolbar && (
         <Toolbar onInsertLink={promptInsertLink} githubVault={githubVault} />
       )}
-      {showTabBar && <TabBar />}
+      {showTabBar && <TabBar onOpenTabs={() => setShowOpenTabs(true)} />}
       {showReload && (
         <ReloadPrompt
           onReload={() => {
@@ -3126,6 +3149,7 @@ export function App() {
         <FindBar sourceMode={sourceMode} onClose={() => setShowFindBar(false)} />
       )}
       {showQuickOpen && <QuickOpen onClose={() => setShowQuickOpen(false)} />}
+      {showOpenTabs && <OpenTabsDialog onClose={() => setShowOpenTabs(false)} />}
       {showSearch && (
         <SearchPanel
           initialQuery={searchInitialQuery}

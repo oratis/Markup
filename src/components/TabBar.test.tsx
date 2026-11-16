@@ -33,13 +33,16 @@ function threeTabs() {
 }
 
 describe("TabBar", () => {
-  it("renders nothing for a single-tab state (no tab strip needed)", () => {
+  it("keeps the manager available for a single document", () => {
     useAppStore.setState({
       tabs: [makeTab("/a.md", "a.md")],
       activeTabId: "/a.md",
     });
-    const { container } = render(<TabBar />);
-    expect(container.firstChild).toBeNull();
+    const { container } = render(<TabBar onOpenTabs={() => {}} />);
+    expect(container.firstChild).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Search open tabs (1)" }),
+    ).toBeInTheDocument();
   });
 
   it("renders one element per tab when there are >= 2", () => {
@@ -47,7 +50,7 @@ describe("TabBar", () => {
       tabs: [makeTab("/a.md", "a.md"), makeTab("/b.md", "b.md")],
       activeTabId: "/a.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     expect(screen.getByText("a.md")).toBeInTheDocument();
     expect(screen.getByText("b.md")).toBeInTheDocument();
   });
@@ -57,7 +60,7 @@ describe("TabBar", () => {
       tabs: [makeTab("/a.md", "a.md"), makeTab("/b.md", "b.md")],
       activeTabId: "/a.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(screen.getByText("b.md"));
     expect(useAppStore.getState().activeTabId).toBe("/b.md");
   });
@@ -67,7 +70,7 @@ describe("TabBar", () => {
       tabs: [makeTab("/a.md", "a.md"), makeTab("/b.md", "b.md")],
       activeTabId: "/a.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     const aRow = screen.getByText("a.md").parentElement!;
     fireEvent.mouseDown(aRow, { button: 1 });
     const ids = useAppStore.getState().tabs.map((t) => t.id);
@@ -79,7 +82,7 @@ describe("TabBar", () => {
       tabs: [{ ...makeTab("/a.md", "a.md"), pinned: true }, makeTab("/b.md", "b.md")],
       activeTabId: "/a.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     const aRow = screen.getByText("a.md").parentElement!;
     fireEvent.mouseDown(aRow, { button: 1 });
     expect(useAppStore.getState().tabs).toHaveLength(2);
@@ -90,7 +93,7 @@ describe("TabBar", () => {
       tabs: [{ ...makeTab("/a.md", "a.md"), pinned: true }, makeTab("/b.md", "b.md")],
       activeTabId: "/a.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     // Only the unpinned tab has a Close button
     expect(screen.getAllByLabelText("Close tab")).toHaveLength(1);
     // Pinned glyph is in the DOM
@@ -106,7 +109,7 @@ describe("TabBar", () => {
       ],
       activeTabId: "/a.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     const aRow = screen.getByText("a.md").parentElement!;
     const cRow = screen.getByText("c.md").parentElement!;
 
@@ -137,7 +140,7 @@ describe("TabBar", () => {
       ],
       activeTabId: "/a.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     const cRow = screen.getByText("c.md").parentElement!;
     fireEvent.contextMenu(cRow, { clientX: 10, clientY: 10 });
     fireEvent.click(screen.getByText("Close to the Left"));
@@ -149,7 +152,7 @@ describe("TabBar", () => {
       tabs: [makeTab("/a.md", "a.md"), makeTab("/b.md", "b.md")],
       activeTabId: "/a.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     const aRow = screen.getByText("a.md").parentElement!;
     fireEvent.contextMenu(aRow, { clientX: 10, clientY: 10 });
     expect(screen.getByText("Close to the Left")).toBeDisabled();
@@ -162,7 +165,7 @@ describe("TabBar", () => {
       tabs: [{ ...makeTab("/a.md", "a.md"), pinned: true }, makeTab("/b.md", "b.md")],
       activeTabId: "/b.md",
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     const bRow = screen.getByText("b.md").parentElement!;
     fireEvent.contextMenu(bRow, { clientX: 10, clientY: 10 });
     expect(screen.getByText("Close to the Left")).toBeDisabled();
@@ -176,7 +179,7 @@ describe("TabBar", () => {
 describe("TabBar multi-select", () => {
   it("⌘-click marks a tab without moving the active doc", () => {
     threeTabs();
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("b.md"), { metaKey: true });
     const s = useAppStore.getState();
     expect(s.selectedTabIds).toEqual(["/b.md"]);
@@ -185,7 +188,7 @@ describe("TabBar multi-select", () => {
 
   it("⌘-click again unmarks it", () => {
     threeTabs();
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("b.md"), { metaKey: true });
     fireEvent.click(row("b.md"), { metaKey: true });
     expect(useAppStore.getState().selectedTabIds).toEqual([]);
@@ -193,7 +196,7 @@ describe("TabBar multi-select", () => {
 
   it("⇧-click extends a range from the last plain-clicked tab", () => {
     threeTabs();
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("a.md"));
     fireEvent.click(row("c.md"), { shiftKey: true });
     expect(useAppStore.getState().selectedTabIds).toEqual(["/a.md", "/b.md", "/c.md"]);
@@ -201,7 +204,7 @@ describe("TabBar multi-select", () => {
 
   it("a plain click drops the selection", () => {
     threeTabs();
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("b.md"), { metaKey: true });
     fireEvent.click(row("c.md"));
     const s = useAppStore.getState();
@@ -211,7 +214,7 @@ describe("TabBar multi-select", () => {
 
   it("marks selected tabs in the DOM", () => {
     threeTabs();
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("b.md"), { metaKey: true });
     expect(row("b.md")).toHaveAttribute("data-selected", "true");
     expect(row("c.md")).not.toHaveAttribute("data-selected");
@@ -219,7 +222,7 @@ describe("TabBar multi-select", () => {
 
   it("Esc drops the selection", () => {
     threeTabs();
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("b.md"), { metaKey: true });
     fireEvent.keyDown(window, { key: "Escape" });
     expect(useAppStore.getState().selectedTabIds).toEqual([]);
@@ -227,7 +230,7 @@ describe("TabBar multi-select", () => {
 
   it("right-clicking a selected tab offers to close the whole selection", () => {
     threeTabs();
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("b.md"), { metaKey: true });
     fireEvent.click(row("c.md"), { metaKey: true });
     fireEvent.contextMenu(row("b.md"), { clientX: 10, clientY: 10 });
@@ -239,7 +242,7 @@ describe("TabBar multi-select", () => {
     threeTabs();
     render(
       <>
-        <TabBar />
+        <TabBar onOpenTabs={() => {}} />
         <input aria-label="probe" />
       </>,
     );
@@ -259,7 +262,7 @@ describe("TabBar multi-select", () => {
       activeTabId: "/b.md",
       selectedTabIds: [],
     });
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("a.md"), { metaKey: true }); // anchor = a
     fireEvent.mouseDown(row("a.md"), { button: 1 }); // …and close it
     fireEvent.click(row("d.md"), { shiftKey: true });
@@ -269,7 +272,7 @@ describe("TabBar multi-select", () => {
 
   it("right-clicking outside the selection clears it first", () => {
     threeTabs();
-    render(<TabBar />);
+    render(<TabBar onOpenTabs={() => {}} />);
     fireEvent.click(row("b.md"), { metaKey: true });
     fireEvent.contextMenu(row("c.md"), { clientX: 10, clientY: 10 });
     expect(useAppStore.getState().selectedTabIds).toEqual([]);

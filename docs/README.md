@@ -15,6 +15,7 @@
 9. [宽内容出血](./design/08-wide-tables.md) — 表格与代码块出血到窗格宽度、按内容分配列宽；实现见 `src/lib/milkdown/table-view.ts`
 10. [应用内渲染 Mermaid](./design/09-mermaid-in-app.md) — 补上一直缺失的 diagram nodeView；实现见 `src/lib/milkdown/diagram-view.ts`
 11. [一次关掉一批标签页](./design/10-close-many-tabs.md) — 标签页多选 + 批量关闭，并修掉批量关闭不问脏状态的旧缺陷；实现见 `src/store.ts`、`src/components/TabBar.tsx`
+12. [查找和整理已打开的标签页](./design/11-open-tabs-manager.md) — 固定入口、文件名/路径搜索、只保留当前与关闭全部、固定页和草稿保护
 
 ## 目录结构
 

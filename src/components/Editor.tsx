@@ -90,7 +90,7 @@ function WysiwygEditor({
           // triggers a React re-render that reflows the editor line and
           // visually breaks the composing text (中文输入折行). The final
           // value is flushed once on compositionend (see effect below).
-          if (markdown !== prevMarkdown && !isComposing()) {
+          if (!readModeRef.current && markdown !== prevMarkdown && !isComposing()) {
             onChangeRef.current(markdown);
           }
         });
@@ -155,6 +155,7 @@ function WysiwygEditor({
     if (!dom) return;
     const onCompositionEnd = () => {
       setTimeout(() => {
+        if (readModeRef.current) return;
         const ed = get();
         if (!ed) return;
         const md = ed.action(getMarkdown());
