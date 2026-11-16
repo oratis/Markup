@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installTauriMock } from "./tauri-mock";
 
 // Regression guard: a document whose `$…$` math span captures prose with an
 // undefined control sequence (e.g. `\*`) used to throw an uncaught KaTeX
@@ -6,6 +7,7 @@ import { expect, test } from "@playwright/test";
 // now configured with throwOnError:false, and a top-level ErrorBoundary backs
 // it up — so a bad equation degrades to an inline error, never a white screen.
 test("a malformed $…$ math span never white-screens the app", async ({ page }) => {
+  await installTauriMock(page);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
 
