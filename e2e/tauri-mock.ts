@@ -10,6 +10,12 @@ import type { Page } from "@playwright/test";
  */
 export async function installTauriMock(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    // Tauri calls this before invoking the native unlisten command. Keep the
+    // browser shim compatible with effect cleanup (including StrictMode).
+    // biome-ignore lint/suspicious/noExplicitAny: browser-side test shim
+    (window as any).__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+      unregisterListener: () => {},
+    };
     const responses: Record<string, unknown> = {
       // event plugin — listen returns a numeric handler id; unlisten is void.
       "plugin:event|listen": 1,
@@ -24,8 +30,7 @@ export async function installTauriMock(page: Page): Promise<void> {
     const callbacks: Record<number, (payload: unknown) => void> = {};
     // biome-ignore lint/suspicious/noExplicitAny: browser-side test shim
     (window as any).__TAURI_INTERNALS__ = {
-      invoke: (cmd: string) =>
-        Promise.resolve(cmd in responses ? responses[cmd] : null),
+      invoke: (cmd: string) => Promise.resolve(cmd in responses ? responses[cmd] : null),
       transformCallback: (cb: (payload: unknown) => void) => {
         cbId += 1;
         callbacks[cbId] = cb;

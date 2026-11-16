@@ -193,6 +193,9 @@ export function App() {
   const setRecentFiles = useAppStore((s) => s.setRecentFiles);
   const setRecentVaults = useAppStore((s) => s.setRecentVaults);
   const recentVaults = useAppStore((s) => s.recentVaults);
+  // Capture before persistence effects overwrite storage on the first render.
+  // Keep this snapshot through StrictMode's effect setup/cleanup replay.
+  const [startupSession] = useState(readSession);
 
   const [showQuickOpen, setShowQuickOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -241,6 +244,8 @@ export function App() {
 
   // Restore prefs on mount
   useEffect(() => {
+    let cancelled = false;
+    const initialActiveTabId = useAppStore.getState().activeTabId;
     try {
       const t = localStorage.getItem(THEME_KEY) as Theme | null;
       if (t === "light" || t === "dark" || t === "sepia" || t === "auto") setTheme(t);
@@ -304,9 +309,15 @@ export function App() {
     if (!IS_MAS_BUILD) checkForUpdates();
     // Restore previously-open tabs. Runs async — failures are silent
     // (file may have been deleted / moved since the last session).
-    const sess = readSession();
+    const sess = startupSession;
     if (sess.open.length > 0) {
       Promise.all(sess.open.map((p) => readFile(p).catch(() => null))).then((all) => {
+        if (cancelled) return;
+        // File opens and navigation can finish while these reads are pending.
+        // Restore the old tabs in the background without stealing that focus.
+        const currentActiveTabId = useAppStore.getState().activeTabId;
+        const activeToRestore =
+          currentActiveTabId === initialActiveTabId ? sess.active : currentActiveTabId;
         let restored = 0;
         for (const loaded of all) {
           if (loaded) {
@@ -314,8 +325,8 @@ export function App() {
             restored += 1;
           }
         }
-        if (sess.active) {
-          useAppStore.getState().setActiveTab(sess.active);
+        if (activeToRestore) {
+          useAppStore.getState().setActiveTab(activeToRestore);
         }
         if (restored > 0) {
           showToast(tr("toast.sessionRestored", restored));
@@ -326,6 +337,9 @@ export function App() {
     // regressed manual "Open Vault". Vault persistence across launches
     // (esp. under the App Sandbox) needs Rust-side security-scoped
     // bookmarks; tracked separately. See docs/app-store/MAS-publishing-plan.md §1.
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -343,14 +357,17 @@ export function App() {
   }, []);
 
   // macOS "open with Markup" — opens .md files double-clicked in Finder
-  // (or `open file.md`). Drains the cold-start buffer once, then listens
-  // for live opens while the app stays running.
+  // (or `open file.md`). Subscribe before draining the cold-start buffer so
+  // files arriving during listener registration cannot fall into a gap.
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let cancelled = false;
     const openPaths = async (paths: string[]) => {
       for (const p of paths) {
+        if (cancelled) return;
         try {
           const loaded = await readFile(p);
+          if (cancelled) return;
           openLoadedFile(loaded);
           pushRecentFile(p);
         } catch (e) {
@@ -358,16 +375,20 @@ export function App() {
         }
       }
     };
-    listenOpenFiles(openPaths).then((u) => {
-      unlisten = u;
-    });
-    takePendingFiles()
-      .then((paths) => {
-        if (paths.length) openPaths(paths);
+    listenOpenFiles(openPaths)
+      .then(async (u) => {
+        if (cancelled) {
+          u();
+          return;
+        }
+        unlisten = u;
+        const paths = await takePendingFiles();
+        if (paths.length) await openPaths(paths);
       })
-      .catch(() => {});
+      .catch((e) => console.warn("open-files setup failed:", e));
     return () => {
-      if (unlisten) unlisten();
+      cancelled = true;
+      unlisten?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
