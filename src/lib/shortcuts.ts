@@ -20,6 +20,7 @@ export type ShortcutId =
   | "openFile"
   | "openVault"
   | "quickOpen"
+  | "openTabs"
   | "findInFile"
   | "findInVault"
   | "commandPalette"
@@ -63,6 +64,7 @@ export const defaults: Record<ShortcutId, string> = {
   openFile: "Mod+O", // also handled by native menu
   openVault: "Mod+Shift+O",
   quickOpen: "Mod+P",
+  openTabs: "Mod+Shift+L",
   findInFile: "Mod+F",
   findInVault: "Mod+Shift+F",
   commandPalette: "Mod+Shift+P",
@@ -107,6 +109,7 @@ export const labels: Record<ShortcutId, string> = {
   openFile: "Open File",
   openVault: "Open Vault",
   quickOpen: "Quick Open",
+  openTabs: "Search Open Tabs",
   findInFile: "Find in File",
   findInVault: "Find in Vault",
   commandPalette: "Command Palette",

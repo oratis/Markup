@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   getBookmarks,
   isBookmarked,
@@ -6,6 +6,7 @@ import {
   toggleBookmark,
 } from "../lib/bookmarks";
 import { liveSelection, useAppStore } from "../store";
+import { useT } from "../lib/i18n";
 
 const DRAG_MIME = "application/x-markup-tab";
 
@@ -15,7 +16,9 @@ interface CtxState {
   y: number;
 }
 
-export function TabBar() {
+export function TabBar({ onOpenTabs }: { onOpenTabs: () => void }) {
+  const t = useT();
+  const stripRef = useRef<HTMLDivElement>(null);
   const tabs = useAppStore((s) => s.tabs);
   const activeTabId = useAppStore((s) => s.activeTabId);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
@@ -72,132 +75,174 @@ export function TabBar() {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedIds.length, clearTabSelection]);
 
-  if (tabs.length <= 1) return null;
+  useEffect(() => {
+    stripRef.current
+      ?.querySelector<HTMLElement>('[data-active="true"]')
+      ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [activeTabId, tabs.length]);
+
+  if (tabs.length === 0 || (tabs.length === 1 && tabs[0].id === "scratch:welcome")) {
+    return null;
+  }
 
   const ctxIdx = ctx ? tabs.findIndex((t) => t.id === ctx.id) : -1;
 
   return (
-    <div className="flex items-stretch border-b border-black/5 dark:border-white/10 overflow-x-auto no-scrollbar bg-canvas-light dark:bg-canvas-dark">
-      {tabs.map((tab) => {
-        const isActive = tab.id === activeTabId;
-        const isSelected = selected.has(tab.id);
-        const indicator = tab.status === "dirty" ? "●" : "";
-        const isDragging = draggingId === tab.id;
-        const isOver = overId === tab.id && draggingId && draggingId !== tab.id;
-        // A selected tab stays at full opacity — the marking has to be
-        // obvious enough that nobody forgets a selection is live.
-        const tone = isActive
-          ? "bg-canvas-light dark:bg-canvas-dark text-ink-light dark:text-ink-dark"
-          : isSelected
-            ? ""
-            : "opacity-60 hover:opacity-90";
-        return (
-          <div
-            key={tab.id}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData(DRAG_MIME, tab.id);
-              e.dataTransfer.effectAllowed = "move";
-              setDraggingId(tab.id);
-            }}
-            onDragOver={(e) => {
-              if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "move";
-              setOverId(tab.id);
-            }}
-            onDragLeave={() => {
-              if (overId === tab.id) setOverId(null);
-            }}
-            onDrop={(e) => {
-              const fromId = e.dataTransfer.getData(DRAG_MIME);
-              if (fromId) {
+    <div className="flex shrink-0 min-w-0 items-stretch border-b border-black/5 dark:border-white/10 bg-canvas-light dark:bg-canvas-dark">
+      <div
+        ref={stripRef}
+        className="flex flex-1 min-w-0 overflow-x-auto no-scrollbar"
+        data-testid="tab-strip"
+      >
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeTabId;
+          const isSelected = selected.has(tab.id);
+          const indicator = tab.status === "dirty" ? "●" : "";
+          const isDragging = draggingId === tab.id;
+          const isOver = overId === tab.id && draggingId && draggingId !== tab.id;
+          // A selected tab stays at full opacity — the marking has to be
+          // obvious enough that nobody forgets a selection is live.
+          const tone = isActive
+            ? "bg-canvas-light dark:bg-canvas-dark text-ink-light dark:text-ink-dark"
+            : isSelected
+              ? ""
+              : "opacity-60 hover:opacity-90";
+          return (
+            <div
+              key={tab.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData(DRAG_MIME, tab.id);
+                e.dataTransfer.effectAllowed = "move";
+                setDraggingId(tab.id);
+              }}
+              onDragOver={(e) => {
+                if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
                 e.preventDefault();
-                reorderTab(fromId, tab.id);
-              }
-              setDraggingId(null);
-              setOverId(null);
-            }}
-            onDragEnd={() => {
-              setDraggingId(null);
-              setOverId(null);
-            }}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              // Right-clicking outside the selection moves focus to that tab,
-              // so the menu never describes tabs the user isn't pointing at.
-              if (!isSelected) clearTabSelection();
-              setCtx({ id: tab.id, x: e.clientX, y: e.clientY });
-            }}
-            onMouseDown={(e) => {
-              // Middle-click closes the tab (browser convention).
-              // Pinned tabs ignore the gesture; explicit unpin first.
-              if (e.button === 1 && !tab.pinned) {
+                e.dataTransfer.dropEffect = "move";
+                setOverId(tab.id);
+              }}
+              onDragLeave={() => {
+                if (overId === tab.id) setOverId(null);
+              }}
+              onDrop={(e) => {
+                const fromId = e.dataTransfer.getData(DRAG_MIME);
+                if (fromId) {
+                  e.preventDefault();
+                  reorderTab(fromId, tab.id);
+                }
+                setDraggingId(null);
+                setOverId(null);
+              }}
+              onDragEnd={() => {
+                setDraggingId(null);
+                setOverId(null);
+              }}
+              onContextMenu={(e) => {
                 e.preventDefault();
-                closeTab(tab.id);
-              }
-            }}
-            data-selected={isSelected ? "true" : undefined}
-            className={`group titlebar-no-drag relative flex items-center gap-2 pl-3 pr-1 py-1.5 text-[12px] cursor-pointer border-r border-black/5 dark:border-white/10 select-none ${tone} ${
-              isSelected ? "bg-blue-500/10 ring-1 ring-inset ring-blue-500/60" : ""
-            } ${isDragging ? "opacity-30" : ""} ${
-              isOver ? "ring-2 ring-blue-500/50 ring-inset" : ""
-            }`}
-            onClick={(e) => {
-              // ⇧ extends a range from the anchor, ⌘/Ctrl toggles one tab
-              // (without moving the active doc), a plain click does what it
-              // always did — activate, and drop any selection.
-              if (e.shiftKey) {
-                // The anchor may have been closed since it was set; fall
-                // back to the active tab rather than selecting one tab.
-                const anchorLive = anchorId && tabs.some((t) => t.id === anchorId);
-                selectTabRange(anchorLive ? anchorId : activeTabId, tab.id);
-                return;
-              }
-              if (e.metaKey || e.ctrlKey) {
-                toggleTabSelection(tab.id);
-                setAnchorId(tab.id);
-                return;
-              }
-              clearTabSelection();
-              setAnchorId(tab.id);
-              setActiveTab(tab.id);
-            }}
-          >
-            {tab.pinned && (
-              <span aria-label="Pinned" title="Pinned" className="text-[10px] opacity-70">
-                📌
-              </span>
-            )}
-            {tab.path && isBookmarked(tab.path) && (
-              <span
-                aria-label="Bookmarked"
-                title="Bookmarked"
-                className="text-[11px] text-amber-500"
-              >
-                ★
-              </span>
-            )}
-            <span className="max-w-[180px] truncate">{tab.name}</span>
-            <span className="text-[10px] opacity-70 w-2">{indicator}</span>
-            {!tab.pinned && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
+                // Right-clicking outside the selection moves focus to that tab,
+                // so the menu never describes tabs the user isn't pointing at.
+                if (!isSelected) clearTabSelection();
+                setCtx({ id: tab.id, x: e.clientX, y: e.clientY });
+              }}
+              onMouseDown={(e) => {
+                // Middle-click closes the tab (browser convention).
+                // Pinned tabs ignore the gesture; explicit unpin first.
+                if (e.button === 1 && !tab.pinned) {
+                  e.preventDefault();
                   closeTab(tab.id);
-                }}
-                className="ml-1 w-4 h-4 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/15 opacity-0 group-hover:opacity-100"
-                aria-label="Close tab"
-              >
-                ×
-              </button>
-            )}
-            {isActive && (
-              <span className="mk-tab-indicator absolute left-0 right-0 top-0 h-[2px]" />
-            )}
-          </div>
-        );
-      })}
+                }
+              }}
+              data-selected={isSelected ? "true" : undefined}
+              data-active={isActive ? "true" : undefined}
+              data-tab-id={tab.id}
+              title={tab.path ?? tab.name}
+              className={`group titlebar-no-drag relative shrink-0 flex items-center gap-2 pl-3 pr-1 py-1.5 text-[12px] cursor-pointer border-r border-black/5 dark:border-white/10 select-none ${tone} ${
+                isSelected ? "bg-blue-500/10 ring-1 ring-inset ring-blue-500/60" : ""
+              } ${isDragging ? "opacity-30" : ""} ${
+                isOver ? "ring-2 ring-blue-500/50 ring-inset" : ""
+              }`}
+              onClick={(e) => {
+                // ⇧ extends a range from the anchor, ⌘/Ctrl toggles one tab
+                // (without moving the active doc), a plain click does what it
+                // always did — activate, and drop any selection.
+                if (e.shiftKey) {
+                  // The anchor may have been closed since it was set; fall
+                  // back to the active tab rather than selecting one tab.
+                  const anchorLive = anchorId && tabs.some((t) => t.id === anchorId);
+                  selectTabRange(anchorLive ? anchorId : activeTabId, tab.id);
+                  return;
+                }
+                if (e.metaKey || e.ctrlKey) {
+                  toggleTabSelection(tab.id);
+                  setAnchorId(tab.id);
+                  return;
+                }
+                clearTabSelection();
+                setAnchorId(tab.id);
+                setActiveTab(tab.id);
+              }}
+            >
+              {tab.pinned && (
+                <span
+                  aria-label="Pinned"
+                  title="Pinned"
+                  className="text-[10px] opacity-70"
+                >
+                  📌
+                </span>
+              )}
+              {tab.path && isBookmarked(tab.path) && (
+                <span
+                  aria-label="Bookmarked"
+                  title="Bookmarked"
+                  className="text-[11px] text-amber-500"
+                >
+                  ★
+                </span>
+              )}
+              <span className="max-w-[180px] truncate">{tab.name}</span>
+              <span className="text-[10px] opacity-70 w-2">{indicator}</span>
+              {!tab.pinned && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeTab(tab.id);
+                  }}
+                  className="ml-1 w-4 h-4 flex items-center justify-center rounded hover:bg-black/10 dark:hover:bg-white/15 opacity-0 group-hover:opacity-100"
+                  aria-label="Close tab"
+                >
+                  ×
+                </button>
+              )}
+              {isActive && (
+                <span className="mk-tab-indicator absolute left-0 right-0 top-0 h-[2px]" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <button
+        type="button"
+        onClick={onOpenTabs}
+        aria-label={t("openTabs.trigger", tabs.length)}
+        aria-haspopup="dialog"
+        title={t("openTabs.title")}
+        className="mk-open-tabs-trigger titlebar-no-drag shrink-0 flex items-center gap-2 px-3 text-xs"
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          aria-hidden="true"
+        >
+          <path d="M2 3h12M2 7h12M2 11h7m2 0 2 2 2-2" />
+        </svg>
+        <span>{t("openTabs.count", tabs.length)}</span>
+      </button>
       {ctx && (
         <ContextMenu
           x={ctx.x}

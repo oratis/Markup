@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { isCanvasPath, isHtmlPath } from "./lib/canvas-path";
+import { confirmDiscardMessage } from "./lib/confirm-discard";
 import { t } from "./lib/i18n";
 import type { LoadedFile } from "./lib/types";
 
@@ -28,8 +29,8 @@ export interface Tab {
   mtimeMs: number | null;
   status: SaveStatus;
   errorMessage: string | null;
-  /** Pinned tabs render before unpinned ones, survive Close All / Close
-   * Others / Close to the Right unless explicitly unpinned. */
+  /** Pinned tabs render first and survive bulk closes by default. The tab
+   * manager can explicitly include them in its close operation. */
   pinned?: boolean;
   /** What kind of editor renders this tab. Defaults to `"markdown"` when
    * absent (back-compat with code that constructs Tabs without a kind). */
@@ -115,20 +116,22 @@ interface AppState {
   newScratchTab: () => void;
   /** Open fetched text (e.g. a GitHub file) as a new unsaved buffer. */
   openScratchWithContent: (name: string, content: string) => void;
-  closeTab: (id: string) => void;
-  /** Close an explicit set of tabs in one transaction. Pinned tabs in the
-   * set are skipped, like every other bulk gesture. */
-  closeTabs: (ids: string[]) => void;
+  closeTab: (id: string) => boolean | Promise<boolean>;
+  /** Pinned tabs are protected unless the tab manager explicitly includes them. */
+  closeTabs: (
+    ids: string[],
+    options?: { includePinned?: boolean },
+  ) => boolean | Promise<boolean>;
   setActiveTab: (id: string) => void;
   reorderTab: (fromId: string, toId: string) => void;
-  closeOtherTabs: (id: string) => void;
-  closeTabsToRight: (id: string) => void;
-  closeTabsToLeft: (id: string) => void;
-  closeAllTabs: () => void;
+  closeOtherTabs: (id: string) => boolean | Promise<boolean>;
+  closeTabsToRight: (id: string) => boolean | Promise<boolean>;
+  closeTabsToLeft: (id: string) => boolean | Promise<boolean>;
+  closeAllTabs: () => boolean | Promise<boolean>;
   /** What ⌘W / File ▸ Close Tab does: closes the selection when the user
    * marked one, otherwise just the active tab. Lives here (not in App) so
    * the dispatch is testable — it's the riskiest path in this feature. */
-  closeSelectedOrActive: () => void;
+  closeSelectedOrActive: () => boolean | Promise<boolean>;
   /** Add/remove one tab from the selection. Pinned tabs are ignored. */
   toggleTabSelection: (id: string) => void;
   /** Add every tab between `anchorId` and `toId` (inclusive) to the
@@ -307,22 +310,71 @@ export function liveSelection(
 /** How many filenames a batch confirmation spells out before summarising. */
 const CONFIRM_NAME_MAX = 5;
 
-/**
- * One prompt for a whole batch — the batch closes only if it returns true.
- *
- * Only path-backed dirty tabs can actually lose work; a scratch buffer has
- * no on-disk version to diverge from (and never flips to "dirty" — see
- * `updateActiveContent`). Single-victim batches keep the exact wording the
- * one-tab close has always used.
- */
-function confirmDiscard(victims: Tab[]): boolean {
-  const dirty = victims.filter((v) => v.status === "dirty" && v.path);
+/** Scratch buffers have no saved copy, even though their status stays "saved". */
+export function hasUnsavedChanges(tab: Tab): boolean {
+  if (tab.path) return tab.status !== "saved";
+  if (tab.id === `${SCRATCH_PREFIX}welcome`) return tab.content !== WELCOME_MD;
+  return tab.content.length > 0;
+}
+
+/** One prompt for the whole batch; cancellation keeps every tab intact. */
+function confirmDiscard(victims: Tab[]): boolean | Promise<boolean> {
+  const dirty = victims.filter(hasUnsavedChanges);
   if (dirty.length === 0) return true;
-  if (dirty.length === 1) return window.confirm(t("tab.confirmClose", dirty[0].name));
+  if (dirty.length === 1)
+    return confirmDiscardMessage(t("tab.confirmClose", dirty[0].name));
   const shown = dirty.slice(0, CONFIRM_NAME_MAX).map((d) => d.name);
   const rest = dirty.length - shown.length;
   const lines = rest > 0 ? [...shown, t("tab.confirmCloseMore", rest)] : shown;
-  return window.confirm(t("tab.confirmCloseMany", dirty.length, lines.join("\n")));
+  return confirmDiscardMessage(t("tab.confirmCloseMany", dirty.length, lines.join("\n")));
+}
+
+let closeConfirmationPending = false;
+
+/** Snapshot the requested batch before a native dialog yields. Never discard
+ * edits made during the wait, or sweep in files opened by Finder meanwhile. */
+function closeConfirmed(
+  victims: Tab[],
+  selectAfter?: (state: AppState, next: ReturnType<typeof removeTabs>) => string | null,
+): boolean | Promise<boolean> {
+  if (!victims.length || closeConfirmationPending) return false;
+  const commit = (confirmed: boolean) => {
+    if (!confirmed) return false;
+    let closed = false;
+    useAppStore.setState((state) => {
+      const unchanged = victims.every((before) => {
+        const now = state.tabs.find((tab) => tab.id === before.id);
+        return (
+          now &&
+          now.content === before.content &&
+          now.path === before.path &&
+          now.pinned === before.pinned
+        );
+      });
+      if (!unchanged) return state;
+      const next = removeTabs(state, new Set(victims.map((tab) => tab.id)));
+      closed = true;
+      return selectAfter ? { ...next, activeTabId: selectAfter(state, next) } : next;
+    });
+    return closed;
+  };
+  try {
+    const answer = confirmDiscard(victims);
+    if (typeof answer === "boolean") return commit(answer);
+    closeConfirmationPending = true;
+    return Promise.resolve(answer)
+      .then(commit)
+      .catch(() => {
+        // A failed native dialog must leave every document open.
+        return false;
+      })
+      .finally(() => {
+        closeConfirmationPending = false;
+      });
+  } catch {
+    // Likewise for synchronous bridge failures.
+    return false;
+  }
 }
 
 /**
@@ -363,14 +415,16 @@ function removeTabs(state: AppState, victimIds: Set<string>) {
  */
 function closeSide(state: AppState, id: string, side: "left" | "right") {
   const idx = state.tabs.findIndex((x) => x.id === id);
-  if (idx < 0) return state;
+  if (idx < 0) return false;
   const range = side === "left" ? state.tabs.slice(0, idx) : state.tabs.slice(idx + 1);
   const victims = range.filter((x) => !x.pinned);
-  if (victims.length === 0) return state;
-  if (!confirmDiscard(victims)) return state;
-  const next = removeTabs(state, new Set(victims.map((x) => x.id)));
-  const activeSurvives = next.tabs.some((x) => x.id === state.activeTabId);
-  return { ...next, activeTabId: activeSurvives ? state.activeTabId : id };
+  return closeConfirmed(victims, (current, next) =>
+    next.tabs.some((tab) => tab.id === current.activeTabId)
+      ? current.activeTabId
+      : next.tabs.some((tab) => tab.id === id)
+        ? id
+        : next.activeTabId,
+  );
 }
 
 function welcomeTab(): Tab {
@@ -482,24 +536,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { tabs: [...state.tabs, tab], activeTabId: id };
     }),
 
-  closeTab: (id) =>
-    set((state) => {
-      const target = state.tabs.find((t) => t.id === id);
-      if (!target) return state;
-      // An explicit single close names its target, so it closes pinned tabs
-      // too. The bulk gestures below are the ones that sweep past them.
-      if (!confirmDiscard([target])) return state;
-      return removeTabs(state, new Set([id]));
-    }),
+  // An explicit single close also permits a pinned tab.
+  closeTab: (id) => closeConfirmed(get().tabs.filter((tab) => tab.id === id)),
 
-  closeTabs: (ids) =>
-    set((state) => {
-      const wanted = new Set(ids);
-      const victims = state.tabs.filter((x) => wanted.has(x.id) && !x.pinned);
-      if (victims.length === 0) return state;
-      if (!confirmDiscard(victims)) return state;
-      return removeTabs(state, new Set(victims.map((x) => x.id)));
-    }),
+  closeTabs: (ids, options) => {
+    const wanted = new Set(ids);
+    const victims = get().tabs.filter(
+      (x) => wanted.has(x.id) && (!x.pinned || options?.includePinned),
+    );
+    return closeConfirmed(victims);
+  },
 
   setActiveTab: (id) => set({ activeTabId: id }),
 
@@ -520,37 +566,28 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { tabs };
     }),
 
-  closeOtherTabs: (id) =>
-    set((state) => {
-      const keep = state.tabs.find((t) => t.id === id);
-      if (!keep) return state;
-      // Pinned tabs survive "close others" — they're explicitly anchored.
-      const victims = state.tabs.filter((t) => t.id !== id && !t.pinned);
-      // Nothing to close (everything else is pinned) still lands you on the
-      // tab you pointed at — the gesture has always done that.
-      if (victims.length === 0) {
-        return state.activeTabId === keep.id ? state : { activeTabId: keep.id };
-      }
-      if (!confirmDiscard(victims)) return state;
-      return {
-        ...removeTabs(state, new Set(victims.map((x) => x.id))),
-        activeTabId: keep.id,
-      };
-    }),
+  closeOtherTabs: (id) => {
+    const state = get();
+    const keep = state.tabs.find((t) => t.id === id);
+    if (!keep) return false;
+    // Pinned tabs survive "close others" — they're explicitly anchored.
+    const victims = state.tabs.filter((t) => t.id !== id && !t.pinned);
+    // Nothing to close (everything else is pinned) still lands you on the
+    // tab you pointed at — the gesture has always done that.
+    if (victims.length === 0) {
+      set({ activeTabId: keep.id });
+      return false;
+    }
+    return closeConfirmed(victims, (_current, next) =>
+      next.tabs.some((tab) => tab.id === keep.id) ? keep.id : next.activeTabId,
+    );
+  },
 
-  closeTabsToRight: (id) => set((state) => closeSide(state, id, "right")),
+  closeTabsToRight: (id) => closeSide(get(), id, "right"),
 
-  closeTabsToLeft: (id) => set((state) => closeSide(state, id, "left")),
+  closeTabsToLeft: (id) => closeSide(get(), id, "left"),
 
-  closeAllTabs: () =>
-    set((state) => {
-      const victims = state.tabs.filter((t) => !t.pinned);
-      if (victims.length === 0) return state;
-      // One prompt for the whole batch, naming every doc that would lose
-      // changes — this used to name only the first and drop the rest.
-      if (!confirmDiscard(victims)) return state;
-      return removeTabs(state, new Set(victims.map((x) => x.id)));
-    }),
+  closeAllTabs: () => closeConfirmed(get().tabs.filter((tab) => !tab.pinned)),
 
   closeSelectedOrActive: () => {
     const s = get();
@@ -561,10 +598,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     // than turn ⌘W into a dead key.
     const live = s.showTabBar ? liveSelection(s) : [];
     if (live.length > 0) {
-      s.closeTabs(live);
-      return;
+      return s.closeTabs(live);
     }
-    if (s.activeTabId) s.closeTab(s.activeTabId);
+    if (s.activeTabId) return s.closeTab(s.activeTabId);
+    return false;
   },
 
   toggleTabSelection: (id) =>
